@@ -18,9 +18,9 @@ inputs:
 runs:
   using: composite
   steps:
+    # La versión de pnpm se toma del campo "packageManager" de package.json —
+    # no se repite aquí para evitar ERR_PNPM_BAD_PM_VERSION.
     - uses: pnpm/action-setup@v4
-      with:
-        version: 9
 
     - uses: actions/setup-node@v4
       with:
