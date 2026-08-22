@@ -15,6 +15,8 @@ on:
     branches: [main]
     paths:
       - "features/**"
+      - ".github/workflows/bdd-lint.yml"
+  workflow_dispatch: {}
 
 jobs:
   gherkin-syntax:
