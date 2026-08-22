@@ -1,0 +1,60 @@
+name: Deploy Vercel App
+description: Despliega una app Angular del monorepo a su proyecto de Vercel (build vía Turborepo, deploy vía Vercel CLI).
+
+inputs:
+  app-path:
+    description: Ruta de la app dentro del monorepo (p. ej. apps/shell)
+    required: true
+  vercel-token:
+    required: true
+  vercel-org-id:
+    required: true
+  vercel-project-id:
+    required: true
+  production:
+    description: "true para deploy de producción, false para preview"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 9
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    - name: Instalar dependencias
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Vercel pull (config del entorno)
+      shell: bash
+      env:
+        VERCEL_TOKEN: ${{ inputs.vercel-token }}
+        VERCEL_ORG_ID: ${{ inputs.vercel-org-id }}
+        VERCEL_PROJECT_ID: ${{ inputs.vercel-project-id }}
+      run: npx vercel pull --yes --environment=${{ inputs.production == 'true' && 'production' || 'preview' }} --token=$VERCEL_TOKEN
+
+    - name: Build (Turborepo, solo esta app y sus dependencias)
+      shell: bash
+      run: npx turbo run build --filter="./${{ inputs.app-path }}..."
+
+    - name: Vercel build
+      shell: bash
+      env:
+        VERCEL_TOKEN: ${{ inputs.vercel-token }}
+        VERCEL_ORG_ID: ${{ inputs.vercel-org-id }}
+        VERCEL_PROJECT_ID: ${{ inputs.vercel-project-id }}
+      run: npx vercel build ${{ inputs.production == 'true' && '--prod' || '' }} --token=$VERCEL_TOKEN
+
+    - name: Vercel deploy
+      shell: bash
+      env:
+        VERCEL_TOKEN: ${{ inputs.vercel-token }}
+        VERCEL_ORG_ID: ${{ inputs.vercel-org-id }}
+        VERCEL_PROJECT_ID: ${{ inputs.vercel-project-id }}
+      run: npx vercel deploy --prebuilt ${{ inputs.production == 'true' && '--prod' || '' }} --token=$VERCEL_TOKEN
