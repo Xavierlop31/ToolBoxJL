@@ -1,0 +1,78 @@
+name: Deploy Railway
+
+# Backend NestJS (Documento de Arquitectura §7) y Workers/Cron a Railway.
+# RAILWAY_TOKEN y RAILWAY_SERVICE_ID_API ya están configurados como secreto
+# del repo. RAILWAY_SERVICE_ID_WORKERS está pendiente (se crea si el equipo
+# decide desplegar Workers como un servicio Railway separado del API).
+#
+# Nota: los `if` a nivel de job en GitHub Actions no pueden leer el contexto
+# `secrets`, así que en vez de saltar el job entero, cada job siempre corre
+# pero su primer paso comprueba si el secreto necesario existe y, si no,
+# termina limpio (exit 0) en lugar de fallar en rojo.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "apps/workers/**"
+      - "packages/**"
+
+jobs:
+  api:
+    name: Deploy apps/api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que RAILWAY_SERVICE_ID_API existe
+        id: check
+        env:
+          RAILWAY_SERVICE_ID_API: ${{ secrets.RAILWAY_SERVICE_ID_API }}
+        run: |
+          if [ -z "$RAILWAY_SERVICE_ID_API" ]; then
+            echo "RAILWAY_SERVICE_ID_API no está configurado — omitiendo deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Instalar Railway CLI
+        if: steps.check.outputs.skip == 'false'
+        run: npm install -g @railway/cli
+
+      - name: Deploy a Railway
+        if: steps.check.outputs.skip == 'false'
+        working-directory: apps/api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service "${{ secrets.RAILWAY_SERVICE_ID_API }}" --detach
+
+  workers:
+    name: Deploy apps/workers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que RAILWAY_SERVICE_ID_WORKERS existe
+        id: check
+        env:
+          RAILWAY_SERVICE_ID_WORKERS: ${{ secrets.RAILWAY_SERVICE_ID_WORKERS }}
+        run: |
+          if [ -z "$RAILWAY_SERVICE_ID_WORKERS" ]; then
+            echo "RAILWAY_SERVICE_ID_WORKERS no está configurado — omitiendo deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Instalar Railway CLI
+        if: steps.check.outputs.skip == 'false'
+        run: npm install -g @railway/cli
+
+      - name: Deploy a Railway
+        if: steps.check.outputs.skip == 'false'
+        working-directory: apps/workers
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service "${{ secrets.RAILWAY_SERVICE_ID_WORKERS }}" --detach

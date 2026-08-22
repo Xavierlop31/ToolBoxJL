@@ -1,0 +1,34 @@
+name: BDD Lint (Gherkin)
+
+# Gate de SDD (Plan de Implementación §1.1), etapa 1: valida que todo
+# features/*.feature tiene sintaxis Gherkin válida. La etapa 2 (ejecutar los
+# escenarios contra step definitions reales, p. ej. con Cucumber o
+# Playwright-BDD) se activa módulo a módulo a medida que exista código de
+# aplicación — hasta entonces, este job es el único gate posible.
+
+on:
+  pull_request:
+    paths:
+      - "features/**"
+      - ".github/workflows/bdd-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "features/**"
+
+jobs:
+  gherkin-syntax:
+    name: Validar sintaxis Gherkin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Instalar validador
+        run: npm install --no-save @cucumber/gherkin @cucumber/messages
+
+      - name: Validar features/*.feature
+        run: node scripts/validate-gherkin.mjs

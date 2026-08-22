@@ -1,0 +1,80 @@
+name: Deploy Vercel
+
+# Un job por app Angular (Documento de Arquitectura §8): cada remote de
+# Native Federation se despliega a su propio proyecto de Vercel de forma
+# independiente. VERCEL_TOKEN y VERCEL_ORG_ID ya están configurados como
+# secreto del repo.
+#
+# VERCEL_PROJECT_ID_<APP> se agrega como *Variable* (Settings → Secrets and
+# variables → Actions → pestaña "Variables"), no como Secret: el Project ID
+# de Vercel no es información sensible, y los `if` a nivel de job en GitHub
+# Actions no pueden leer el contexto `secrets` (solo `vars`) — por eso cada
+# job queda condicionado a que exista la Variable correspondiente, para no
+# fallar en rojo antes de que crees el proyecto en Vercel.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: deploy-vercel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shell:
+    name: Deploy shell
+    runs-on: ubuntu-latest
+    if: ${{ vars.VERCEL_PROJECT_ID_SHELL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/deploy-vercel-app
+        with:
+          app-path: apps/shell
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_SHELL }}
+          production: ${{ github.event_name == 'push' }}
+
+  portal-cliente:
+    name: Deploy portal-cliente
+    runs-on: ubuntu-latest
+    if: ${{ vars.VERCEL_PROJECT_ID_PORTAL_CLIENTE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/deploy-vercel-app
+        with:
+          app-path: apps/portal-cliente
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PORTAL_CLIENTE }}
+          production: ${{ github.event_name == 'push' }}
+
+  panel-admin:
+    name: Deploy panel-admin
+    runs-on: ubuntu-latest
+    if: ${{ vars.VERCEL_PROJECT_ID_PANEL_ADMIN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/deploy-vercel-app
+        with:
+          app-path: apps/panel-admin
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PANEL_ADMIN }}
+          production: ${{ github.event_name == 'push' }}
+
+  pwa-logistica:
+    name: Deploy pwa-logistica
+    runs-on: ubuntu-latest
+    if: ${{ vars.VERCEL_PROJECT_ID_PWA_LOGISTICA != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/deploy-vercel-app
+        with:
+          app-path: apps/pwa-logistica
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PWA_LOGISTICA }}
+          production: ${{ github.event_name == 'push' }}

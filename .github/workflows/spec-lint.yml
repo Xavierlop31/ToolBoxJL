@@ -1,0 +1,42 @@
+name: Spec Lint (OpenAPI)
+
+# Gate de SDD (Plan de Implementación §1.1): openapi.yaml es el contrato
+# spec-first del proyecto. Ningún PR que lo modifique se mergea si el
+# contrato queda inválido o con errores de linting.
+
+on:
+  pull_request:
+    paths:
+      - "openapi.yaml"
+      - ".spectral.yaml"
+      - ".github/workflows/spec-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "openapi.yaml"
+      - ".spectral.yaml"
+
+jobs:
+  spectral:
+    name: Spectral lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Lint openapi.yaml con Spectral
+        run: npx --yes @stoplight/spectral-cli lint openapi.yaml --ruleset .spectral.yaml --fail-severity=error
+
+      - name: Validar que es un documento OpenAPI 3.x bien formado
+        run: |
+          pip install --quiet openapi-spec-validator pyyaml
+          python3 -c "
+          from openapi_spec_validator import validate_spec
+          import yaml
+          doc = yaml.safe_load(open('openapi.yaml'))
+          validate_spec(doc)
+          print('openapi.yaml es válido')
+          "
