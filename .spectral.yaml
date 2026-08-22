@@ -1,0 +1,14 @@
+extends:
+  - ["spectral:oas", "recommended"]
+
+rules:
+  # El proyecto documenta roles requeridos vía la extensión x-roles en lugar de
+  # security schemes por operación individual — no marcar como error.
+  oas3-operation-security-defined: off
+  # openapi.yaml usa descripciones largas en español por diseño (documento SDD
+  # de referencia, no solo contrato técnico) — no limitar longitud.
+  info-description: off
+  # El esquema User documenta la entidad `users` del diccionario de datos
+  # (Esquema de Backend §3.2) aunque no hay CRUD propio: los usuarios se
+  # gestionan vía Supabase Auth, no por un endpoint REST del backend NestJS.
+  oas3-unused-component: off

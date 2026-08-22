@@ -1,0 +1,957 @@
+openapi: 3.0.3
+info:
+  title: ToolBox JL — API Platform
+  description: >
+    Contrato de API canónico de la plataforma ToolBox JL (gestión, alquiler, venta de
+    herramientas y logística inteligente). Este archivo es un artefacto de
+    Spec-Driven Development (SDD): se escribe y versiona ANTES que el código
+    (spec-first) y es la fuente de verdad que Claude Code consume para generar e
+    implementar los controladores, DTOs y guards de rol del backend NestJS. El
+    código se valida por conformidad contra este contrato, no al revés.
+
+    Fuente de contenido: Esquema de Backend (DOC-BE-01) §3.2 (diccionario de
+    datos) y §4 (contratos de API por módulo); complementado con TRD §4 para las
+    rutas invocadas por los Agentes de IA vía tool calling.
+
+    Convención de rutas: las tablas del Esquema de Backend usan rutas sin
+    prefijo (p. ej. /catalog/search); el TRD usa el prefijo /api/v1/... al
+    describir el tool calling de los agentes. Este documento resuelve esa
+    inconsistencia declarando el prefijo /api/v1 en `servers` y manteniendo los
+    `paths` sin prefijo — ambas formas describen el mismo endpoint físico.
+  version: "1.0.0"
+  contact:
+    name: Equipo de Arquitectura de Soluciones — ToolBox JL
+  x-sdd:
+    canonical: true
+    generated_by: "Claude Code (SDD spec-first) — alineado a DOC-BE-01 v1.0 y DOC-ARQ-01 §6.1"
+    related_docs:
+      - "01_Documento_de_Arquitectura_ToolBoxJL.docx §6.1"
+      - "06_Esquema_Backend_ToolBoxJL.docx §3.2, §4"
+      - "07_Plan_de_Implementacion_ToolBoxJL.docx §1.1"
+      - "features/*.feature"
+
+servers:
+  - url: https://api.toolboxjl.com/api/v1
+    description: Producción (futuro)
+  - url: https://toolboxjl-api-staging.up.railway.app/api/v1
+    description: Staging / Railway (sandbox)
+  - url: http://localhost:3000/api/v1
+    description: Desarrollo local
+
+tags:
+  - name: Catálogo e Inventario
+    description: RF-1.1 a RF-1.4 — modelos, unidades físicas y su hoja de vida.
+  - name: Cotización, Órdenes y Pagos
+    description: RF-2.1 a RF-2.4 — cotización, creación de órdenes, pagos y garantía.
+  - name: Logística
+    description: RF-3.1 a RF-3.3 — flota, asignación de rutas y seguimiento de envíos.
+  - name: Inspección y Mora
+    description: RF-4.1 a RF-4.3 — checklist de devolución y facturación de mora.
+  - name: Carrito y Conserje de Voz
+    description: Carrito de compras, usado también por el Agente 3 (tool calling).
+  - name: Analítica
+    description: KPIs de negocio para Gerencia (Fase 1 y Fase 2).
+
+security:
+  - bearerAuth: []
+
+paths:
+  /catalog/search:
+    get:
+      operationId: searchCatalog
+      summary: Búsqueda de modelos disponibles en el catálogo
+      description: >
+        Endpoint público. También usado por el Agente 3 (Conserje de Voz) vía
+        tool calling para responder solicitudes de búsqueda por voz.
+      tags: [Catálogo e Inventario]
+      security: []
+      x-roles: [público]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Texto de búsqueda libre (nombre, marca, categoría).
+        - name: categoria
+          in: query
+          schema: { type: string }
+        - name: fecha_inicio
+          in: query
+          schema: { type: string, format: date }
+        - name: fecha_fin
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Lista de modelos que cumplen el criterio de búsqueda.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ToolModel" }
+
+  /catalog/models/{id}:
+    get:
+      operationId: getModelById
+      summary: Ficha técnica de un modelo
+      description: Devuelve la ficha técnica completa de un modelo de herramienta, incluida su tarifa diaria/semanal y condiciones de garantía.
+      tags: [Catálogo e Inventario]
+      security: []
+      x-roles: [público]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      responses:
+        "200":
+          description: Ficha técnica del modelo.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolModel" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /inventory/models:
+    post:
+      operationId: createToolModel
+      summary: Registrar ficha técnica de un nuevo modelo (RF-1.1)
+      description: Da de alta un nuevo modelo de herramienta en el catálogo, con sus tarifas y parámetros de garantía y mora.
+      tags: [Catálogo e Inventario]
+      x-roles: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ToolModelInput" }
+      responses:
+        "201":
+          description: Modelo creado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolModel" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inventory/units:
+    post:
+      operationId: createToolUnit
+      summary: Alta de unidad física + generación de QR (RF-1.2)
+      description: Registra una unidad física serializada de un modelo existente y genera su código QR único.
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modelo_id, numero_serie]
+              properties:
+                modelo_id: { type: string, format: uuid }
+                numero_serie: { type: string }
+      responses:
+        "201":
+          description: Unidad física creada, con su UUID y QR generados.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolUnit" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inventory/units/{id}:
+    get:
+      operationId: getToolUnitById
+      summary: Ficha de una unidad física al escanear su QR (RF-1.4)
+      description: Devuelve la ficha de una unidad física, incluida su hoja de vida resumida, a partir del escaneo de su QR.
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, repartidor]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      responses:
+        "200":
+          description: Ficha de la unidad, incluida su hoja de vida resumida.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolUnit" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /inventory/units/{id}/status:
+    patch:
+      operationId: updateToolUnitStatus
+      summary: Cambio de estado de una unidad + registro en hoja de vida (RF-1.3)
+      description: Actualiza el estado de desgaste de una unidad física y crea la entrada correspondiente en su hoja de vida (tool_unit_status_log).
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, repartidor]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado_nuevo]
+              properties:
+                estado_nuevo:
+                  type: string
+                  enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+                fotos_urls:
+                  type: array
+                  items: { type: string, format: uri }
+      responses:
+        "200":
+          description: Estado actualizado; entrada de hoja de vida creada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolUnitStatusLogEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /inventory/check-availability:
+    get:
+      operationId: checkAvailability
+      summary: Disponibilidad de un modelo por rango de fechas
+      description: >
+        Invocado por el Cliente en el flujo de cotización y por los Agentes 2 y 3
+        vía tool calling (TRD §4.2, §4.3).
+      tags: [Logística]
+      x-roles: [cliente, agente-2, agente-3]
+      parameters:
+        - name: modelo_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: fecha_inicio
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: fecha_fin
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Cantidad de unidades disponibles en el rango solicitado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  modelo_id: { type: string, format: uuid }
+                  unidades_disponibles: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /orders/quote:
+    post:
+      operationId: createQuote
+      summary: Cotización de alquiler/venta (RF-2.1)
+      description: Calcula la cotización de un alquiler o venta, desglosando tarifa base, recargo logístico y depósito de garantía.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modelo_id, tipo]
+              properties:
+                modelo_id: { type: string, format: uuid }
+                tipo: { type: string, enum: [alquiler, venta] }
+                fecha_inicio: { type: string, format: date }
+                fecha_fin: { type: string, format: date }
+                direccion_entrega: { type: string }
+                zona_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Cotización desglosada por concepto.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quote" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /orders:
+    post:
+      operationId: createOrder
+      summary: Crear orden (alquiler o venta)
+      description: Crea una orden de alquiler o venta a partir de una cotización aceptada por el cliente.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrderInput" }
+      responses:
+        "201":
+          description: Orden creada en estado pendiente_pago.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /orders/{id}:
+    get:
+      operationId: getOrderById
+      summary: Detalle de una orden
+      description: Devuelve el detalle completo de una orden, incluidos sus ítems.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente-propietario, admin, gerente]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      responses:
+        "200":
+          description: Detalle completo de la orden.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /orders/{id}/pay:
+    post:
+      operationId: payOrder
+      summary: Iniciar pago vía Wompi (PSE/Tarjeta/Contra Entrega) — RF-2.2, RF-2.3
+      description: Inicia el pago de una orden a través de Wompi con el método elegido por el cliente.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [metodo]
+              properties:
+                metodo: { type: string, enum: [pse, tarjeta, contra_entrega] }
+      responses:
+        "200":
+          description: >
+            Transacción iniciada. Con tarjeta, el depósito de garantía se
+            ejecuta como hold; con PSE se cobra y se reembolsa tras
+            inspección satisfactoria; con contra entrega la transacción
+            queda reservada hasta la confirmación del Repartidor.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /orders/{id}/confirm-cod-payment:
+    post:
+      operationId: confirmCodPayment
+      summary: Confirmar pago contra entrega (RF-2.4)
+      description: Confirma, desde la PWA del Repartidor, que el pago contra entrega fue recibido.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [repartidor]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      responses:
+        "200":
+          description: Pago contra entrega confirmado; el Payment pasa a estado capturado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /rentals/extend:
+    post:
+      operationId: extendRental
+      summary: Extender un alquiler activo
+      description: >
+        Invocado directamente por el Cliente o por el Agente 2 (WhatsApp) vía
+        tool calling tras confirmar disponibilidad futura (TRD §4.2).
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente, agente-2]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id, nueva_fecha_fin]
+              properties:
+                order_id: { type: string, format: uuid }
+                nueva_fecha_fin: { type: string, format: date }
+                modo_cobro:
+                  type: string
+                  enum: [link_pago, acumular_a_factura_final]
+      responses:
+        "200":
+          description: Orden extendida.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /fleet/vehicles:
+    post:
+      operationId: createVehicle
+      summary: Registrar vehículo (RF-3.1)
+      description: Registra un vehículo de la flota con su capacidad de carga y zonas asignadas.
+      tags: [Logística]
+      x-roles: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VehicleInput" }
+      responses:
+        "201":
+          description: Vehículo registrado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Vehicle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /logistics/pending-orders:
+    get:
+      operationId: getPendingOrders
+      summary: Pedidos confirmados sin ruta asignada
+      description: Consumido por el Agente 1 (batch nocturno) vía tool calling (TRD §4.1).
+      tags: [Logística]
+      x-roles: [agente-1, admin]
+      responses:
+        "200":
+          description: Lista de pedidos pendientes de asignación de ruta.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Shipment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /logistics/assign-routes:
+    post:
+      operationId: assignRoutes
+      summary: Publicar rutas del día (RF-3.1)
+      description: Invocado por el Agente 1 tras optimizar por zona y capacidad de vehículo.
+      tags: [Logística]
+      x-roles: [agente-1, admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/RouteInput" }
+      responses:
+        "201":
+          description: Rutas publicadas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Route" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /logistics/shipments:
+    get:
+      operationId: getShipments
+      summary: Panel de seguimiento de envíos en tiempo real (RF-3.3)
+      description: >
+        El listado inicial se sirve por este endpoint; las actualizaciones en
+        vivo del panel se reciben por Supabase Realtime, no por polling.
+      tags: [Logística]
+      x-roles: [gerente, admin]
+      responses:
+        "200":
+          description: Envíos en curso con su estado actual.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Shipment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inspections:
+    post:
+      operationId: createInspection
+      summary: Registrar checklist de salida/recepción (RF-4.2)
+      description: Registra el checklist de inspección de salida o recepción de una unidad física, con evidencia fotográfica.
+      tags: [Inspección y Mora]
+      x-roles: [almacenista, repartidor]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InspectionChecklistInput" }
+      responses:
+        "201":
+          description: >
+            Checklist registrado. Si `hallazgos` indica daño o pieza
+            faltante, se dispara el evento de dominio InspeccionConHallazgo
+            que ejecuta la garantía (GarantiaExecutionHandler, ver Esquema
+            de Backend §5).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InspectionChecklist" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /billing/mora/{orderId}:
+    get:
+      operationId: getMoraByOrder
+      summary: Consultar comprobante de mora generado (RF-4.3)
+      description: Devuelve el comprobante de mora generado para una orden, si el MoraCalculatorJob ya lo emitió.
+      tags: [Inspección y Mora]
+      x-roles: [cliente, admin]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Comprobante de mora de la orden, si existe.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id: { type: string, format: uuid }
+                  dias_retraso: { type: number }
+                  interes_mora_dia: { type: number }
+                  monto_mora: { type: integer, description: "COP" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /cart:
+    get:
+      operationId: getCart
+      summary: Ver carrito activo
+      description: Devuelve el carrito de compras activo del cliente autenticado.
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      responses:
+        "200":
+          description: Carrito del cliente autenticado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /cart/add-item:
+    post:
+      operationId: addCartItem
+      summary: Agregar producto al carrito
+      description: Invocado directamente por el Cliente o por el Agente 3 vía tool calling (TRD §4.3).
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente, agente-3]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartItem" }
+      responses:
+        "200":
+          description: Carrito actualizado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /analytics/revenue:
+    get:
+      operationId: getRevenue
+      summary: Ingresos totales desglosados (Fase 1)
+      description: Devuelve los ingresos totales del periodo solicitado, desglosados por venta, alquiler y mora (RF de Analítica, Fase 1).
+      tags: [Analítica]
+      x-roles: [gerente, admin]
+      parameters:
+        - name: periodo
+          in: query
+          schema: { type: string, description: "p. ej. 2026-08 o rango ISO" }
+      responses:
+        "200":
+          description: Ingresos desglosados por venta, alquiler y mora.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ventas_directas: { type: integer, description: "COP" }
+                  tarifas_alquiler: { type: integer, description: "COP" }
+                  cobros_mora: { type: integer, description: "COP" }
+                  total: { type: integer, description: "COP" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /analytics/roi:
+    get:
+      operationId: getRoi
+      summary: ROI por herramienta (Fase 2)
+      description: Devuelve el ROI calculado por modelo de herramienta (Fase 2).
+      tags: [Analítica]
+      x-roles: [gerente, admin]
+      parameters:
+        - name: modelo_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ROI calculado por modelo/SKU.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    modelo_id: { type: string, format: uuid }
+                    roi_pct: { type: number }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /analytics/utilization:
+    get:
+      operationId: getUtilization
+      summary: Tasa de utilización de inventario (Fase 2)
+      description: Devuelve la tasa de utilización de inventario, global y por modelo (Fase 2).
+      tags: [Analítica]
+      x-roles: [gerente, admin]
+      responses:
+        "200":
+          description: Tasa de utilización por modelo y global.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  utilizacion_global_pct: { type: number }
+                  por_modelo:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        modelo_id: { type: string, format: uuid }
+                        utilizacion_pct: { type: number }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /analytics/delivery-productivity:
+    get:
+      operationId: getDeliveryProductivity
+      summary: Productividad de repartidores (Fase 2)
+      description: Devuelve la productividad de cada repartidor del periodo solicitado (Fase 2).
+      tags: [Analítica]
+      x-roles: [gerente, admin]
+      responses:
+        "200":
+          description: Productividad por repartidor.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    repartidor_id: { type: string, format: uuid }
+                    entregas_exitosas: { type: integer }
+                    ruta_asignada: { type: integer }
+                    tiempo_promedio_min: { type: number }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT emitido por Supabase Auth. Los endpoints invocados por agentes de
+        IA (x-roles con prefijo "agente-") usan un JWT de servicio con scope
+        restringido a las tools que ese agente tiene permitido llamar (TRD §4).
+
+  parameters:
+    idPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Solicitud inválida (validación de DTO fallida).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: JWT ausente o inválido.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Rol autenticado sin permiso para esta operación (guard RBAC).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    ToolModel:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+        marca: { type: string }
+        categoria: { type: string }
+        potencia_w: { type: number }
+        peso_kg: { type: number }
+        volumen_m3: { type: number }
+        tarifa_dia: { type: integer, description: "COP" }
+        tarifa_semana: { type: integer, description: "COP" }
+        costo_compra: { type: integer, description: "COP" }
+        deposito_pct: { type: number }
+        interes_mora_dia: { type: number }
+        manual_pdf_url: { type: string, format: uri }
+        disponible_para_venta: { type: boolean }
+
+    ToolModelInput:
+      allOf:
+        - $ref: "#/components/schemas/ToolModel"
+      required: [nombre, marca, categoria, tarifa_dia]
+
+    ToolUnit:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        modelo_id: { type: string, format: uuid }
+        numero_serie: { type: string }
+        estado:
+          type: string
+          enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+        fecha_ingreso: { type: string, format: date }
+        qr_code_url: { type: string, format: uri }
+
+    ToolUnitStatusLogEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        unidad_id: { type: string, format: uuid }
+        estado_anterior:
+          type: string
+          enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+        estado_nuevo:
+          type: string
+          enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+        fotos_urls:
+          type: array
+          items: { type: string, format: uri }
+        autor_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        rol:
+          type: string
+          enum: [admin, gerente, almacenista, repartidor, cliente]
+        nombre: { type: string }
+        email: { type: string, format: email }
+        telefono: { type: string }
+        tipo_cliente:
+          type: string
+          nullable: true
+          enum: [B2C, B2B]
+
+    Order:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cliente_id: { type: string, format: uuid }
+        tipo: { type: string, enum: [alquiler, venta] }
+        estado:
+          type: string
+          enum: [pendiente_pago, confirmada, en_curso, devuelta, cerrada, cancelada]
+        fecha_inicio: { type: string, format: date, nullable: true }
+        fecha_fin: { type: string, format: date, nullable: true }
+        return_mode:
+          type: string
+          enum: [en_sede, recogida_domicilio]
+        direccion_entrega: { type: string }
+        zona_id: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrderItem" }
+
+    OrderInput:
+      type: object
+      required: [tipo, modelo_id]
+      properties:
+        modelo_id: { type: string, format: uuid }
+        tipo: { type: string, enum: [alquiler, venta] }
+        fecha_inicio: { type: string, format: date }
+        fecha_fin: { type: string, format: date }
+        return_mode:
+          type: string
+          enum: [en_sede, recogida_domicilio]
+        direccion_entrega: { type: string }
+        zona_id: { type: string, format: uuid }
+
+    OrderItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        unidad_id: { type: string, format: uuid }
+        tarifa_aplicada: { type: integer, description: "COP" }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        tipo:
+          type: string
+          enum: [pago_alquiler, pago_venta, deposito_garantia, cobro_mora]
+        metodo: { type: string, enum: [pse, tarjeta, contra_entrega] }
+        estado:
+          type: string
+          enum: [pendiente, hold, capturado, reembolsado, fallido]
+        monto: { type: integer, description: "COP" }
+        wompi_transaction_id: { type: string, nullable: true }
+
+    Quote:
+      type: object
+      properties:
+        modelo_id: { type: string, format: uuid }
+        tarifa_base: { type: integer, description: "COP" }
+        recargo_logistico: { type: integer, description: "COP" }
+        deposito_garantia: { type: integer, description: "COP" }
+        total: { type: integer, description: "COP" }
+        desglose:
+          type: array
+          items:
+            type: object
+            properties:
+              concepto: { type: string }
+              monto: { type: integer, description: "COP" }
+
+    Vehicle:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tipo: { type: string, enum: [moto, camioneta, camion] }
+        capacidad_kg: { type: number }
+        capacidad_m3: { type: number }
+        zonas:
+          type: array
+          items: { type: string, format: uuid }
+        repartidor_id: { type: string, format: uuid, nullable: true }
+
+    VehicleInput:
+      allOf:
+        - $ref: "#/components/schemas/Vehicle"
+      required: [tipo, capacidad_kg, capacidad_m3]
+
+    Shipment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        vehiculo_id: { type: string, format: uuid, nullable: true }
+        tipo: { type: string, enum: [entrega, recogida] }
+        estado_envio:
+          type: string
+          enum: [pendiente_asignacion, en_ruta_entrega, entregado, en_ruta_recogida, retornado]
+
+    Route:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        vehiculo_id: { type: string, format: uuid }
+        fecha: { type: string, format: date }
+        paradas:
+          type: array
+          items: { type: string, format: uuid, description: "shipment_id, en orden de secuencia" }
+        generada_por: { type: string, enum: [agente_1, manual] }
+
+    RouteInput:
+      type: object
+      required: [vehiculo_id, fecha, paradas]
+      properties:
+        vehiculo_id: { type: string, format: uuid }
+        fecha: { type: string, format: date }
+        paradas:
+          type: array
+          items: { type: string, format: uuid }
+
+    InspectionChecklist:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        unidad_id: { type: string, format: uuid }
+        shipment_id: { type: string, format: uuid }
+        tipo: { type: string, enum: [salida, recepcion] }
+        hallazgos:
+          type: array
+          items:
+            type: object
+            properties:
+              descripcion: { type: string }
+              severidad: { type: string, enum: [leve, moderada, grave] }
+        fotos_urls:
+          type: array
+          items: { type: string, format: uri }
+        garantia_ejecutada: { type: boolean }
+
+    InspectionChecklistInput:
+      type: object
+      required: [unidad_id, shipment_id, tipo]
+      properties:
+        unidad_id: { type: string, format: uuid }
+        shipment_id: { type: string, format: uuid }
+        tipo: { type: string, enum: [salida, recepcion] }
+        hallazgos:
+          type: array
+          items:
+            type: object
+            properties:
+              descripcion: { type: string }
+              severidad: { type: string, enum: [leve, moderada, grave] }
+        fotos_urls:
+          type: array
+          items: { type: string, format: uri }
+
+    CartItem:
+      type: object
+      required: [modelo_id, cantidad]
+      properties:
+        modelo_id: { type: string, format: uuid }
+        cantidad: { type: integer, minimum: 1 }
+        dias: { type: integer, minimum: 1 }
+
+    Cart:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CartItem" }
+        total: { type: integer, description: "COP" }
