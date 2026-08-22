@@ -1,0 +1,26 @@
+# CODEOWNERS — completa cada rol con el usuario de GitHub real del equipo
+# (Plan de Implementación §5). Mientras no se asignen, estas líneas quedan
+# comentadas para no bloquear revisiones por falta de dueño.
+
+# Arquitecto / Tech Lead — revisión transversal y del paquete de documentación
+# *                          @<tech-lead>
+# /docs/                     @<tech-lead>
+# /openapi.yaml              @<tech-lead>
+# /features/                 @<tech-lead>
+
+# Backend (NestJS)
+# /apps/api/                 @<backend-dev>
+# /apps/workers/             @<backend-dev>
+
+# Frontend (Angular)
+# /apps/shell/                @<frontend-dev>
+# /apps/portal-cliente/        @<frontend-dev>
+# /apps/panel-admin/            @<frontend-dev>
+# /apps/pwa-logistica/           @<frontend-dev>
+# /packages/shared-ui/            @<frontend-dev>
+
+# Ingeniero de Agentes de IA
+# /apps/api/src/agents/            @<ai-engineer>
+
+# CI/CD
+# /.github/                          @<tech-lead>
