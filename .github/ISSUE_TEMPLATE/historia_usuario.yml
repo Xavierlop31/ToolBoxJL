@@ -1,0 +1,84 @@
+name: "📋 Historia de Usuario"
+description: Historia de usuario del PRD, lista para tomar en un sprint.
+title: "HU-<Épica>.<n>: "
+labels: ["historia-usuario"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Copia el contenido tal como aparece en el PRD (§5) para esta historia.
+        No inventes campos: si algo no está en el PRD, dilo en la descripción.
+
+  - type: dropdown
+    id: epica
+    attributes:
+      label: Épica
+      options:
+        - "Épica 1 — Catálogo e Inventario Serializado (QR)"
+        - "Épica 2 — Cotización, Alquiler y Venta"
+        - "Épica 3 — Pagos y Depósito de Garantía"
+        - "Épica 4 — Logística y Flota"
+        - "Épica 5 — Devoluciones, Inspección y Facturación de Mora"
+        - "Épica 6 — Autenticación y Seguridad de Cuenta"
+        - "Épica 7 — Tableros de Control, KPIs y Analítica"
+        - "Épica 8 — Agente 1, Programador Inteligente de Rutas"
+        - "Épica 9 — Agente 2, Asistente Bidireccional de WhatsApp"
+        - "Épica 10 — Agente 3, Conserje Web de Búsqueda y Venta por Voz"
+    validations:
+      required: true
+
+  - type: input
+    id: rf
+    attributes:
+      label: Requisito Funcional (RF) del ERS
+      placeholder: "p. ej. RF-1.2"
+
+  - type: textarea
+    id: historia
+    attributes:
+      label: Historia de usuario
+      placeholder: "Como <rol>, quiero <acción> para <beneficio>."
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Tal como están en el PRD. Si ya existe el escenario Gherkin equivalente, referencia el archivo (features/<archivo>.feature).
+    validations:
+      required: true
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      options: ["Alta", "Media"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: fase
+    attributes:
+      label: Fase
+      options: ["Fase 1", "Fase 2"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: Sprint
+      options:
+        - "Sprint 0"
+        - "Sprint 1"
+        - "Sprint 2"
+        - "Sprint 3"
+        - "Sprint 4"
+        - "Sprint 5"
+        - "Sprint 6"
+        - "Sprint 7"
+        - "Sprint 8"
+        - "Sprint 9"
+        - "Sprint 10"
+        - "Sprint 11"

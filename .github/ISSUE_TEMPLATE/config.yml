@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Cómo contribuir
+    url: https://github.com/Xavierlop31/ToolBoxJL/blob/main/CONTRIBUTING.md
+    about: Flujo de rama, PR y Definition of Done ampliada por SDD antes de reportar o tomar algo.

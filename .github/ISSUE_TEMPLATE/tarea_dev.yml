@@ -1,0 +1,52 @@
+name: "🛠️ Tarea de sprint"
+description: Reporta una tarea de desarrollo que no es directamente una historia de usuario nueva (refactor, spike, deuda técnica, configuración).
+title: "TASK: "
+labels: ["tarea"]
+body:
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: Sprint
+      options:
+        - "Sprint 0"
+        - "Sprint 1"
+        - "Sprint 2"
+        - "Sprint 3"
+        - "Sprint 4"
+        - "Sprint 5"
+        - "Sprint 6"
+        - "Sprint 7"
+        - "Sprint 8"
+        - "Sprint 9"
+        - "Sprint 10"
+        - "Sprint 11"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options: ["backend", "frontend", "agentes-ia", "infra-cicd", "docs"]
+    validations:
+      required: true
+
+  - type: input
+    id: historia
+    attributes:
+      label: Historia de usuario relacionada (si aplica)
+      placeholder: "#N"
+
+  - type: input
+    id: estimacion
+    attributes:
+      label: Estimación
+      placeholder: "p. ej. 1 día, 4 horas"
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: Qué hay que hacer y por qué.
+    validations:
+      required: true
