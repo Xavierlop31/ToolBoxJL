@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       # La versión de pnpm se toma del campo "packageManager" de package.json
       # (pnpm@9.15.0) — no se repite aquí para evitar el error
@@ -33,11 +33,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Sprint 0 en adelante: a medida que existan apps/* y packages/*, este
-      # comando afecta solo los paquetes cambiados respecto a main (--filter).
-      # Antes de Sprint 0 (sin workspaces reales) turbo no encuentra tareas y
-      # termina en 0, sin marcar el job en rojo.
+      # comando afecta solo los paquetes cambiados respecto a la rama base del
+      # PR (main o dev, segun corresponda) — de ahi que el checkout use
+      # fetch-depth: 0 (si no, origin/<base> no existe en el runner y turbo
+      # falla con "Unable to query SCM"). Antes de Sprint 0 (sin workspaces
+      # reales) turbo no encuentra tareas y termina en 0, sin marcar el job
+      # en rojo.
       - name: Lint, test y build de los paquetes afectados
-        run: pnpm turbo run lint test build --filter=...[origin/main]
+        run: pnpm turbo run lint test build --filter=...[origin/${{ github.base_ref }}]
         if: github.event_name == 'pull_request'
 
       - name: Lint, test y build (rama main completa)
