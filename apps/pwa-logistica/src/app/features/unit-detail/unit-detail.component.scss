@@ -1,0 +1,11 @@
+.unit-detail {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--tbjl-spacing-6, 1.5rem);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--tbjl-spacing-3, 0.75rem);
+}

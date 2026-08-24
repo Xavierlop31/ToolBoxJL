@@ -1,0 +1,10 @@
+{
+  "name": "ToolBox JL — PWA Logística",
+  "short_name": "TBJL Logística",
+  "description": "Escaneo de QR y cambio de estado de unidades físicas — Almacenista/Repartidor.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F7F8",
+  "theme_color": "#F2600C",
+  "icons": []
+}
