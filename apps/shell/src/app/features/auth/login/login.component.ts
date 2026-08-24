@@ -1,0 +1,98 @@
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+
+import { AuthService } from '../../../core/auth/auth.service';
+
+type AuthMode = 'signIn' | 'signUp';
+
+/**
+ * Pantalla de login/registro — HU-6.1 (Issue #17).
+ * Cubre features/06_autenticacion_seguridad.feature, escenario "Cliente
+ * inicia sesión con correo/contraseña o con Google". El segundo escenario
+ * (OTP WhatsApp) es Sprint 6 y no se implementa acá.
+ */
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
+})
+export class LoginComponent {
+  private readonly formBuilder = inject(FormBuilder);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  readonly mode = signal<AuthMode>('signIn');
+  readonly loading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly infoMessage = signal<string | null>(null);
+
+  readonly form = this.formBuilder.nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(6)]],
+  });
+
+  get isSignUp(): boolean {
+    return this.mode() === 'signUp';
+  }
+
+  toggleMode(): void {
+    this.mode.set(this.isSignUp ? 'signIn' : 'signUp');
+    this.errorMessage.set(null);
+    this.infoMessage.set(null);
+  }
+
+  async submit(): Promise<void> {
+    if (this.form.invalid || this.loading()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.loading.set(true);
+    this.errorMessage.set(null);
+    this.infoMessage.set(null);
+
+    const { email, password } = this.form.getRawValue();
+    const result = this.isSignUp
+      ? await this.auth.signUp(email, password)
+      : await this.auth.signInWithPassword(email, password);
+
+    this.loading.set(false);
+
+    if (result.error) {
+      this.errorMessage.set(result.error.message);
+      return;
+    }
+
+    if (this.isSignUp) {
+      this.infoMessage.set(
+        'Cuenta creada. Revisá tu correo para confirmar el registro.',
+      );
+      return;
+    }
+
+    await this.router.navigateByUrl('/home');
+  }
+
+  async continueWithGoogle(): Promise<void> {
+    if (this.loading()) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.errorMessage.set(null);
+    this.infoMessage.set(null);
+
+    const result = await this.auth.signInWithGoogle();
+
+    this.loading.set(false);
+
+    if (result.error) {
+      this.errorMessage.set(result.error.message);
+    }
+    // En éxito, Supabase Auth redirige el navegador a Google y de vuelta a
+    // la app — no hay navegación manual que hacer acá.
+  }
+}
