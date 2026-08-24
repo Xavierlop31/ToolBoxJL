@@ -1,0 +1,10 @@
+<main class="scanner" data-testid="qr-scanner-screen">
+  <h1>Escanear unidad</h1>
+  <p>Apuntá la cámara al código QR impreso en la unidad física.</p>
+
+  @if (error()) {
+    <p class="form-error" role="alert">{{ error() }}</p>
+  }
+
+  <video #video class="scanner-video" autoplay muted playsinline></video>
+</main>

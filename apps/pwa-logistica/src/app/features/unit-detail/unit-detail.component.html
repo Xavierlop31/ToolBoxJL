@@ -1,0 +1,65 @@
+<main class="unit-detail">
+  @if (loading()) {
+    <p role="status">Cargando ficha de la unidad…</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (unit(); as unit) {
+    <h1>Unidad {{ unit.numero_serie }}</h1>
+    <p class="unit-meta" data-testid="unit-current-status">Estado actual: {{ unit.estado }}</p>
+
+    <section aria-labelledby="status-change-title">
+      <h2 id="status-change-title">Cambiar estado</h2>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="field">
+          <label for="estadoNuevo">Nuevo estado</label>
+          <select id="estadoNuevo" formControlName="estadoNuevo">
+            @for (estado of estados; track estado) {
+              <option [value]="estado">{{ estado }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fotos">Fotos de evidencia (opcional)</label>
+          <input
+            id="fotos"
+            type="file"
+            accept="image/*"
+            multiple
+            (change)="onPhotosSelected($event)"
+          />
+          @if (selectedPhotoCount() > 0) {
+            <p class="photo-count">{{ selectedPhotoCount() }} foto(s) seleccionada(s).</p>
+          }
+        </div>
+
+        <button type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Guardando…' : 'Registrar cambio de estado' }}
+        </button>
+      </form>
+
+      @if (submitError()) {
+        <p class="form-error" role="alert">{{ submitError() }}</p>
+      }
+
+      @if (queuedOffline()) {
+        <p class="form-info" role="status" data-testid="offline-queued-message">
+          Sin conexión: el cambio quedó encolado y se va a sincronizar apenas
+          vuelva la conectividad.
+        </p>
+      }
+
+      @if (lastLogEntry(); as entry) {
+        <p role="status" data-testid="status-change-confirmation">
+          Cambio registrado: {{ entry.estado_anterior }} → {{ entry.estado_nuevo }}
+          el {{ entry.created_at }} por {{ entry.autor_id }}.
+        </p>
+      }
+    </section>
+  }
+</main>

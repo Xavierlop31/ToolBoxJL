@@ -1,0 +1,52 @@
+{
+  "name": "pwa-logistica",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test --watch=false --browsers=ChromeHeadless && pnpm run test:bdd",
+    "test:bdd": "playwright install --with-deps chromium && playwright test --config=e2e-bdd/playwright.config.ts",
+    "lint": "ng lint"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular-architects/native-federation": "18.2.7",
+    "@angular/animations": "^18.2.0",
+    "@angular/common": "^18.2.0",
+    "@angular/compiler": "^18.2.0",
+    "@angular/core": "^18.2.0",
+    "@angular/forms": "^18.2.0",
+    "@angular/platform-browser": "^18.2.0",
+    "@angular/platform-browser-dynamic": "^18.2.0",
+    "@angular/router": "^18.2.0",
+    "@angular/service-worker": "^18.2.0",
+    "@softarc/native-federation-node": "^2.0.10",
+    "@toolboxjl/ui-kit": "workspace:*",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
+    "es-module-shims": "^1.5.12",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.14.10"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^18.2.21",
+    "@angular/cli": "^18.2.21",
+    "@angular/compiler-cli": "^18.2.0",
+    "@playwright/test": "^1.49.0",
+    "@types/jasmine": "~5.1.0",
+    "angular-eslint": "18.4.3",
+    "eslint": "^9.15.0",
+    "jasmine-core": "~5.2.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "playwright-bdd": "^7.5.0",
+    "typescript": "~5.5.2",
+    "typescript-eslint": "8.16.0"
+  }
+}

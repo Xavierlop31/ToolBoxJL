@@ -1,0 +1,43 @@
+<main class="model-detail">
+  @if (loading()) {
+    <p role="status">Cargando ficha del modelo…</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (model(); as model) {
+    <h1>{{ model.nombre }}</h1>
+    <p class="model-meta">{{ model.marca }} · {{ model.categoria }}</p>
+    <p class="model-rate">Tarifa diaria: {{ model.tarifa_dia }} COP</p>
+
+    <section class="availability" aria-labelledby="availability-title">
+      <h2 id="availability-title">Consultar disponibilidad</h2>
+
+      <form [formGroup]="form" (ngSubmit)="checkAvailability()" novalidate>
+        <div class="field">
+          <label for="fechaInicio">Fecha inicio</label>
+          <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+        </div>
+        <div class="field">
+          <label for="fechaFin">Fecha fin</label>
+          <input id="fechaFin" type="date" formControlName="fechaFin" />
+        </div>
+        <button type="submit" [disabled]="availabilityLoading()">
+          {{ availabilityLoading() ? 'Consultando…' : 'Consultar disponibilidad' }}
+        </button>
+      </form>
+
+      @if (availabilityError()) {
+        <p class="form-error" role="alert">{{ availabilityError() }}</p>
+      }
+
+      @if (unidadesDisponibles() !== null) {
+        <p data-testid="availability-result" role="status">
+          {{ unidadesDisponibles() }} unidades disponibles para el rango seleccionado.
+        </p>
+      }
+    </section>
+  }
+</main>
