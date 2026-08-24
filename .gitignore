@@ -34,3 +34,6 @@ coverage/
 # Railway / Vercel local
 .vercel/
 .railway/
+
+# Git worktrees used by Claude Code subagents
+.claude/worktrees/
