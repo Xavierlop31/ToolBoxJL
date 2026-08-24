@@ -32,6 +32,16 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      # Sprint 1 en adelante: apps con Playwright-BDD (portal-cliente,
+      # pwa-logistica) instalan Chromium + dependencias de sistema en su
+      # propio script de test. Si turbo corre esos tests en paralelo, dos
+      # `playwright install --with-deps` chocan por el lock de apt
+      # ("Could not get lock /var/lib/apt/lists/lock"). Se instala una sola
+      # vez acá, antes de turbo — el binario y las deps de sistema quedan
+      # cacheados y cada `playwright install` posterior es un no-op rápido.
+      - name: Instalar Chromium + deps de sistema para Playwright (una sola vez)
+        run: npx -y playwright install --with-deps chromium
+
       # Sprint 0 en adelante: a medida que existan apps/* y packages/*, este
       # comando afecta solo los paquetes cambiados respecto a la rama base del
       # PR (main o dev, segun corresponda) — de ahi que el checkout use
