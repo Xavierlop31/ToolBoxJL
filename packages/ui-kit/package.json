@@ -1,0 +1,28 @@
+{
+  "name": "@toolboxjl/ui-kit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Design tokens de ToolBox JL, compartidos entre apps/shell y los futuros remotes de Native Federation (portal-cliente, panel-admin, pwa-logistica). Sprint 0 entrega solo tokens; los componentes Angular compartidos se agregan en un sprint posterior (ver README.md).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens.css": "./src/tokens/design-tokens.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --ext .ts",
+    "test": "pnpm run build && node --test dist/tokens/design-tokens.test.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/node": "^20.16.0",
+    "eslint": "^9.15.0",
+    "typescript": "~5.5.2",
+    "typescript-eslint": "^8.16.0"
+  }
+}
