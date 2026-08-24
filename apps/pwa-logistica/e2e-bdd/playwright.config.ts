@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import { defineBddConfig } from 'playwright-bdd';
 
@@ -12,8 +13,9 @@ import { defineBddConfig } from 'playwright-bdd';
  * cámara real, requisito explícito para correr en CI.
  */
 const testDir = defineBddConfig({
-  features: '../../../features/01_catalogo_inventario.feature',
-  steps: 'steps/*.steps.ts',
+  featuresRoot: path.join(__dirname, '../../../features'),
+  features: path.join(__dirname, '../../../features/01_catalogo_inventario.feature'),
+  steps: path.join(__dirname, 'steps/*.steps.ts'),
   tags: '@RF-1.2 or @RF-1.3',
 });
 
@@ -28,7 +30,7 @@ export default defineConfig({
     permissions: ['camera'],
   },
   webServer: {
-    command: 'pnpm exec ng serve --configuration development --port 4202',
+    command: 'pnpm exec ng serve --port 4202',
     url: 'http://localhost:4202',
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,

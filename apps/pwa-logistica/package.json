@@ -7,7 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false --browsers=ChromeHeadless && pnpm run test:bdd",
-    "test:bdd": "playwright install --with-deps chromium && playwright test --config=e2e-bdd/playwright.config.ts",
+    "test:bdd": "playwright install --with-deps chromium && bddgen --config=e2e-bdd/playwright.config.ts && playwright test --config=e2e-bdd/playwright.config.ts",
     "lint": "ng lint"
   },
   "private": true,
@@ -45,7 +45,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "playwright-bdd": "^7.5.0",
+    "playwright-bdd": "^9.2.0",
     "typescript": "~5.5.2",
     "typescript-eslint": "8.16.0"
   }

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import { defineBddConfig } from 'playwright-bdd';
 
@@ -13,8 +14,9 @@ import { defineBddConfig } from 'playwright-bdd';
  * del Tech Lead #2) — no se conecta acá.
  */
 const testDir = defineBddConfig({
-  features: '../../../features/01_catalogo_inventario.feature',
-  steps: 'steps/*.steps.ts',
+  featuresRoot: path.join(__dirname, '../../../features'),
+  features: path.join(__dirname, '../../../features/01_catalogo_inventario.feature'),
+  steps: path.join(__dirname, 'steps/*.steps.ts'),
   tags: '@RF-1.4',
 });
 
@@ -28,7 +30,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm exec ng serve --configuration development --port 4201',
+    command: 'pnpm exec ng serve --port 4201',
     url: 'http://localhost:4201',
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,
