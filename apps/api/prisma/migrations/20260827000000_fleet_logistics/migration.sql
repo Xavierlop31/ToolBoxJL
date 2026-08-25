@@ -101,43 +101,38 @@ ALTER TABLE "public"."vehicles" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."shipments" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."routes" ENABLE ROW LEVEL SECURITY;
 
+-- Helper: agrupa la condición de "es staff operativo" (admin/gerente/
+-- almacenista/repartidor) usada en varias policies SELECT de este archivo,
+-- para no repetir el mismo literal de roles en cada CREATE POLICY
+-- (SonarCloud plsql:S1192).
+CREATE OR REPLACE FUNCTION public.is_staff() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
+  );
+$$;
+
 -- vehicles / routes: sin política de cliente (no aplica — un cliente nunca
 -- necesita ver la flota ni las rutas directamente, mismo criterio que el
 -- prompt del Tech Lead). Solo el staff operativo puede ver estas tablas.
 CREATE POLICY "Staff can view all vehicles"
 ON "public"."vehicles"
 FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
-  )
-);
+USING (public.is_staff());
 
 CREATE POLICY "Staff can view all routes"
 ON "public"."routes"
 FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
-  )
-);
+USING (public.is_staff());
 
 -- shipments: el staff ve todos; el cliente ve el envío de SU propia orden
 -- (mismo criterio de join que la policy de "payments" del Sprint 3).
 CREATE POLICY "Staff can view all shipments"
 ON "public"."shipments"
 FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
-  )
-);
+USING (public.is_staff());
 
 CREATE POLICY "Users can view shipment of own orders"
 ON "public"."shipments"
