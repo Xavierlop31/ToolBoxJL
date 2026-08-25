@@ -29,8 +29,13 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # Versiones fijadas a las mismas ya resueltas por @cucumber/cucumber en
+      # pnpm-lock.yaml (workspace) — evita instalar código no auditado desde
+      # un rango de versión sin fijar (githubactions:S8543/S8544) y bloquea
+      # scripts de instalación arbitrarios de las dependencias transitivas
+      # (githubactions:S6505); ninguno de estos dos paquetes usa postinstall.
       - name: Instalar validador
-        run: npm install --no-save @cucumber/gherkin @cucumber/messages
+        run: npm install --no-save --ignore-scripts @cucumber/gherkin@30.0.4 @cucumber/messages@27.2.0
 
       - name: Validar features/*.feature
         run: node scripts/validate-gherkin.mjs

@@ -26,6 +26,17 @@ describe("loadSupabaseAuthConfig", () => {
     );
   });
 
+  it("recorta múltiples barras finales en SUPABASE_URL antes de derivar las URLs", () => {
+    const config = loadSupabaseAuthConfig({
+      SUPABASE_URL: "https://proyecto.supabase.co///",
+    } as NodeJS.ProcessEnv);
+
+    expect(config.jwksUri).toBe(
+      "https://proyecto.supabase.co/auth/v1/.well-known/jwks.json",
+    );
+    expect(config.issuer).toBe("https://proyecto.supabase.co/auth/v1");
+  });
+
   it("usa SUPABASE_JWT_AUDIENCE cuando está definida", () => {
     const config = loadSupabaseAuthConfig({
       SUPABASE_URL: "https://proyecto.supabase.co",

@@ -209,7 +209,7 @@ When("el MoraCalculatorJob se ejecuta", async function (this: ToolboxWorld) {
 });
 
 Then(
-  "el sistema calcula los días\\/horas de retraso multiplicados por el interés de mora configurado del modelo",
+  String.raw`el sistema calcula los días\/horas de retraso multiplicados por el interés de mora configurado del modelo`,
   function (this: ToolboxWorld) {
     assert.ok(this.ultimosComprobantesMora);
     const comprobante = this.ultimosComprobantesMora!.find((p) => p.order_id === this.ultimaOrden!.id);

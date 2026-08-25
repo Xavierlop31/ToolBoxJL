@@ -50,26 +50,28 @@ export class OfflineQueueService {
   private dbPromise: Promise<IDBDatabase> | null = null;
 
   private open(): Promise<IDBDatabase> {
-    if (!this.dbPromise) {
-      this.dbPromise = new Promise((resolve, reject) => {
-        if (typeof indexedDB === 'undefined') {
-          reject(new Error('IndexedDB no disponible en este entorno.'));
-          return;
+    // dbPromise, una vez creada, es siempre un objeto Promise (nunca
+    // falsy) — solo puede ser `null` antes de la primera apertura, así que
+    // `??=` es equivalente al `if (!this.dbPromise)` anterior.
+    this.dbPromise ??= new Promise((resolve, reject) => {
+      if (typeof indexedDB === 'undefined') {
+        reject(new Error('IndexedDB no disponible en este entorno.'));
+        return;
+      }
+      const request = indexedDB.open(this.dbName, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
         }
-        const request = indexedDB.open(this.dbName, 1);
-        request.onupgradeneeded = () => {
-          const db = request.result;
-          if (!db.objectStoreNames.contains(this.storeName)) {
-            db.createObjectStore(this.storeName, {
-              keyPath: 'id',
-              autoIncrement: true,
-            });
-          }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () =>
+        reject(request.error ?? new Error('No se pudo abrir la base de datos IndexedDB.'));
+    });
     return this.dbPromise;
   }
 
@@ -79,7 +81,8 @@ export class OfflineQueueService {
       const tx = db.transaction(this.storeName, 'readwrite');
       tx.objectStore(this.storeName).add(item);
       tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+      tx.onerror = () =>
+        reject(tx.error ?? new Error('No se pudo encolar el cambio de estado en IndexedDB.'));
     });
   }
 
@@ -89,7 +92,8 @@ export class OfflineQueueService {
       const tx = db.transaction(this.storeName, 'readonly');
       const req = tx.objectStore(this.storeName).getAll();
       req.onsuccess = () => resolve(req.result as QueuedMutation[]);
-      req.onerror = () => reject(req.error);
+      req.onerror = () =>
+        reject(req.error ?? new Error('No se pudo leer la cola de cambios pendientes de IndexedDB.'));
     });
   }
 
@@ -99,7 +103,8 @@ export class OfflineQueueService {
       const tx = db.transaction(this.storeName, 'readwrite');
       tx.objectStore(this.storeName).delete(id);
       tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+      tx.onerror = () =>
+        reject(tx.error ?? new Error('No se pudo eliminar el cambio de estado de la cola de IndexedDB.'));
     });
   }
 }

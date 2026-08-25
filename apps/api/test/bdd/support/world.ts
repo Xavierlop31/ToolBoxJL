@@ -2,7 +2,6 @@ import "reflect-metadata";
 import { World as CucumberWorld, setWorldConstructor } from "@cucumber/cucumber";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type {
-  EstadoUnidad,
   MetodoPago,
   Payment,
   Rol,
@@ -209,4 +208,4 @@ setWorldConstructor(ToolboxWorld);
 
 // Re-exportado para que los step definitions no necesiten importar
 // `EstadoUnidad` desde shared-types directamente en cada archivo.
-export type { EstadoUnidad };
+export type { EstadoUnidad } from "@toolboxjl/shared-types";

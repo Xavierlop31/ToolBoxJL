@@ -1,6 +1,6 @@
 <main class="unit-detail">
   @if (loading()) {
-    <p role="status">Cargando ficha de la unidad…</p>
+    <output>Cargando ficha de la unidad…</output>
   }
 
   @if (errorMessage()) {
@@ -48,17 +48,17 @@
       }
 
       @if (queuedOffline()) {
-        <p class="form-info" role="status" data-testid="offline-queued-message">
+        <output class="form-info" data-testid="offline-queued-message">
           Sin conexión: el cambio quedó encolado y se va a sincronizar apenas
           vuelva la conectividad.
-        </p>
+        </output>
       }
 
       @if (lastLogEntry(); as entry) {
-        <p role="status" data-testid="status-change-confirmation">
+        <output data-testid="status-change-confirmation">
           Cambio registrado: {{ entry.estado_anterior }} → {{ entry.estado_nuevo }}
           el {{ entry.created_at }} por {{ entry.autor_id }}.
-        </p>
+        </output>
       }
     </section>
   }

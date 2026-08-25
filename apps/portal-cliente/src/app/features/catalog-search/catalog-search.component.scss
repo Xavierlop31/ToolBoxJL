@@ -4,6 +4,13 @@
   padding: var(--tbjl-spacing-6, 1.5rem);
 }
 
+// <output> is inline by default; keep the same block layout/spacing the
+// previous <p role="status"> element had from the browser UA stylesheet.
+output {
+  display: block;
+  margin: 1em 0;
+}
+
 .search-form {
   display: flex;
   gap: var(--tbjl-spacing-3, 0.75rem);
