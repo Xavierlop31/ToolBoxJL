@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+import { InspectionService } from '../inspections/inspection.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { OfflineQueueService } from './offline-queue.service';
 
@@ -8,12 +9,16 @@ import { OfflineQueueService } from './offline-queue.service';
  * Reintenta las mutaciones encoladas por `OfflineQueueService` cuando el
  * navegador recupera conectividad (`window.addEventListener('online', ...)`).
  * Es intencionalmente secuencial y se detiene en el primer error para no
- * perder el orden de la hoja de vida de una misma unidad.
+ * perder el orden de la hoja de vida de una misma unidad. Distingue por
+ * `kind` (Sprint 5) entre cambios de estado (`unit-detail`) y checklists de
+ * inspección (`inspection-checklist`) — un ítem sin `kind` (encolado antes
+ * de Sprint 5) se sigue tratando como cambio de estado.
  */
 @Injectable({ providedIn: 'root' })
 export class OfflineSyncService {
   private readonly queue = inject(OfflineQueueService);
   private readonly inventory = inject(InventoryService);
+  private readonly inspections = inject(InspectionService);
 
   readonly pendingCount = signal(0);
 
@@ -33,9 +38,15 @@ export class OfflineSyncService {
     const items = await this.queue.getAll();
     for (const item of items) {
       try {
-        await firstValueFrom(
-          this.inventory.updateUnitStatus(item.unidadId, item.body),
-        );
+        if (item.kind === 'inspection-checklist') {
+          await firstValueFrom(
+            this.inspections.submitChecklist(item.unidadId, item.body),
+          );
+        } else {
+          await firstValueFrom(
+            this.inventory.updateUnitStatus(item.unidadId, item.body),
+          );
+        }
         if (item.id !== undefined) {
           await this.queue.remove(item.id);
         }
