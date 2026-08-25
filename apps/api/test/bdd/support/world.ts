@@ -9,6 +9,9 @@ import type {
   ToolUnit,
   ToolUnitStatusLogEntry,
   Order,
+  Vehicle,
+  Shipment,
+  Route,
 } from "@toolboxjl/shared-types";
 
 import { ActualizarEstadoUnidadUseCase } from "../../../src/modules/catalog-inventory/application/actualizar-estado-unidad.use-case";
@@ -45,9 +48,21 @@ import {
 } from "../../../src/modules/payments/application/pagar-orden.use-case";
 import { ConfirmarPagoContraEntregaUseCase } from "../../../src/modules/payments/application/confirmar-pago-contra-entrega.use-case";
 
+import { VEHICLE_REPOSITORY } from "../../../src/modules/fleet/infrastructure/fleet.tokens";
+import { InMemoryVehicleRepository } from "../../../src/modules/fleet/infrastructure/in-memory/in-memory-vehicle.repository";
+import { RegistrarVehiculoUseCase } from "../../../src/modules/fleet/application/registrar-vehiculo.use-case";
+
+import { SHIPMENT_REPOSITORY, ROUTE_REPOSITORY } from "../../../src/modules/logistics/infrastructure/logistics.tokens";
+import { InMemoryShipmentRepository } from "../../../src/modules/logistics/infrastructure/in-memory/in-memory-shipment.repository";
+import { InMemoryRouteRepository } from "../../../src/modules/logistics/infrastructure/in-memory/in-memory-route.repository";
+import { ListarPedidosPendientesUseCase } from "../../../src/modules/logistics/application/listar-pedidos-pendientes.use-case";
+import { AsignarRutasUseCase } from "../../../src/modules/logistics/application/asignar-rutas.use-case";
+import { ListarEnviosUseCase } from "../../../src/modules/logistics/application/listar-envios.use-case";
+
 /**
- * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`
- * y `02_cotizacion_alquiler_venta.feature`.
+ * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
+ * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature` y
+ * `04_logistica_flota.feature`.
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -67,6 +82,11 @@ export class ToolboxWorld extends CucumberWorld {
   pagarOrden!: PagarOrdenUseCase;
   confirmarPagoContraEntrega!: ConfirmarPagoContraEntregaUseCase;
 
+  registrarVehiculo!: RegistrarVehiculoUseCase;
+  listarPedidosPendientes!: ListarPedidosPendientesUseCase;
+  asignarRutas!: AsignarRutasUseCase;
+  listarEnvios!: ListarEnviosUseCase;
+
   usuarioActualId!: string;
   rolActual!: Rol;
 
@@ -82,6 +102,10 @@ export class ToolboxWorld extends CucumberWorld {
   /** Método de pago fijado en el Given de escenarios que no lo reciben como parámetro directo. */
   metodoPagoEscenario?: MetodoPago;
 
+  ultimoVehiculo?: Vehicle;
+  ultimasRutas?: Route[];
+  ultimosEnvios?: Shipment[];
+
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
       providers: [
@@ -95,6 +119,9 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: ORDER_REPOSITORY, useClass: InMemoryOrderRepository },
         { provide: PAYMENT_REPOSITORY, useClass: InMemoryPaymentRepository },
         { provide: WOMPI_GATEWAY, useClass: InMemoryWompiGateway },
+        { provide: VEHICLE_REPOSITORY, useClass: InMemoryVehicleRepository },
+        { provide: SHIPMENT_REPOSITORY, useClass: InMemoryShipmentRepository },
+        { provide: ROUTE_REPOSITORY, useClass: InMemoryRouteRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -107,6 +134,10 @@ export class ToolboxWorld extends CucumberWorld {
         ObtenerOrdenUseCase,
         PagarOrdenUseCase,
         ConfirmarPagoContraEntregaUseCase,
+        RegistrarVehiculoUseCase,
+        ListarPedidosPendientesUseCase,
+        AsignarRutasUseCase,
+        ListarEnviosUseCase,
       ],
     }).compile();
 
@@ -128,6 +159,11 @@ export class ToolboxWorld extends CucumberWorld {
     this.confirmarPagoContraEntrega = this.moduleRef.get(
       ConfirmarPagoContraEntregaUseCase,
     );
+
+    this.registrarVehiculo = this.moduleRef.get(RegistrarVehiculoUseCase);
+    this.listarPedidosPendientes = this.moduleRef.get(ListarPedidosPendientesUseCase);
+    this.asignarRutas = this.moduleRef.get(AsignarRutasUseCase);
+    this.listarEnvios = this.moduleRef.get(ListarEnviosUseCase);
 
     this.ultimosLogs = [];
   }
