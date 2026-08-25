@@ -72,7 +72,7 @@ export class PagarOrdenUseCase {
     // Ocultar la existencia de órdenes ajenas: si no existe o no pertenece
     // al cliente autenticado, el error es el mismo (mismo criterio que
     // evitar enumeración de recursos por id).
-    if (!orden || orden.cliente_id !== clienteId) {
+    if (orden?.cliente_id !== clienteId) {
       throw new OrdenNoEncontradaError(ordenId);
     }
     if (orden.estado !== "pendiente_pago") {

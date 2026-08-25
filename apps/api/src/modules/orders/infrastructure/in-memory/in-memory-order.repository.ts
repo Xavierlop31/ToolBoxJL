@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import type { EstadoOrden, Order, TipoOrden } from "@toolboxjl/shared-types";
+import type { EstadoOrden, Order } from "@toolboxjl/shared-types";
 import type { NuevaOrdenInput, OrderRepository } from "../../domain/order.repository";
 
 @Injectable()

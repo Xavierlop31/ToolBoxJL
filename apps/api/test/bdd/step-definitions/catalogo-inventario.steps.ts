@@ -225,11 +225,11 @@ Given(
 
     // 2 unidades realmente disponibles + 1 en mantenimiento + 1 dada de
     // baja (estas últimas 2 NO deben contar como disponibles).
-    const disponible1 = await this.registrarUnidad.ejecutar({
+    await this.registrarUnidad.ejecutar({
       modelo_id: this.ultimoModelo.id,
       numero_serie: "SN-DISPONIBLE-1",
     });
-    const disponible2 = await this.registrarUnidad.ejecutar({
+    await this.registrarUnidad.ejecutar({
       modelo_id: this.ultimoModelo.id,
       numero_serie: "SN-DISPONIBLE-2",
     });
@@ -241,8 +241,6 @@ Given(
       modelo_id: this.ultimoModelo.id,
       numero_serie: "SN-BAJA-1",
     });
-    void disponible1;
-    void disponible2;
 
     await this.actualizarEstado.ejecutar(
       enMantenimiento.id,
