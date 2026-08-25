@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import type { Order, TipoOrden } from "@toolboxjl/shared-types";
+import type { EstadoOrden, Order, TipoOrden } from "@toolboxjl/shared-types";
 import type { NuevaOrdenInput, OrderRepository } from "../../domain/order.repository";
 
 @Injectable()
@@ -75,5 +75,15 @@ export class InMemoryOrderRepository implements OrderRepository {
       }
     }
     return activas;
+  }
+
+  async actualizarEstado(id: string, estado: EstadoOrden): Promise<Order> {
+    const orden = this.ordenes.get(id);
+    if (!orden) {
+      throw new Error(`No existe una orden con id "${id}".`);
+    }
+    const actualizada: Order = { ...orden, estado };
+    this.ordenes.set(id, actualizada);
+    return actualizada;
   }
 }

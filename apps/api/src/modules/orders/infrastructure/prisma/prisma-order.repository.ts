@@ -117,4 +117,13 @@ export class PrismaOrderRepository implements OrderRepository {
     }
     return unidadesIds;
   }
+
+  async actualizarEstado(id: string, estado: EstadoOrden): Promise<Order> {
+    const actualizado = await this.prisma.order.update({
+      where: { id },
+      data: { estado },
+      include: { items: true },
+    });
+    return aDominio(actualizado);
+  }
 }

@@ -6,7 +6,8 @@ module.exports = {
   default: {
     paths: [
       "../../features/01_catalogo_inventario.feature",
-      "../../features/02_cotizacion_alquiler_venta.feature"
+      "../../features/02_cotizacion_alquiler_venta.feature",
+      "../../features/03_pagos_garantia.feature"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],

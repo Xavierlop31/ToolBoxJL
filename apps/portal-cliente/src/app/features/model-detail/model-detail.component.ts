@@ -4,12 +4,12 @@ import { ActivatedRoute } from '@angular/router';
 
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ToolModel } from '../../core/models/catalog.models';
-import { Quote, Order } from '../../core/models/order.models';
+import { Quote, Order, Payment, MetodoPago } from '../../core/models/order.models';
 
 /**
  * Ficha de modelo + consulta de disponibilidad + cotización y creación de órdenes (RF-2.1).
  * Permite seleccionar modalidad Alquiler o Venta (si está disponible para venta),
- * cotizar con desglose detallado y confirmar la orden.
+ * cotizar con desglose detallado, confirmar la orden y proceder al pago seguro (RF-2.2, RF-2.3).
  */
 @Component({
   selector: 'app-model-detail',
@@ -40,6 +40,12 @@ export class ModelDetailComponent implements OnInit {
   readonly orderLoading = signal(false);
   readonly orderError = signal<string | null>(null);
   readonly orderResult = signal<Order | null>(null);
+
+  // Estados de pago (Sprint 3)
+  readonly paymentLoading = signal(false);
+  readonly paymentError = signal<string | null>(null);
+  readonly paymentResult = signal<Payment | null>(null);
+  readonly selectedMetodoPago = signal<MetodoPago>('pse');
 
   // Zonas de entrega simuladas para cumplir con el DTO
   readonly zonas = [
@@ -134,6 +140,7 @@ export class ModelDetailComponent implements OnInit {
     this.quoteError.set(null);
     this.quoteResult.set(null);
     this.orderResult.set(null);
+    this.paymentResult.set(null);
 
     const { tipo, fechaInicio, fechaFin, direccionEntrega, zonaId } = this.form.getRawValue();
 
@@ -190,6 +197,34 @@ export class ModelDetailComponent implements OnInit {
       error: (err) => {
         this.orderError.set(err?.error?.message || 'No pudimos confirmar la orden. Intenta de nuevo.');
         this.orderLoading.set(false);
+      }
+    });
+  }
+
+  setMetodoPago(metodo: MetodoPago): void {
+    this.selectedMetodoPago.set(metodo);
+  }
+
+  confirmPayment(): void {
+    const order = this.orderResult();
+    if (!order) return;
+
+    this.paymentLoading.set(true);
+    this.paymentError.set(null);
+
+    this.catalog.payOrder(order.id, this.selectedMetodoPago()).subscribe({
+      next: (payment) => {
+        this.paymentResult.set(payment);
+        this.paymentLoading.set(false);
+        
+        // Actualizar el estado local de la orden si el pago fue exitoso
+        if (payment.estado === 'capturado' || payment.estado === 'hold') {
+          this.orderResult.update(current => current ? { ...current, estado: 'confirmada' } : null);
+        }
+      },
+      error: (err) => {
+        this.paymentError.set(err?.error?.message || 'No pudimos procesar el pago. Intenta de nuevo.');
+        this.paymentLoading.set(false);
       }
     });
   }

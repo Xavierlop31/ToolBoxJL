@@ -121,9 +121,52 @@
           <h3>¡Orden Creada Exitosamente!</h3>
           <p>Tu orden ha sido registrada con el ID: <strong>{{ order.id }}</strong></p>
           <p>Estado actual: <span class="badge-pending">{{ order.estado }}</span></p>
-          <div class="payment-next-steps">
-            <p><strong>Siguiente paso:</strong> El pago de tu orden está pendiente. En el siguiente sprint podrás realizar el pago seguro a través de nuestra pasarela Wompi.</p>
-          </div>
+
+          @if (!paymentResult()) {
+            <div class="payment-section" data-testid="payment-section">
+              <h4>Selecciona tu método de pago</h4>
+              <div class="radio-group">
+                <label>
+                  <input type="radio" name="metodoPago" value="pse" [checked]="selectedMetodoPago() === 'pse'" (change)="setMetodoPago('pse')" />
+                  PSE
+                </label>
+                <label>
+                  <input type="radio" name="metodoPago" value="tarjeta" [checked]="selectedMetodoPago() === 'tarjeta'" (change)="setMetodoPago('tarjeta')" />
+                  Tarjeta
+                </label>
+                <label>
+                  <input type="radio" name="metodoPago" value="contra_entrega" [checked]="selectedMetodoPago() === 'contra_entrega'" (change)="setMetodoPago('contra_entrega')" />
+                  Contra entrega
+                </label>
+              </div>
+
+              @if (selectedMetodoPago() === 'tarjeta' || selectedMetodoPago() === 'pse') {
+                <p class="payment-placeholder-note">
+                  En producción, acá se embebe el checkout seguro de Wompi (tokeniza la tarjeta/PSE directo con Wompi, sin pasar por nuestro servidor).
+                </p>
+              }
+
+              <button type="button" class="btn-primary" data-testid="confirm-payment" (click)="confirmPayment()" [disabled]="paymentLoading()">
+                {{ paymentLoading() ? 'Procesando pago…' : 'Confirmar pago' }}
+              </button>
+
+              @if (paymentError()) {
+                <p class="form-error" role="alert">{{ paymentError() }}</p>
+              }
+            </div>
+          }
+
+          @if (paymentResult(); as payment) {
+            <div class="payment-result" data-testid="payment-result">
+              @if (payment.metodo === 'tarjeta') {
+                <p class="payment-success">Pago procesado. El depósito de garantía queda retenido (hold) hasta la devolución.</p>
+              } @else if (payment.metodo === 'pse') {
+                <p class="payment-success">Pago procesado exitosamente.</p>
+              } @else {
+                <p class="payment-success">Pago reservado — se confirma cuando el Repartidor lo reciba.</p>
+              }
+            </div>
+          }
         </div>
       }
     </section>
