@@ -114,3 +114,46 @@ Then(
     assert.equal(orden.items[0].tarifa_aplicada, 600000);
   }
 );
+
+// --- Escenario: Administrador configura el % de depósito de garantía por modelo (HU-2.3) ---
+//
+// HU-2.3 no agrega endpoint ni caso de uso nuevo (decisión del Tech Lead,
+// ver PR): ya está satisfecha por RegistrarModeloUseCase de Sprint 1, que
+// acepta `deposito_pct` en el body. "Activar/desactivar" la exigencia de
+// depósito se representa con `deposito_pct = 0` (sin depósito) vs. `> 0`
+// (con depósito) — no hace falta un campo booleano separado.
+
+When(
+  "configuro el porcentaje de depósito de garantía para un modelo específico",
+  async function (this: ToolboxWorld) {
+    this.ultimoModelo = await this.registrarModelo.ejecutar({
+      nombre: "Compresor de Aire CA-150",
+      marca: "DeWalt",
+      categoria: "Compresores",
+      tarifa_dia: 60000,
+      deposito_pct: 0.25,
+    });
+  },
+);
+
+Then("el porcentaje queda asociado a ese modelo", function (this: ToolboxWorld) {
+  assert.ok(this.ultimoModelo);
+  assert.equal(this.ultimoModelo!.deposito_pct, 0.25);
+});
+
+Then(
+  "puedo activar o desactivar la exigencia de depósito de garantía para ese modelo",
+  async function (this: ToolboxWorld) {
+    // "Desactivar" = registrar (o re-registrar) el modelo con deposito_pct = 0.
+    const sinDeposito = await this.registrarModelo.ejecutar({
+      nombre: "Compresor de Aire CA-150 (sin garantía)",
+      marca: "DeWalt",
+      categoria: "Compresores",
+      tarifa_dia: 60000,
+      deposito_pct: 0,
+    });
+    assert.equal(sinDeposito.deposito_pct, 0);
+    // "Activar" = el modelo original de este escenario ya quedó con 0.25 (> 0).
+    assert.ok((this.ultimoModelo?.deposito_pct ?? 0) > 0);
+  },
+);
