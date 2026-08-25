@@ -1,9 +1,25 @@
 name: Deploy Railway
 
 # Backend NestJS (Documento de Arquitectura §7) y Workers/Cron a Railway.
-# RAILWAY_TOKEN y RAILWAY_SERVICE_ID_API ya están configurados como secreto
-# del repo. RAILWAY_SERVICE_ID_WORKERS está pendiente (se crea si el equipo
-# decide desplegar Workers como un servicio Railway separado del API).
+# `api` y `workers` son dos servicios del MISMO proyecto Railway, así que un
+# único Project Token (RAILWAY_TOKEN) cubre ambos jobs.
+#
+# *** IMPORTANTE — por qué `railway up` corre desde la raíz del repo ***
+# `railway up` sube el directorio actual como archivo de despliegue. Correrlo
+# con `working-directory: apps/api` (como estaba antes) sube un `apps/api`
+# huérfano: sin `pnpm-workspace.yaml`, sin `pnpm-lock.yaml` y sin
+# `packages/shared-types`, con lo cual `"@toolboxjl/shared-types":
+# "workspace:*"` es irresoluble y el build falla en Railway. Por eso se sube
+# la raíz completa y cada servicio selecciona su app vía su archivo de
+# config-as-code (`railway.api.json` / `railway.workers.json`), que hay que
+# apuntar en Settings → Config-as-code de cada servicio en el dashboard.
+#
+# `railway up` respeta `.gitignore` por defecto, así que `node_modules/` y
+# `dist/` no se suben.
+#
+# Se usa `--ci` en vez de `--detach`: `--detach` vuelve apenas el build se
+# encola, así que un build roto en Railway dejaba este workflow en verde.
+# `--ci` streamea los logs del build y sale con código distinto de 0 si falla.
 #
 # Nota: los `if` a nivel de job en GitHub Actions no pueden leer el contexto
 # `secrets`, así que en vez de saltar el job entero, cada job siempre corre
@@ -17,6 +33,12 @@ on:
       - "apps/api/**"
       - "apps/workers/**"
       - "packages/**"
+      - "railway.*.json"
+      - "pnpm-lock.yaml"
+
+concurrency:
+  group: deploy-railway-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   api:
@@ -52,13 +74,15 @@ jobs:
       # ($RAILWAY_SERVICE_ID_API), nunca interpolado directo en el cuerpo del
       # script (githubactions:S7636 — un secreto con metacaracteres de shell
       # embebido en `${{ }}` dentro de `run:` puede inyectar comandos).
+      #
+      # Sin `working-directory`: se sube la raíz del monorepo (ver nota de
+      # cabecera).
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
-        working-directory: apps/api
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_SERVICE_ID_API: ${{ secrets.RAILWAY_SERVICE_ID_API }}
-        run: railway up --service "$RAILWAY_SERVICE_ID_API" --detach
+        run: railway up --service "$RAILWAY_SERVICE_ID_API" --ci
 
   workers:
     name: Deploy apps/workers
@@ -78,13 +102,7 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # Versión fijada (githubactions:S8543/S8544 — evita instalar un rango
-      # de versión sin resolver). NO se agrega --ignore-scripts acá
-      # (githubactions:S6505) a propósito: el postinstall de @railway/cli
-      # descarga el binario real de la CLI (no hay JS de fallback en
-      # runtime, a diferencia de p. ej. esbuild) — con --ignore-scripts la
-      # instalación queda en un estado roto ("could not find the CLI binary
-      # at .../railway.exe"), verificado localmente antes de este cambio.
+      # Ídem nota del job `api` (githubactions:S8543/S8544/S6505).
       - name: Instalar Railway CLI
         if: steps.check.outputs.skip == 'false'
         run: npm install -g @railway/cli@5.43.4
@@ -93,8 +111,7 @@ jobs:
       # interpolado directo en `run:`.
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
-        working-directory: apps/workers
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_SERVICE_ID_WORKERS: ${{ secrets.RAILWAY_SERVICE_ID_WORKERS }}
-        run: railway up --service "$RAILWAY_SERVICE_ID_WORKERS" --detach
+        run: railway up --service "$RAILWAY_SERVICE_ID_WORKERS" --ci
