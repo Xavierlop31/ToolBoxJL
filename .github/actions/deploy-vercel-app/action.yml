@@ -27,9 +27,13 @@ runs:
         node-version-file: .nvmrc
         cache: pnpm
 
+    # --ignore-scripts (githubactions:S6505): esta action solo construye y
+    # despliega apps Angular (nunca apps/api, ver deploy-vercel.yml), que no
+    # tienen ningún script de postinstall en su package.json — es seguro
+    # omitir la ejecución automática de scripts de lifecycle de terceros acá.
     - name: Instalar dependencias
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile --ignore-scripts
 
     - name: Vercel pull (config del entorno)
       shell: bash
