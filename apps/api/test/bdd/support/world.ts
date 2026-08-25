@@ -71,10 +71,15 @@ import {
 } from "../../../src/modules/inspections/application/consultar-mora.use-case";
 import { EjecutarMoraCalculatorUseCase } from "../../../src/modules/inspections/application/ejecutar-mora-calculator.use-case";
 
+import { REVENUE_REPOSITORY } from "../../../src/modules/analytics/infrastructure/analytics.tokens";
+import { InMemoryRevenueRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-revenue.repository";
+import { ConsultarIngresosUseCase } from "../../../src/modules/analytics/application/consultar-ingresos.use-case";
+
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
  * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
- * `04_logistica_flota.feature` y `05_devoluciones_inspeccion_mora.feature`.
+ * `04_logistica_flota.feature`, `05_devoluciones_inspeccion_mora.feature` y
+ * `07_kpis_analitica.feature` (solo el escenario `@Fase1`).
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -106,6 +111,10 @@ export class ToolboxWorld extends CucumberWorld {
   shipmentRepository!: ShipmentRepository;
   paymentRepository!: PaymentRepository;
 
+  consultarIngresos!: ConsultarIngresosUseCase;
+  /** Acceso directo — conveniencia para el step Given de HU-7.1 (sembrar pagos con fecha controlable). */
+  revenueRepository!: InMemoryRevenueRepository;
+
   usuarioActualId!: string;
   rolActual!: Rol;
 
@@ -131,6 +140,9 @@ export class ToolboxWorld extends CucumberWorld {
   /** Modalidad de devolución fijada en el Given del escenario HU-5.2 (Esquema del escenario). */
   returnModeEscenario?: "en_sede" | "recogida_domicilio";
 
+  periodoEscenario?: string;
+  ultimosIngresos?: Awaited<ReturnType<ConsultarIngresosUseCase["ejecutar"]>>;
+
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
       providers: [
@@ -148,6 +160,7 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: SHIPMENT_REPOSITORY, useClass: InMemoryShipmentRepository },
         { provide: ROUTE_REPOSITORY, useClass: InMemoryRouteRepository },
         { provide: INSPECTION_CHECKLIST_REPOSITORY, useClass: InMemoryInspectionChecklistRepository },
+        { provide: REVENUE_REPOSITORY, useClass: InMemoryRevenueRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -167,6 +180,7 @@ export class ToolboxWorld extends CucumberWorld {
         RegistrarInspeccionUseCase,
         ConsultarMoraUseCase,
         EjecutarMoraCalculatorUseCase,
+        ConsultarIngresosUseCase,
       ],
     }).compile();
 
@@ -199,6 +213,9 @@ export class ToolboxWorld extends CucumberWorld {
     this.ejecutarMoraCalculator = this.moduleRef.get(EjecutarMoraCalculatorUseCase);
     this.shipmentRepository = this.moduleRef.get(SHIPMENT_REPOSITORY);
     this.paymentRepository = this.moduleRef.get(PAYMENT_REPOSITORY);
+
+    this.consultarIngresos = this.moduleRef.get(ConsultarIngresosUseCase);
+    this.revenueRepository = this.moduleRef.get(REVENUE_REPOSITORY);
 
     this.ultimosLogs = [];
   }
