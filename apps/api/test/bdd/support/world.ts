@@ -7,6 +7,7 @@ import type {
   ToolModel,
   ToolUnit,
   ToolUnitStatusLogEntry,
+  Order,
 } from "@toolboxjl/shared-types";
 
 import { ActualizarEstadoUnidadUseCase } from "../../../src/modules/catalog-inventory/application/actualizar-estado-unidad.use-case";
@@ -27,19 +28,16 @@ import { InMemoryToolUnitRepository } from "../../../src/modules/catalog-invento
 import { InMemoryToolUnitStatusLogRepository } from "../../../src/modules/catalog-inventory/infrastructure/in-memory/in-memory-tool-unit-status-log.repository";
 import { QrCodeGeneratorService } from "../../../src/modules/catalog-inventory/infrastructure/qr/qrcode-generator.service";
 
+import { ORDER_REPOSITORY } from "../../../src/modules/orders/infrastructure/orders.tokens";
+import { InMemoryOrderRepository } from "../../../src/modules/orders/infrastructure/in-memory/in-memory-order.repository";
+import { CotizarOrdenUseCase } from "../../../src/modules/orders/application/cotizar-orden.use-case";
+import { CrearOrdenUseCase } from "../../../src/modules/orders/application/crear-orden.use-case";
+import { ObtenerOrdenUseCase } from "../../../src/modules/orders/application/obtener-orden.use-case";
+import type { QuoteResult } from "../../../src/modules/pricing/domain/pricing-calculator.service";
+
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`
- * (RF-1.1 a 1.4). Arranca un `@nestjs/testing` `TestingModule` "a mano" con
- * SOLO las implementaciones in-memory de los repositorios — no importa
- * `CatalogInventoryModule` (que trae `PrismaService`/`DATABASE_URL`) — así
- * estos escenarios corren en CI sin necesitar una base real.
- *
- * Decisión documentada: estos steps ejercitan la capa de aplicación (los
- * use cases) directamente, no la capa HTTP con guards. El RBAC en sí ya
- * tiene cobertura unitaria dedicada en AuthModule (Sprint 0,
- * roles.guard.spec.ts) — acá el rol "logueado" en cada Given es solo
- * contexto de negocio (ej. quién queda como autor de una entrada de hoja de
- * vida), no algo que este World re-verifique a nivel de guard.
+ * y `02_cotizacion_alquiler_venta.feature`.
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -52,6 +50,10 @@ export class ToolboxWorld extends CucumberWorld {
   actualizarEstado!: ActualizarEstadoUnidadUseCase;
   consultarDisponibilidad!: ConsultarDisponibilidadUseCase;
 
+  cotizarOrden!: CotizarOrdenUseCase;
+  crearOrden!: CrearOrdenUseCase;
+  obtenerOrden!: ObtenerOrdenUseCase;
+
   usuarioActualId!: string;
   rolActual!: Rol;
 
@@ -59,6 +61,9 @@ export class ToolboxWorld extends CucumberWorld {
   ultimaUnidad?: ToolUnit;
   ultimosLogs: ToolUnitStatusLogEntry[] = [];
   ultimaDisponibilidad?: DisponibilidadModelo;
+
+  ultimaCotizacion?: QuoteResult;
+  ultimaOrden?: Order;
 
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
@@ -70,6 +75,7 @@ export class ToolboxWorld extends CucumberWorld {
           useClass: InMemoryToolUnitStatusLogRepository,
         },
         { provide: QR_CODE_GENERATOR, useClass: QrCodeGeneratorService },
+        { provide: ORDER_REPOSITORY, useClass: InMemoryOrderRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -77,6 +83,9 @@ export class ToolboxWorld extends CucumberWorld {
         ObtenerUnidadUseCase,
         ActualizarEstadoUnidadUseCase,
         ConsultarDisponibilidadUseCase,
+        CotizarOrdenUseCase,
+        CrearOrdenUseCase,
+        ObtenerOrdenUseCase,
       ],
     }).compile();
 
@@ -89,6 +98,10 @@ export class ToolboxWorld extends CucumberWorld {
     this.consultarDisponibilidad = this.moduleRef.get(
       ConsultarDisponibilidadUseCase,
     );
+
+    this.cotizarOrden = this.moduleRef.get(CotizarOrdenUseCase);
+    this.crearOrden = this.moduleRef.get(CrearOrdenUseCase);
+    this.obtenerOrden = this.moduleRef.get(ObtenerOrdenUseCase);
 
     this.ultimosLogs = [];
   }

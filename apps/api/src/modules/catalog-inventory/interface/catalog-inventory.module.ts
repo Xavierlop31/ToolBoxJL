@@ -56,5 +56,18 @@ import { InventoryController } from "./inventory.controller";
     ActualizarEstadoUnidadUseCase,
     ConsultarDisponibilidadUseCase,
   ],
+  exports: [
+    TOOL_MODEL_REPOSITORY,
+    TOOL_UNIT_REPOSITORY,
+    TOOL_UNIT_STATUS_LOG_REPOSITORY,
+    QR_CODE_GENERATOR,
+    RegistrarModeloUseCase,
+    BuscarCatalogoUseCase,
+    ObtenerModeloPorIdUseCase,
+    RegistrarUnidadUseCase,
+    ObtenerUnidadUseCase,
+    ActualizarEstadoUnidadUseCase,
+    ConsultarDisponibilidadUseCase,
+  ],
 })
 export class CatalogInventoryModule {}
