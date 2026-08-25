@@ -15,6 +15,23 @@ export interface SupabaseAuthConfig {
 }
 
 /**
+ * Quita las barras ("/") finales de `valor`, si las hay.
+ *
+ * Reemplaza a un regex `/\/+$/` que SonarCloud marcó como potencialmente
+ * vulnerable a ReDoS (typescript:S8786, backtracking sobre un cuantificador
+ * anclado al final de string). Esta versión con bucle simple es equivalente
+ * en comportamiento (recorta cualquier cantidad de barras finales) pero
+ * corre en tiempo lineal garantizado, sin motor de regex de por medio.
+ */
+function quitarBarrasFinales(valor: string): string {
+  let fin = valor.length;
+  while (fin > 0 && valor[fin - 1] === "/") {
+    fin -= 1;
+  }
+  return valor.slice(0, fin);
+}
+
+/**
  * Lee y valida las variables de entorno necesarias para `SupabaseAuthConfig`.
  * Lanza con un mensaje explícito si `SUPABASE_URL` falta o es inválida —
  * ninguna corrida de la API debe arrancar en un estado donde el AuthModule
@@ -44,7 +61,7 @@ export function loadSupabaseAuthConfig(
     );
   }
 
-  const base = supabaseUrl.toString().replace(/\/+$/, "");
+  const base = quitarBarrasFinales(supabaseUrl.toString());
   const audience = env.SUPABASE_JWT_AUDIENCE?.trim() || "authenticated";
 
   return {
