@@ -14,13 +14,13 @@ Característica: Cotización, Alquiler y Venta
     Y me muestra cada concepto desglosado por separado
     Y me muestra el total a pagar
 
-  @PrioridadMedia
+  @RF-2.2 @PrioridadMedia
   Escenario: Cliente compra una herramienta directamente en lugar de alquilarla
     Dado que un modelo está marcado como disponible para venta
     Cuando selecciono la modalidad "Venta" en lugar de "Alquiler" para ese modelo
     Entonces el catálogo me permite completar el proceso de compra en modalidad venta
 
-  @PrioridadAlta
+  @RF-2.3 @PrioridadAlta
   Escenario: Administrador configura el porcentaje de depósito de garantía por modelo
     Dado que soy un Administrador autenticado
     Cuando configuro el porcentaje de depósito de garantía para un modelo específico

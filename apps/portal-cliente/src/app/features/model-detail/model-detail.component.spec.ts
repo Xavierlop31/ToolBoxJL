@@ -50,7 +50,13 @@ describe('ModelDetailComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    component.form.setValue({ fechaInicio: '2026-09-01', fechaFin: '2026-09-05' });
+    component.form.setValue({
+      tipo: 'alquiler',
+      fechaInicio: '2026-09-01',
+      fechaFin: '2026-09-05',
+      direccionEntrega: 'Calle Falsa 123',
+      zonaId: 'zona-test-uuid',
+    });
     component.checkAvailability();
 
     const req = httpMock.expectOne(
