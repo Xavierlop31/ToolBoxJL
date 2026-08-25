@@ -40,10 +40,15 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
 
-  readonly codeControl = this.formBuilder.nonNullable.control('', [
-    Validators.required,
-    Validators.pattern(/^\d{6}$/),
-  ]);
+  // FormGroup (no un FormControl standalone): `(ngSubmit)` en el template
+  // solo lo emite `FormGroupDirective`/`NgForm` cuando el `<form>` tiene
+  // `[formGroup]` — sin eso, Angular no intercepta el submit nativo del
+  // botón y el navegador termina haciendo un submit HTML real (recarga de
+  // página) en vez de llamar a `verificar()`. Mismo criterio que
+  // login.component.ts/vehicle-registration.component.ts.
+  readonly form = this.formBuilder.nonNullable.group({
+    codigo: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+  });
 
   readonly requesting = signal(false);
   readonly verifying = signal(false);
@@ -85,7 +90,7 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
     this.requesting.set(true);
     this.errorMessage.set(null);
     this.otpId.set(null);
-    this.codeControl.reset('');
+    this.form.reset({ codigo: '' });
 
     this.otp.requestOtp(this.deviceIdService.deviceId).subscribe({
       next: ({ otp_id, expira_en }) => {
@@ -107,8 +112,8 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
     const session = this.auth.session();
     const otpId = this.otpId();
 
-    if (!session || !otpId || this.codeControl.invalid || this.verifying() || this.expired) {
-      this.codeControl.markAsTouched();
+    if (!session || !otpId || this.form.invalid || this.verifying() || this.expired) {
+      this.form.markAllAsTouched();
       return;
     }
 
@@ -118,7 +123,7 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
     this.otp
       .verifyOtp({
         otp_id: otpId,
-        codigo: this.codeControl.value,
+        codigo: this.form.controls.codigo.value,
         device_id: this.deviceIdService.deviceId,
       })
       .subscribe({

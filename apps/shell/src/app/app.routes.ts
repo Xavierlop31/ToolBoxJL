@@ -1,7 +1,7 @@
 import { loadRemoteModule } from '@angular-architects/native-federation';
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/auth/auth.guard';
+import { authGuard, sessionGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -12,6 +12,20 @@ export const routes: Routes = [
         (m) => m.LoginComponent,
       ),
     title: 'Iniciar sesión — ToolBox JL',
+  },
+  {
+    // HU-6.2 (Issue #18) — verificación por OTP de WhatsApp en dispositivo
+    // nuevo. Usa `sessionGuard` (solo exige sesión activa) y NO `authGuard`
+    // (que además exige dispositivo verificado): si usara `authGuard`, un
+    // dispositivo no verificado nunca podría llegar a la pantalla que lo
+    // verifica. Ver la nota completa en `core/auth/auth.guard.ts`.
+    path: 'verificar-dispositivo',
+    canActivate: [sessionGuard],
+    loadComponent: () =>
+      import('./features/auth/otp-verify/otp-verify.component').then(
+        (m) => m.OtpVerifyComponent,
+      ),
+    title: 'Verificá tu dispositivo — ToolBox JL',
   },
   {
     path: 'home',

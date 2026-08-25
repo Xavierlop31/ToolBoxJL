@@ -1,5 +1,7 @@
 import { inject } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CanActivateFn, Router } from '@angular/router';
+import { filter, map, take } from 'rxjs';
 
 import { AuthService } from './auth.service';
 import { DeviceIdService } from './device-id.service';
@@ -19,6 +21,16 @@ import { DeviceVerificationService } from './device-verification.service';
  * Frontend (decisión de alcance del Tech Lead, ver el brief del Issue
  * #18): el backend no expone un guard propio que bloquee el resto de la
  * API hasta la verificación de dispositivo.
+ *
+ * Espera a `auth.sessionLoaded()` antes de decidir (`toObservable` +
+ * `filter`/`take(1)`) — `AuthService.session()` se resuelve de forma
+ * ASÍNCRONA (`getSession().then(...)` en el constructor); leerlo de forma
+ * síncrona acá corría el riesgo de ver `null` todavía en el primer
+ * `NavigationStart` y redirigir a `/login` a un usuario con sesión válida
+ * (bug preexistente del guard original de Sprint 0, que declaraba
+ * `sessionLoaded` en `AuthService` para "evitar parpadeos de guard" pero
+ * nunca lo usaba — encontrado al conectar el escenario Gherkin de HU-6.2 a
+ * Playwright-BDD, donde la carrera se manifestaba de forma determinística).
  */
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
@@ -26,16 +38,22 @@ export const authGuard: CanActivateFn = () => {
   const deviceId = inject(DeviceIdService);
   const router = inject(Router);
 
-  const session = auth.session();
-  if (!session) {
-    return router.createUrlTree(['/login']);
-  }
+  return toObservable(auth.sessionLoaded).pipe(
+    filter((loaded) => loaded),
+    take(1),
+    map(() => {
+      const session = auth.session();
+      if (!session) {
+        return router.createUrlTree(['/login']);
+      }
 
-  if (!deviceVerification.isVerified(session.user.id, deviceId.deviceId)) {
-    return router.createUrlTree(['/verificar-dispositivo']);
-  }
+      if (!deviceVerification.isVerified(session.user.id, deviceId.deviceId)) {
+        return router.createUrlTree(['/verificar-dispositivo']);
+      }
 
-  return true;
+      return true;
+    }),
+  );
 };
 
 /**
@@ -43,11 +61,16 @@ export const authGuard: CanActivateFn = () => {
  * dispositivo verificado. Usado exclusivamente por la ruta
  * `/verificar-dispositivo` — si `authGuard` se usara ahí, un dispositivo no
  * verificado nunca podría llegar a la pantalla que lo verifica (loop de
- * redirección contra sí misma).
+ * redirección contra sí misma). También espera `sessionLoaded` por el mismo
+ * motivo que `authGuard`.
  */
 export const sessionGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  return auth.isAuthenticated() ? true : router.createUrlTree(['/login']);
+  return toObservable(auth.sessionLoaded).pipe(
+    filter((loaded) => loaded),
+    take(1),
+    map(() => (auth.isAuthenticated() ? true : router.createUrlTree(['/login']))),
+  );
 };

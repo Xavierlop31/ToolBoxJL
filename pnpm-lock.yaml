@@ -460,6 +460,9 @@ importers:
       '@angular/compiler-cli':
         specifier: ^18.2.0
         version: 18.2.14(@angular/compiler@18.2.14(@angular/core@18.2.14(rxjs@7.8.2)(zone.js@0.14.10)))(typescript@5.5.4)
+      '@playwright/test':
+        specifier: ^1.49.0
+        version: 1.62.1
       '@types/jasmine':
         specifier: ~5.1.0
         version: 5.1.15
@@ -487,6 +490,9 @@ importers:
       karma-jasmine-html-reporter:
         specifier: ~2.1.0
         version: 2.1.0(jasmine-core@5.2.0)(karma-jasmine@5.1.0(karma@6.4.4))(karma@6.4.4)
+      playwright-bdd:
+        specifier: ^9.2.0
+        version: 9.2.0(@playwright/test@1.62.1)
       typescript:
         specifier: ~5.5.2
         version: 5.5.4
