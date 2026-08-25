@@ -52,12 +52,12 @@ describe('OfflineQueueService', () => {
     });
 
     const items = await service.getAll();
-    expect(items.length).toBe(1);
+    expect(items).toHaveSize(1);
     expect(items[0].unidadId).toBe('unidad-1');
 
     await service.remove(items[0].id as number);
     const afterRemoval = await service.getAll();
-    expect(afterRemoval.length).toBe(0);
+    expect(afterRemoval).toHaveSize(0);
   });
 
   it('Sprint 5: encola un checklist de inspección junto a cambios de estado sin romper el flujo existente', async () => {
@@ -74,7 +74,7 @@ describe('OfflineQueueService', () => {
     });
 
     const items = await service.getAll();
-    expect(items.length).toBe(2);
+    expect(items).toHaveSize(2);
     expect(items[0].kind).toBeUndefined();
     expect(items[1].kind).toBe('inspection-checklist');
   });
