@@ -43,6 +43,15 @@
   }
 
   @if (vehicle(); as v) {
+    <!--
+      role="status" queda a propósito (SonarCloud Web:S6819 pide <output>,
+      pero <output> solo admite "phrasing content" — un <h2> adentro sería
+      HTML inválido, o degradar el heading a texto inline sería una
+      regresión real de accesibilidad. Decisión del Tech Lead: los demás 11
+      casos de este mismo hallazgo (mensajes de una sola línea) sí se
+      migraron a <output>; este, con encabezado + varios párrafos, se deja
+      como estaba.
+    -->
     <section data-testid="vehicle-success" role="status">
       <h2>Vehículo registrado</h2>
       <p>Tipo: {{ v.tipo }}</p>
