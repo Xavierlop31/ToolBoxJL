@@ -145,7 +145,7 @@ When("se procesa el pago", async function (this: ToolboxWorld) {
 });
 
 Then(
-  "el depósito de garantía se ejecuta como un hold \\(preautorización\\) y no como un cobro definitivo",
+  String.raw`el depósito de garantía se ejecuta como un hold \(preautorización\) y no como un cobro definitivo`,
   function (this: ToolboxWorld) {
     const pagoDeposito = this.ultimoResultadoPago!.pagoDeposito;
     assert.ok(pagoDeposito, "se esperaba un pago de depósito de garantía");
@@ -213,7 +213,7 @@ When("el pago se confirma", async function (this: ToolboxWorld) {
 });
 
 Then(
-  "Wompi \\(sandbox\\) simula el split de pago entre la cuenta matriz y la cuenta del proveedor logístico según las reglas configuradas",
+  String.raw`Wompi \(sandbox\) simula el split de pago entre la cuenta matriz y la cuenta del proveedor logístico según las reglas configuradas`,
   function (this: ToolboxWorld) {
     const split = this.ultimoResultadoPago!.split;
     assert.ok(split);
