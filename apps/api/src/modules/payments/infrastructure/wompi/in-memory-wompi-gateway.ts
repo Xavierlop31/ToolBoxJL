@@ -40,4 +40,9 @@ export class InMemoryWompiGateway implements WompiGateway {
       montoMatriz: recargoLogistico - montoLogistica,
     };
   }
+
+  /** Fake determinístico — siempre "captura" con éxito, nunca llama a la red. */
+  async capturarHold(_wompiTransactionId: string): Promise<{ estado: "capturado" }> {
+    return { estado: "capturado" };
+  }
 }
