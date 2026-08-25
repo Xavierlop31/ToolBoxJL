@@ -7,6 +7,7 @@ import { OrdersModule } from "./modules/orders/interface/orders.module";
 import { PaymentsModule } from "./modules/payments/interface/payments.module";
 import { FleetModule } from "./modules/fleet/interface/fleet.module";
 import { LogisticsModule } from "./modules/logistics/interface/logistics.module";
+import { InspectionsModule } from "./modules/inspections/interface/inspections.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -30,6 +31,9 @@ import { LogisticsModule } from "./modules/logistics/interface/logistics.module"
  * Sprint 4: + FleetModule/LogisticsModule (Issues #11-#13 / HU-4.1 a 4.3 —
  * flota, asignación de rutas y seguimiento de envíos en tiempo real,
  * RF-3.1 a RF-3.3).
+ * Sprint 5: + InspectionModule (Issues #14-#16 / HU-5.1 a 5.3 — checklist de
+ * inspección con ejecución de garantía, modalidad de devolución y
+ * facturación automática de mora, RF-4.1 a RF-4.3).
  */
 @Module({
   imports: [
@@ -43,6 +47,7 @@ import { LogisticsModule } from "./modules/logistics/interface/logistics.module"
     PaymentsModule,
     FleetModule,
     LogisticsModule,
+    InspectionsModule,
   ],
 })
 export class AppModule {}

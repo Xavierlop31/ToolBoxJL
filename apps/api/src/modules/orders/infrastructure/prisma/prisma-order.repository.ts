@@ -126,4 +126,15 @@ export class PrismaOrderRepository implements OrderRepository {
     });
     return aDominio(actualizado);
   }
+
+  async listarVencidasSinMora(ahora: Date): Promise<Order[]> {
+    const encontradas = await this.prisma.order.findMany({
+      where: {
+        estado: { in: ["confirmada", "en_curso"] },
+        fechaFin: { lt: ahora },
+      },
+      include: { items: true },
+    });
+    return encontradas.map(aDominio);
+  }
 }

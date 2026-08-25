@@ -39,4 +39,16 @@ export interface WompiGateway {
    * (ver infrastructure/config/wompi.config.ts).
    */
   simularSplit(recargoLogistico: number): ResultadoSplitWompi;
+
+  /**
+   * Captura (cobra en definitiva) una transacción que se inició como `hold`
+   * (preautorización con tarjeta) — Sprint 5, HU-5.1/RF-4.2: se invoca desde
+   * `InspectionModule/RegistrarInspeccionUseCase` cuando un checklist de
+   * recepción con hallazgo `moderada`/`grave` ejecuta la garantía sobre un
+   * depósito preautorizado. `iniciarTransaccion` no sirve para esto: ese
+   * método siempre abre una transacción NUEVA, y acá se necesita capturar
+   * una transacción YA EXISTENTE (identificada por su
+   * `wompi_transaction_id`).
+   */
+  capturarHold(wompiTransactionId: string): Promise<{ estado: "capturado" }>;
 }

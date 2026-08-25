@@ -1,0 +1,95 @@
+<main class="inspection-checklist">
+  <h1>Checklist de inspección — recepción de devolución</h1>
+  <p class="unit-meta" data-testid="inspection-unidad-id">Unidad: {{ unidadId }}</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="field">
+      <label for="shipmentId">ID del envío (shipment)</label>
+      <input id="shipmentId" type="text" formControlName="shipmentId" />
+    </div>
+
+    <section aria-labelledby="hallazgos-title">
+      <h2 id="hallazgos-title">Hallazgos</h2>
+      <p class="form-hint">
+        Dejalo vacío si la devolución está conforme (sin daños ni piezas
+        faltantes).
+      </p>
+
+      @for (hallazgoGroup of hallazgos.controls; track hallazgoGroup; let i = $index) {
+        <fieldset
+          [formGroup]="hallazgoGroup"
+          class="hallazgo-row"
+          [attr.data-testid]="'hallazgo-row-' + i"
+        >
+          <legend>Hallazgo {{ i + 1 }}</legend>
+
+          <div class="field">
+            <label [for]="'descripcion-' + i">Descripción del hallazgo</label>
+            <input
+              [id]="'descripcion-' + i"
+              type="text"
+              formControlName="descripcion"
+            />
+          </div>
+
+          <div class="field">
+            <label [for]="'severidad-' + i">Severidad</label>
+            <select [id]="'severidad-' + i" formControlName="severidad">
+              @for (severidad of severidades; track severidad) {
+                <option [value]="severidad">{{ severidad }}</option>
+              }
+            </select>
+          </div>
+
+          <button type="button" (click)="removeHallazgo(i)">
+            Quitar hallazgo
+          </button>
+        </fieldset>
+      }
+
+      <button type="button" (click)="addHallazgo()">Agregar hallazgo</button>
+    </section>
+
+    <div class="field">
+      <label for="fotos">Fotos de evidencia</label>
+      <input
+        id="fotos"
+        type="file"
+        accept="image/*"
+        multiple
+        (change)="onPhotosSelected($event)"
+      />
+      @if (selectedPhotoCount() > 0) {
+        <p class="photo-count">{{ selectedPhotoCount() }} foto(s) seleccionada(s).</p>
+      }
+    </div>
+
+    <button type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Guardando…' : 'Registrar checklist de inspección' }}
+    </button>
+  </form>
+
+  @if (submitError()) {
+    <p class="form-error" role="alert">{{ submitError() }}</p>
+  }
+
+  @if (queuedOffline()) {
+    <p class="form-info" role="status" data-testid="offline-queued-message">
+      Sin conexión: el checklist quedó encolado y se va a sincronizar apenas
+      vuelva la conectividad.
+    </p>
+  }
+
+  @if (result(); as checklist) {
+    @if (checklist.garantia_ejecutada) {
+      <p role="status" data-testid="garantia-ejecutada">
+        Se detectaron hallazgos — el depósito de garantía fue ejecutado.
+      </p>
+    } @else {
+      <p role="status" data-testid="devolucion-conforme">
+        Devolución conforme — no se registraron hallazgos que ejecuten la
+        garantía.
+      </p>
+    }
+  }
+</main>

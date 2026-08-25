@@ -38,4 +38,21 @@ export interface OrderRepository {
    * caso de uso que la invoca.
    */
   actualizarEstado(id: string, estado: EstadoOrden): Promise<Order>;
+  /**
+   * Sprint 5 (RF-4.3, HU-5.3) — órdenes candidatas a mora: `estado` en
+   * `confirmada`/`en_curso` (todavía no devueltas/cerradas/canceladas) cuya
+   * `fecha_fin` ya pasó. Usada por `EjecutarMoraCalculatorUseCase`
+   * (apps/api, InspectionModule) y por el script standalone de
+   * `apps/workers` (que reimplementa esta misma consulta con su propio
+   * `PrismaClient`, ver apps/workers/src/main.ts).
+   *
+   * Deliberadamente NO filtra acá por "ya tiene un Payment de tipo
+   * cobro_mora" — esa es la idempotencia que exige RF-4.3, pero
+   * `OrderRepository` no conoce el schema de `payments` (bounded context
+   * distinto). El filtro de idempotencia lo hace quien invoca este método,
+   * usando `PaymentRepository.listarPorOrden` — así el criterio es idéntico
+   * para la implementación Prisma y la in-memory, sin que esta última
+   * necesite una referencia cruzada al repositorio de pagos.
+   */
+  listarVencidasSinMora(ahora: Date): Promise<Order[]>;
 }

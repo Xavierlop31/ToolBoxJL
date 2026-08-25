@@ -114,6 +114,7 @@ model ToolUnit {
   modelo    ToolModel           @relation(fields: [modeloId], references: [id])
   historial ToolUnitStatusLog[]
   orderItems OrderItem[]
+  inspecciones InspectionChecklist[]
 
   @@map("tool_units")
   @@index([modeloId])
@@ -298,6 +299,7 @@ model Shipment {
 
   order    Order    @relation(fields: [orderId], references: [id])
   vehiculo Vehicle? @relation(fields: [vehiculoId], references: [id])
+  inspecciones InspectionChecklist[]
 
   @@map("shipments")
   @@index([vehiculoId])
@@ -320,4 +322,43 @@ model Route {
 
   @@map("routes")
   @@index([vehiculoId])
+}
+
+// ============================================================================
+// Sprint 5 (Issues #14-#16, HU-5.1 a 5.3 — InspectionModule): tabla
+// `inspection_checklists` (docs/DESIGN.md §4.1). `MoraCalculatorJob`
+// (HU-5.3) no agrega tablas nuevas: reusa `payments` (`tipo: cobro_mora`,
+// ya declarado en el enum `TipoPago` desde Sprint 3) — ver
+// apps/workers/src/main.ts y
+// apps/api/src/modules/inspections/application/ejecutar-mora-calculator.use-case.ts.
+// ============================================================================
+
+enum TipoInspeccion {
+  salida
+  recepcion
+
+  @@map("tipo_inspeccion")
+}
+
+/// Checklist de inspección de salida/recepción de una unidad física —
+/// RF-4.2. Tabla append-only (sin UPDATE/DELETE), mismo criterio que
+/// `tool_unit_status_log` (docs/DESIGN.md §4.2).
+model InspectionChecklist {
+  id                String         @id @default(uuid()) @db.Uuid
+  unidadId          String         @map("unidad_id") @db.Uuid
+  shipmentId        String         @map("shipment_id") @db.Uuid
+  tipo              TipoInspeccion
+  /// Array de `{ descripcion: string, severidad: "leve"|"moderada"|"grave" }`
+  /// — jsonb, no relación normalizada (mismo criterio que `Route.paradas`).
+  hallazgos         Json           @default("[]")
+  fotosUrls         String[]       @default([]) @map("fotos_urls")
+  garantiaEjecutada Boolean        @default(false) @map("garantia_ejecutada")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  unidad   ToolUnit @relation(fields: [unidadId], references: [id])
+  shipment Shipment @relation(fields: [shipmentId], references: [id])
+
+  @@map("inspection_checklists")
+  @@index([unidadId])
+  @@index([shipmentId])
 }

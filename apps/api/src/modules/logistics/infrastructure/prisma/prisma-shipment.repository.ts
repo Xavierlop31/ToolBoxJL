@@ -62,4 +62,12 @@ export class PrismaShipmentRepository implements ShipmentRepository {
     });
     return aDominio(actualizado);
   }
+
+  async actualizarEstadoEnvio(id: string, estadoEnvio: EstadoEnvio): Promise<Shipment> {
+    const actualizado = await this.prisma.shipment.update({
+      where: { id },
+      data: { estadoEnvio },
+    });
+    return aDominio(actualizado);
+  }
 }

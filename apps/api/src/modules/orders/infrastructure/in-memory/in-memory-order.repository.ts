@@ -86,4 +86,13 @@ export class InMemoryOrderRepository implements OrderRepository {
     this.ordenes.set(id, actualizada);
     return actualizada;
   }
+
+  async listarVencidasSinMora(ahora: Date): Promise<Order[]> {
+    return [...this.ordenes.values()].filter(
+      (orden) =>
+        ["confirmada", "en_curso"].includes(orden.estado) &&
+        !!orden.fecha_fin &&
+        new Date(orden.fecha_fin) < ahora,
+    );
+  }
 }
