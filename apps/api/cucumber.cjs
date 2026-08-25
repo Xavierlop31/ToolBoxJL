@@ -10,10 +10,19 @@ module.exports = {
       "../../features/03_pagos_garantia.feature",
       "../../features/04_logistica_flota.feature",
       "../../features/05_devoluciones_inspeccion_mora.feature",
-      "../../features/06_autenticacion_seguridad.feature"
+      "../../features/06_autenticacion_seguridad.feature",
+      "../../features/07_kpis_analitica.feature"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],
     format: ["progress"],
+    // `07_kpis_analitica.feature` tiene 2 escenarios `@Fase2` (ROI,
+    // utilización/productividad — Sprint 10, Issues #20/#21) sin step
+    // definitions a propósito (Issue #19 solo cubre el escenario `@Fase1`,
+    // ver kpis-analitica.steps.ts). Sin este filtro, esos escenarios
+    // quedarían "undefined" y romperían la corrida. Ningún otro feature
+    // conectado acá usa la tag `@Fase2` hoy, así que el filtro no afecta a
+    // los demás escenarios.
+    tags: "not @Fase2",
   },
 };

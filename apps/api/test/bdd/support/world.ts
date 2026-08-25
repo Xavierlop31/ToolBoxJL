@@ -86,11 +86,16 @@ import { SolicitarOtpUseCase, type OtpSolicitado } from "../../../src/modules/au
 import { VerificarOtpUseCase, type OtpVerificado } from "../../../src/modules/auth-otp/application/verificar-otp.use-case";
 import type { DeviceVerificationRepository } from "../../../src/modules/auth-otp/domain/device-verification.repository";
 
+import { REVENUE_REPOSITORY } from "../../../src/modules/analytics/infrastructure/analytics.tokens";
+import { InMemoryRevenueRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-revenue.repository";
+import { ConsultarIngresosUseCase } from "../../../src/modules/analytics/application/consultar-ingresos.use-case";
+
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
  * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
  * `04_logistica_flota.feature`, `05_devoluciones_inspeccion_mora.feature` y
- * `06_autenticacion_seguridad.feature`.
+ * `06_autenticacion_seguridad.feature` y `07_kpis_analitica.feature` (solo
+ * el escenario `@Fase1`).
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -121,6 +126,10 @@ export class ToolboxWorld extends CucumberWorld {
   /** Acceso directo a los repos in-memory — conveniencia para los steps de HU-5.1/5.3 (buscar el Shipment/Payment creados por otro caso de uso). */
   shipmentRepository!: ShipmentRepository;
   paymentRepository!: PaymentRepository;
+
+  consultarIngresos!: ConsultarIngresosUseCase;
+  /** Acceso directo — conveniencia para el step Given de HU-7.1 (sembrar pagos con fecha controlable). */
+  revenueRepository!: InMemoryRevenueRepository;
 
   usuarioActualId!: string;
   rolActual!: Rol;
@@ -160,6 +169,9 @@ export class ToolboxWorld extends CucumberWorld {
   errorOtpVerificado?: Error;
   ultimoUsuarioVerificado?: UsuarioAutenticado;
 
+  periodoEscenario?: string;
+  ultimosIngresos?: Awaited<ReturnType<ConsultarIngresosUseCase["ejecutar"]>>;
+
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
       providers: [
@@ -181,6 +193,7 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: DEVICE_VERIFICATION_REPOSITORY, useClass: InMemoryDeviceVerificationRepository },
         { provide: WHATSAPP_OTP_GATEWAY, useClass: InMemoryWhatsAppOtpGateway },
         VerificarAccesoUseCase,
+        { provide: REVENUE_REPOSITORY, useClass: InMemoryRevenueRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -202,6 +215,7 @@ export class ToolboxWorld extends CucumberWorld {
         EjecutarMoraCalculatorUseCase,
         SolicitarOtpUseCase,
         VerificarOtpUseCase,
+        ConsultarIngresosUseCase,
       ],
     }).compile();
 
@@ -240,6 +254,9 @@ export class ToolboxWorld extends CucumberWorld {
     this.verificarOtp = this.moduleRef.get(VerificarOtpUseCase);
     this.deviceVerificationRepository = this.moduleRef.get(DEVICE_VERIFICATION_REPOSITORY);
     this.whatsappOtpGateway = this.moduleRef.get(WHATSAPP_OTP_GATEWAY);
+
+    this.consultarIngresos = this.moduleRef.get(ConsultarIngresosUseCase);
+    this.revenueRepository = this.moduleRef.get(REVENUE_REPOSITORY);
 
     this.ultimosLogs = [];
   }
