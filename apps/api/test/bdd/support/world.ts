@@ -3,6 +3,7 @@ import { World as CucumberWorld, setWorldConstructor } from "@cucumber/cucumber"
 import { Test, type TestingModule } from "@nestjs/testing";
 import type {
   EstadoUnidad,
+  MetodoPago,
   Rol,
   ToolModel,
   ToolUnit,
@@ -35,6 +36,15 @@ import { CrearOrdenUseCase } from "../../../src/modules/orders/application/crear
 import { ObtenerOrdenUseCase } from "../../../src/modules/orders/application/obtener-orden.use-case";
 import type { QuoteResult } from "../../../src/modules/pricing/domain/pricing-calculator.service";
 
+import { PAYMENT_REPOSITORY, WOMPI_GATEWAY } from "../../../src/modules/payments/infrastructure/payments.tokens";
+import { InMemoryPaymentRepository } from "../../../src/modules/payments/infrastructure/in-memory/in-memory-payment.repository";
+import { InMemoryWompiGateway } from "../../../src/modules/payments/infrastructure/wompi/in-memory-wompi-gateway";
+import {
+  PagarOrdenUseCase,
+  type ResultadoPagoOrden,
+} from "../../../src/modules/payments/application/pagar-orden.use-case";
+import { ConfirmarPagoContraEntregaUseCase } from "../../../src/modules/payments/application/confirmar-pago-contra-entrega.use-case";
+
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`
  * y `02_cotizacion_alquiler_venta.feature`.
@@ -54,6 +64,9 @@ export class ToolboxWorld extends CucumberWorld {
   crearOrden!: CrearOrdenUseCase;
   obtenerOrden!: ObtenerOrdenUseCase;
 
+  pagarOrden!: PagarOrdenUseCase;
+  confirmarPagoContraEntrega!: ConfirmarPagoContraEntregaUseCase;
+
   usuarioActualId!: string;
   rolActual!: Rol;
 
@@ -64,6 +77,10 @@ export class ToolboxWorld extends CucumberWorld {
 
   ultimaCotizacion?: QuoteResult;
   ultimaOrden?: Order;
+
+  ultimoResultadoPago?: ResultadoPagoOrden;
+  /** Método de pago fijado en el Given de escenarios que no lo reciben como parámetro directo. */
+  metodoPagoEscenario?: MetodoPago;
 
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
@@ -76,6 +93,8 @@ export class ToolboxWorld extends CucumberWorld {
         },
         { provide: QR_CODE_GENERATOR, useClass: QrCodeGeneratorService },
         { provide: ORDER_REPOSITORY, useClass: InMemoryOrderRepository },
+        { provide: PAYMENT_REPOSITORY, useClass: InMemoryPaymentRepository },
+        { provide: WOMPI_GATEWAY, useClass: InMemoryWompiGateway },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -86,6 +105,8 @@ export class ToolboxWorld extends CucumberWorld {
         CotizarOrdenUseCase,
         CrearOrdenUseCase,
         ObtenerOrdenUseCase,
+        PagarOrdenUseCase,
+        ConfirmarPagoContraEntregaUseCase,
       ],
     }).compile();
 
@@ -102,6 +123,11 @@ export class ToolboxWorld extends CucumberWorld {
     this.cotizarOrden = this.moduleRef.get(CotizarOrdenUseCase);
     this.crearOrden = this.moduleRef.get(CrearOrdenUseCase);
     this.obtenerOrden = this.moduleRef.get(ObtenerOrdenUseCase);
+
+    this.pagarOrden = this.moduleRef.get(PagarOrdenUseCase);
+    this.confirmarPagoContraEntrega = this.moduleRef.get(
+      ConfirmarPagoContraEntregaUseCase,
+    );
 
     this.ultimosLogs = [];
   }

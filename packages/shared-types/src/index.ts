@@ -6,3 +6,4 @@ export * from "./estado-unidad";
 export * from "./tool-model";
 export * from "./tool-unit";
 export * from "./order";
+export * from "./payment";

@@ -1,4 +1,4 @@
-import type { Order, TipoOrden } from "@toolboxjl/shared-types";
+import type { EstadoOrden, Order, TipoOrden } from "@toolboxjl/shared-types";
 
 export interface NuevaOrdenInput {
   clienteId: string;
@@ -31,4 +31,11 @@ export interface OrderRepository {
    * (usado para ventas, donde cualquier orden activa excluye la unidad).
    */
   obtenerUnidadesConOrdenesActivas(modeloId: string): Promise<string[]>;
+  /**
+   * Transición de estado de la orden (ej. `pendiente_pago` → `confirmada`
+   * tras un pago iniciado con éxito — ver PaymentsModule/PagarOrdenUseCase,
+   * Sprint 3). No valida transiciones permitidas acá: esa regla vive en el
+   * caso de uso que la invoca.
+   */
+  actualizarEstado(id: string, estado: EstadoOrden): Promise<Order>;
 }
