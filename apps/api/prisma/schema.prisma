@@ -152,7 +152,8 @@ model Order {
   zonaId           String      @map("zona_id") @db.Uuid
   createdAt        DateTime    @default(now()) @map("created_at")
 
-  items OrderItem[]
+  items    OrderItem[]
+  payments Payment[]
 
   @@map("orders")
   @@index([clienteId])
@@ -170,4 +171,49 @@ model OrderItem {
   @@map("order_items")
   @@index([orderId])
   @@index([unidadId])
+}
+
+enum TipoPago {
+  pago_alquiler
+  pago_venta
+  deposito_garantia
+  cobro_mora
+
+  @@map("tipo_pago")
+}
+
+enum MetodoPago {
+  pse
+  tarjeta
+  contra_entrega
+
+  @@map("metodo_pago")
+}
+
+enum EstadoPago {
+  pendiente
+  hold
+  capturado
+  reembolsado
+  fallido
+
+  @@map("estado_pago")
+}
+
+/// Pago asociado a una orden — RF-2.2/2.3/2.4 (Sprint 3). Ver
+/// apps/api/src/modules/payments para el detalle de puertos/casos de uso.
+model Payment {
+  id                 String     @id @default(uuid()) @db.Uuid
+  orderId            String     @map("order_id") @db.Uuid
+  tipo               TipoPago
+  metodo             MetodoPago
+  estado             EstadoPago @default(pendiente)
+  monto              Int
+  wompiTransactionId String?    @map("wompi_transaction_id")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+  @@index([orderId])
 }
