@@ -62,7 +62,7 @@ export class PricingCalculatorService {
   }
 
   calcular(input: PricingCalculatorInput): QuoteResult {
-    const { tipo, tarifaDia, tarifaSemana, depositoPct, dias, costoCompra, pesoKg, zonaId, returnMode } = input;
+    const { tipo, tarifaDia, tarifaSemana, depositoPct, dias, costoCompra, pesoKg, returnMode } = input;
 
     // 1. Tarifa base
     let tarifaBase: Dinero;

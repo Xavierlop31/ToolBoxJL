@@ -39,7 +39,7 @@ When("solicito una cotización de alquiler", async function (this: ToolboxWorld)
 });
 
 Then(
-  "el sistema calcula la tarifa por días, el recargo logístico por peso\\/zona y el depósito de garantía si aplica",
+  String.raw`el sistema calcula la tarifa por días, el recargo logístico por peso\/zona y el depósito de garantía si aplica`,
   function (this: ToolboxWorld) {
     const cot = this.ultimaCotizacion;
     assert.ok(cot);

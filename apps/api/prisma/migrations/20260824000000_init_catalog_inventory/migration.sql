@@ -104,6 +104,19 @@ ALTER TABLE "tool_unit_status_log" ADD CONSTRAINT "tool_unit_status_log_unidad_i
 -- el camino listo si el acceso público se restringe más adelante.
 ALTER TABLE "public"."tool_models" ENABLE ROW LEVEL SECURITY;
 
+-- Helper: agrupa la condición de "es staff operativo" (admin/gerente/
+-- almacenista/repartidor) usada en varias policies SELECT de este archivo,
+-- para no repetir el mismo literal de roles en cada CREATE POLICY
+-- (SonarCloud plsql:S1192).
+CREATE OR REPLACE FUNCTION public.is_staff() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
+  );
+$$;
+
 CREATE POLICY "Anyone can view tool models"
 ON "public"."tool_models"
 FOR SELECT
@@ -112,13 +125,7 @@ USING (true);
 CREATE POLICY "Staff can view all tool models"
 ON "public"."tool_models"
 FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
-  )
-);
+USING (public.is_staff());
 
 -- Solo admin puede registrar nuevos modelos (RF-1.1, POST /inventory/models).
 CREATE POLICY "Only admin can insert tool models"
@@ -146,13 +153,7 @@ USING (true);
 CREATE POLICY "Staff can view all tool units"
 ON "public"."tool_units"
 FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
-  )
-);
+USING (public.is_staff());
 
 -- Solo almacenista/admin pueden dar de alta unidades físicas
 -- (RF-1.2, POST /inventory/units).
@@ -177,13 +178,7 @@ ALTER TABLE "public"."tool_unit_status_log" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Staff can view status log entries"
 ON "public"."tool_unit_status_log"
 FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-    AND users.rol IN ('admin', 'gerente', 'almacenista', 'repartidor')
-  )
-);
+USING (public.is_staff());
 
 CREATE POLICY "Staff can insert status log entries"
 ON "public"."tool_unit_status_log"

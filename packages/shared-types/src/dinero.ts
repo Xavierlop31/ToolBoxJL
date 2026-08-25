@@ -14,7 +14,7 @@ export class Dinero {
   /** Construye un Dinero a partir de un monto entero en pesos (>= 0). */
   static pesos(monto: number): Dinero {
     if (!Number.isInteger(monto)) {
-      throw new Error(
+      throw new TypeError(
         `Dinero solo admite montos enteros en COP (recibido: ${monto}).`,
       );
     }
@@ -22,7 +22,7 @@ export class Dinero {
       throw new Error(`Dinero no admite montos negativos (recibido: ${monto}).`);
     }
     if (!Number.isSafeInteger(monto)) {
-      throw new Error(`Dinero recibió un monto fuera de rango seguro: ${monto}.`);
+      throw new TypeError(`Dinero recibió un monto fuera de rango seguro: ${monto}.`);
     }
     return new Dinero(monto);
   }

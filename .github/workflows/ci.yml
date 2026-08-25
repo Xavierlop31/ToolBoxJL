@@ -22,15 +22,26 @@ jobs:
       # La versión de pnpm se toma del campo "packageManager" de package.json
       # (pnpm@9.15.0) — no se repite aquí para evitar el error
       # ERR_PNPM_BAD_PM_VERSION por versiones duplicadas.
-      - uses: pnpm/action-setup@v4
+      # SHA completo del commit de la tag v4 (githubactions:S7637 — hardening
+      # de supply chain: pinear a un commit inmutable en vez de una tag
+      # mutable). Resuelto con `gh api repos/pnpm/action-setup/commits/v4`.
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # --ignore-scripts (githubactions:S6505) evita ejecutar scripts de
+      # instalación arbitrarios de dependencias de terceros. El único
+      # postinstall real del workspace es el de apps/api (`prisma generate`,
+      # ver apps/api/package.json) — se ejecuta explícitamente en el paso
+      # siguiente en vez de dejar que corra automáticamente.
       - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generar Prisma Client (apps/api)
+        run: pnpm --filter @toolboxjl/api exec prisma generate
 
       # Sprint 1 en adelante: apps con Playwright-BDD (portal-cliente,
       # pwa-logistica) instalan Chromium + dependencias de sistema en su
@@ -44,6 +55,15 @@ jobs:
       # pwa-logistica) — se invoca explicitamente desde un paquete que lo
       # tiene instalado; el cache de Chromium/deps de sistema es global al
       # runner, asi que igual cubre a ambas apps.
+      #
+      # Nota SonarCloud (githubactions:S6505): esta línea no es un
+      # `npm install`/`pnpm install` de paquetes del registro — es el
+      # subcomando propio de Playwright que descarga binarios de Chromium
+      # (verificados por checksum, servidos por la CDN de Playwright) y
+      # paquetes de sistema vía apt. No ejecuta scripts de lifecycle de
+      # dependencias de terceros, así que `--ignore-scripts` no aplica acá
+      # (ni Playwright ni `pnpm exec` lo interpretan como tal para este
+      # subcomando) — se deja sin cambios a propósito.
       - name: Instalar Chromium + deps de sistema para Playwright (una sola vez)
         run: pnpm --filter portal-cliente exec playwright install --with-deps chromium
 

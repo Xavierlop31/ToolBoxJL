@@ -37,16 +37,28 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Versión fijada (githubactions:S8543/S8544 — evita instalar un rango
+      # de versión sin resolver). NO se agrega --ignore-scripts acá
+      # (githubactions:S6505) a propósito: el postinstall de @railway/cli
+      # descarga el binario real de la CLI (no hay JS de fallback en
+      # runtime, a diferencia de p. ej. esbuild) — con --ignore-scripts la
+      # instalación queda en un estado roto ("could not find the CLI binary
+      # at .../railway.exe"), verificado localmente antes de este cambio.
       - name: Instalar Railway CLI
         if: steps.check.outputs.skip == 'false'
-        run: npm install -g @railway/cli
+        run: npm install -g @railway/cli@5.43.4
 
+      # El secret se pasa vía `env` y se referencia como variable de shell
+      # ($RAILWAY_SERVICE_ID_API), nunca interpolado directo en el cuerpo del
+      # script (githubactions:S7636 — un secreto con metacaracteres de shell
+      # embebido en `${{ }}` dentro de `run:` puede inyectar comandos).
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
         working-directory: apps/api
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service "${{ secrets.RAILWAY_SERVICE_ID_API }}" --detach
+          RAILWAY_SERVICE_ID_API: ${{ secrets.RAILWAY_SERVICE_ID_API }}
+        run: railway up --service "$RAILWAY_SERVICE_ID_API" --detach
 
   workers:
     name: Deploy apps/workers
@@ -66,13 +78,23 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Versión fijada (githubactions:S8543/S8544 — evita instalar un rango
+      # de versión sin resolver). NO se agrega --ignore-scripts acá
+      # (githubactions:S6505) a propósito: el postinstall de @railway/cli
+      # descarga el binario real de la CLI (no hay JS de fallback en
+      # runtime, a diferencia de p. ej. esbuild) — con --ignore-scripts la
+      # instalación queda en un estado roto ("could not find the CLI binary
+      # at .../railway.exe"), verificado localmente antes de este cambio.
       - name: Instalar Railway CLI
         if: steps.check.outputs.skip == 'false'
-        run: npm install -g @railway/cli
+        run: npm install -g @railway/cli@5.43.4
 
+      # Ídem nota de arriba (githubactions:S7636): secret vía `env`, nunca
+      # interpolado directo en `run:`.
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
         working-directory: apps/workers
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service "${{ secrets.RAILWAY_SERVICE_ID_WORKERS }}" --detach
+          RAILWAY_SERVICE_ID_WORKERS: ${{ secrets.RAILWAY_SERVICE_ID_WORKERS }}
+        run: railway up --service "$RAILWAY_SERVICE_ID_WORKERS" --detach
