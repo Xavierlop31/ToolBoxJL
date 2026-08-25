@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./modules/auth/interface/auth.module";
 import { validarEnvDeAuth } from "./modules/auth/infrastructure/config/supabase-auth.config";
 import { CatalogInventoryModule } from "./modules/catalog-inventory/interface/catalog-inventory.module";
+import { OrdersModule } from "./modules/orders/interface/orders.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -30,6 +31,7 @@ import { CatalogInventoryModule } from "./modules/catalog-inventory/interface/ca
     }),
     AuthModule,
     CatalogInventoryModule,
+    OrdersModule,
   ],
 })
 export class AppModule {}

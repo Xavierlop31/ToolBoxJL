@@ -50,6 +50,31 @@ enum EstadoUnidad {
   @@map("estado_unidad")
 }
 
+enum TipoOrden {
+  alquiler
+  venta
+
+  @@map("tipo_orden")
+}
+
+enum EstadoOrden {
+  pendiente_pago @map("pendiente_pago")
+  confirmada
+  en_curso       @map("en_curso")
+  devuelta
+  cerrada
+  cancelada
+
+  @@map("estado_orden")
+}
+
+enum ModoRetorno {
+  en_sede           @map("en_sede")
+  recogida_domicilio @map("recogida_domicilio")
+
+  @@map("modo_retorno")
+}
+
 /// Ficha técnica de un modelo de herramienta (SKU) — RF-1.1.
 model ToolModel {
   id      String @id @default(uuid()) @db.Uuid
@@ -88,6 +113,7 @@ model ToolUnit {
 
   modelo    ToolModel           @relation(fields: [modeloId], references: [id])
   historial ToolUnitStatusLog[]
+  orderItems OrderItem[]
 
   @@map("tool_units")
   @@index([modeloId])
@@ -111,5 +137,37 @@ model ToolUnitStatusLog {
   unidad ToolUnit @relation(fields: [unidadId], references: [id])
 
   @@map("tool_unit_status_log")
+  @@index([unidadId])
+}
+
+model Order {
+  id               String      @id @default(uuid()) @db.Uuid
+  clienteId        String      @map("cliente_id") @db.Uuid
+  tipo             TipoOrden
+  estado           EstadoOrden @default(pendiente_pago)
+  fechaInicio      DateTime?   @map("fecha_inicio") @db.Date
+  fechaFin         DateTime?   @map("fecha_fin") @db.Date
+  returnMode       ModoRetorno @map("return_mode")
+  direccionEntrega String      @map("direccion_entrega")
+  zonaId           String      @map("zona_id") @db.Uuid
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  items OrderItem[]
+
+  @@map("orders")
+  @@index([clienteId])
+}
+
+model OrderItem {
+  id             String @id @default(uuid()) @db.Uuid
+  orderId        String @map("order_id") @db.Uuid
+  unidadId       String @map("unidad_id") @db.Uuid
+  tarifaAplicada Int    @map("tarifa_aplicada")
+
+  order  Order    @relation(fields: [orderId], references: [id])
+  unidad ToolUnit @relation(fields: [unidadId], references: [id])
+
+  @@map("order_items")
+  @@index([orderId])
   @@index([unidadId])
 }
