@@ -362,3 +362,45 @@ model InspectionChecklist {
   @@index([unidadId])
   @@index([shipmentId])
 }
+
+// ============================================================================
+// Sprint 6 (Issue #18, HU-6.2 — AuthOtpModule): OTPS, DEVICE_VERIFICATIONS.
+// No hay modelo `User`/`USERS` en este schema (Supabase Auth es la fuente de
+// verdad de usuarios, fuera de este Postgres gestionado por Prisma — mismo
+// criterio que `Order.clienteId`, ver arriba): `usuarioId` es un uuid sin FK,
+// igual que el resto de las referencias a usuarios en este schema.
+// ============================================================================
+
+/// OTP de verificación de dispositivo nuevo por WhatsApp — RF-6.2/HU-6.2.
+/// `codigoHash` NUNCA almacena el código en texto plano (hasheado con
+/// scrypt, ver infrastructure/hashing/otp-hasher.ts — mismo criterio que se
+/// aplicaría a una contraseña). Tabla append-only en la práctica (solo se
+/// actualiza `consumidoAt` al verificar, nunca se borra un OTP vencido —
+/// queda como registro auditable, igual que `tool_unit_status_log`).
+model Otp {
+  id          String    @id @default(uuid()) @db.Uuid
+  usuarioId   String    @map("usuario_id") @db.Uuid
+  deviceId    String    @map("device_id")
+  codigoHash  String    @map("codigo_hash")
+  expiraEn    DateTime  @map("expira_en")
+  consumidoAt DateTime? @map("consumido_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("otps")
+  @@index([usuarioId, deviceId])
+}
+
+/// Registro de qué `device_id` ya superó la verificación OTP para qué
+/// usuario — RF-6.2/HU-6.2. Consultado por el frontend (no por un guard
+/// transversal del propio backend, decisión del Tech Lead: ver comentario en
+/// `AuthOtpModule`) para decidir si bloquea la navegación hasta verificar.
+model DeviceVerification {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuarioId  String   @map("usuario_id") @db.Uuid
+  deviceId   String   @map("device_id")
+  verifiedAt DateTime @map("verified_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("device_verifications")
+  @@unique([usuarioId, deviceId])
+}

@@ -13,6 +13,7 @@ import type {
   Shipment,
   Route,
   InspectionChecklist,
+  UsuarioAutenticado,
 } from "@toolboxjl/shared-types";
 
 import { ActualizarEstadoUnidadUseCase } from "../../../src/modules/catalog-inventory/application/actualizar-estado-unidad.use-case";
@@ -71,10 +72,25 @@ import {
 } from "../../../src/modules/inspections/application/consultar-mora.use-case";
 import { EjecutarMoraCalculatorUseCase } from "../../../src/modules/inspections/application/ejecutar-mora-calculator.use-case";
 
+import { VerificarAccesoUseCase } from "../../../src/modules/auth/application/verificar-acceso.use-case";
+
+import {
+  DEVICE_VERIFICATION_REPOSITORY,
+  OTP_REPOSITORY,
+  WHATSAPP_OTP_GATEWAY,
+} from "../../../src/modules/auth-otp/infrastructure/auth-otp.tokens";
+import { InMemoryDeviceVerificationRepository } from "../../../src/modules/auth-otp/infrastructure/in-memory/in-memory-device-verification.repository";
+import { InMemoryOtpRepository } from "../../../src/modules/auth-otp/infrastructure/in-memory/in-memory-otp.repository";
+import { InMemoryWhatsAppOtpGateway } from "../../../src/modules/auth-otp/infrastructure/whatsapp/in-memory-whatsapp-otp-gateway";
+import { SolicitarOtpUseCase, type OtpSolicitado } from "../../../src/modules/auth-otp/application/solicitar-otp.use-case";
+import { VerificarOtpUseCase, type OtpVerificado } from "../../../src/modules/auth-otp/application/verificar-otp.use-case";
+import type { DeviceVerificationRepository } from "../../../src/modules/auth-otp/domain/device-verification.repository";
+
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
  * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
- * `04_logistica_flota.feature` y `05_devoluciones_inspeccion_mora.feature`.
+ * `04_logistica_flota.feature`, `05_devoluciones_inspeccion_mora.feature` y
+ * `06_autenticacion_seguridad.feature`.
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -131,6 +147,19 @@ export class ToolboxWorld extends CucumberWorld {
   /** Modalidad de devolución fijada en el Given del escenario HU-5.2 (Esquema del escenario). */
   returnModeEscenario?: "en_sede" | "recogida_domicilio";
 
+  verificarAcceso!: VerificarAccesoUseCase;
+  solicitarOtp!: SolicitarOtpUseCase;
+  verificarOtp!: VerificarOtpUseCase;
+  /** Acceso directo — conveniencia para los steps de HU-6.2 (leer el estado de verificación y el código "enviado" por el fake). */
+  deviceVerificationRepository!: DeviceVerificationRepository;
+  whatsappOtpGateway!: InMemoryWhatsAppOtpGateway;
+
+  deviceIdEscenario?: string;
+  ultimoOtpSolicitado?: OtpSolicitado;
+  ultimoOtpVerificado?: OtpVerificado;
+  errorOtpVerificado?: Error;
+  ultimoUsuarioVerificado?: UsuarioAutenticado;
+
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
       providers: [
@@ -148,6 +177,10 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: SHIPMENT_REPOSITORY, useClass: InMemoryShipmentRepository },
         { provide: ROUTE_REPOSITORY, useClass: InMemoryRouteRepository },
         { provide: INSPECTION_CHECKLIST_REPOSITORY, useClass: InMemoryInspectionChecklistRepository },
+        { provide: OTP_REPOSITORY, useClass: InMemoryOtpRepository },
+        { provide: DEVICE_VERIFICATION_REPOSITORY, useClass: InMemoryDeviceVerificationRepository },
+        { provide: WHATSAPP_OTP_GATEWAY, useClass: InMemoryWhatsAppOtpGateway },
+        VerificarAccesoUseCase,
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -167,6 +200,8 @@ export class ToolboxWorld extends CucumberWorld {
         RegistrarInspeccionUseCase,
         ConsultarMoraUseCase,
         EjecutarMoraCalculatorUseCase,
+        SolicitarOtpUseCase,
+        VerificarOtpUseCase,
       ],
     }).compile();
 
@@ -199,6 +234,12 @@ export class ToolboxWorld extends CucumberWorld {
     this.ejecutarMoraCalculator = this.moduleRef.get(EjecutarMoraCalculatorUseCase);
     this.shipmentRepository = this.moduleRef.get(SHIPMENT_REPOSITORY);
     this.paymentRepository = this.moduleRef.get(PAYMENT_REPOSITORY);
+
+    this.verificarAcceso = this.moduleRef.get(VerificarAccesoUseCase);
+    this.solicitarOtp = this.moduleRef.get(SolicitarOtpUseCase);
+    this.verificarOtp = this.moduleRef.get(VerificarOtpUseCase);
+    this.deviceVerificationRepository = this.moduleRef.get(DEVICE_VERIFICATION_REPOSITORY);
+    this.whatsappOtpGateway = this.moduleRef.get(WHATSAPP_OTP_GATEWAY);
 
     this.ultimosLogs = [];
   }

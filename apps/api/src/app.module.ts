@@ -8,6 +8,7 @@ import { PaymentsModule } from "./modules/payments/interface/payments.module";
 import { FleetModule } from "./modules/fleet/interface/fleet.module";
 import { LogisticsModule } from "./modules/logistics/interface/logistics.module";
 import { InspectionsModule } from "./modules/inspections/interface/inspections.module";
+import { AuthOtpModule } from "./modules/auth-otp/interface/auth-otp.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -34,6 +35,10 @@ import { InspectionsModule } from "./modules/inspections/interface/inspections.m
  * Sprint 5: + InspectionModule (Issues #14-#16 / HU-5.1 a 5.3 — checklist de
  * inspección con ejecución de garantía, modalidad de devolución y
  * facturación automática de mora, RF-4.1 a RF-4.3).
+ * Sprint 6: + AuthOtpModule (Issue #18 / HU-6.2 — verificación OTP por
+ * WhatsApp en dispositivo nuevo). El otro entregable de Sprint 6 (Issue #19
+ * / HU-7.1 — ingresos totales desglosados) vive en AnalyticsModule, en su
+ * propio PR aparte.
  */
 @Module({
   imports: [
@@ -48,6 +53,7 @@ import { InspectionsModule } from "./modules/inspections/interface/inspections.m
     FleetModule,
     LogisticsModule,
     InspectionsModule,
+    AuthOtpModule,
   ],
 })
 export class AppModule {}

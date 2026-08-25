@@ -9,7 +9,8 @@ module.exports = {
       "../../features/02_cotizacion_alquiler_venta.feature",
       "../../features/03_pagos_garantia.feature",
       "../../features/04_logistica_flota.feature",
-      "../../features/05_devoluciones_inspeccion_mora.feature"
+      "../../features/05_devoluciones_inspeccion_mora.feature",
+      "../../features/06_autenticacion_seguridad.feature"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],

@@ -1,0 +1,87 @@
+name: WhatsApp OTP Integration
+
+# Issue #18 (HU-6.2) — valida `WhatsAppOtpGatewayService` contra la WhatsApp
+# Cloud API REAL (no el fake in-memory que usan los tests unitarios/BDD).
+# Job separado del pipeline principal (ci.yml) a propósito: necesita
+# secrets reales (WHATSAPP_TOKEN/WHATSAPP_PHONE_NUMBER_ID) que no tiene
+# sentido exponer al job de lint/test/build genérico, y cuyo fallo no debe
+# bloquear PRs que no tocan este módulo.
+#
+# Nota (mismo criterio que deploy-railway.yml): un `if` a nivel de job no
+# puede leer el contexto `secrets`, así que el job siempre corre pero su
+# primer paso comprueba si las credenciales existen y, si no, termina limpio
+# (exit 0) en vez de fallar en rojo — relevante para forks de PR externos,
+# que no reciben secrets del repo base.
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "apps/api/src/modules/auth-otp/**"
+      - "apps/api/test/integration/**"
+      - ".github/workflows/whatsapp-otp-integration.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "apps/api/src/modules/auth-otp/**"
+      - "apps/api/test/integration/**"
+      - ".github/workflows/whatsapp-otp-integration.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: whatsapp-otp-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  whatsapp-real-api:
+    name: Validar WhatsAppOtpGatewayService contra la API real
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que las credenciales de WhatsApp existen
+        id: check
+        env:
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+        run: |
+          if [ -z "$WHATSAPP_TOKEN" ] || [ -z "$WHATSAPP_PHONE_NUMBER_ID" ]; then
+            echo "WHATSAPP_TOKEN/WHATSAPP_PHONE_NUMBER_ID no están configurados — omitiendo validación real."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        if: steps.check.outputs.skip == 'false'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.skip == 'false'
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        if: steps.check.outputs.skip == 'false'
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build de @toolboxjl/shared-types (dependencia del API)
+        if: steps.check.outputs.skip == 'false'
+        run: pnpm --filter @toolboxjl/shared-types build
+
+      # Secrets SIEMPRE vía `env:`, nunca interpolados en el cuerpo de
+      # `run:` (githubactions:S7636 — hardening de Sonar, ver
+      # deploy-railway.yml para el mismo criterio ya aplicado en el repo).
+      # WHATSAPP_TEST_RECIPIENT_PHONE es opcional (ver
+      # apps/api/test/integration/whatsapp-otp-gateway.integration.spec.ts):
+      # sin ella, el test de envío end-to-end queda en skip explícito — no
+      # se inventa un número de prueba.
+      - name: Validar credenciales reales de WhatsApp Cloud API
+        if: steps.check.outputs.skip == 'false'
+        working-directory: apps/api
+        env:
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+          WHATSAPP_TEST_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_TEST_RECIPIENT_PHONE }}
+        run: pnpm run test:integration:whatsapp

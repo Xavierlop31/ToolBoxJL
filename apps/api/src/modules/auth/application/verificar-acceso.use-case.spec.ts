@@ -23,7 +23,30 @@ describe("VerificarAccesoUseCase", () => {
       id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       email: "cliente@example.com",
       rol: "cliente",
+      telefono: null,
     });
+  });
+
+  it("normaliza un teléfono ausente a null (Sprint 6, HU-6.2 — claim opcional)", () => {
+    const usuario = useCase.ejecutar(payloadBase());
+    expect(usuario.telefono).toBeNull();
+  });
+
+  it("extrae el teléfono de app_metadata.telefono si está presente", () => {
+    const usuario = useCase.ejecutar(
+      payloadBase({ app_metadata: { rol: "cliente", telefono: "+573001234567" } }),
+    );
+    expect(usuario.telefono).toBe("+573001234567");
+  });
+
+  it("acepta el teléfono como fallback en user_metadata.telefono si app_metadata no lo trae", () => {
+    const usuario = useCase.ejecutar(
+      payloadBase({
+        app_metadata: { rol: "cliente" },
+        user_metadata: { telefono: "+573009876543" },
+      }),
+    );
+    expect(usuario.telefono).toBe("+573009876543");
   });
 
   it("acepta el rol como fallback en user_metadata.rol si app_metadata no lo trae", () => {
