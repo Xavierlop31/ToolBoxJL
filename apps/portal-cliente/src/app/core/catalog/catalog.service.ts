@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { AvailabilityResult, ToolModel } from '../models/catalog.models';
+import { Quote, OrderInput, Order } from '../models/order.models';
 
 export interface CatalogSearchParams {
   q?: string;
@@ -17,10 +18,8 @@ export interface CatalogSearchParams {
  * `GET /inventory/check-availability` (openapi.yaml líneas 59-244) — RF-1.1
  * y RF-1.4 (features/01_catalogo_inventario.feature).
  *
- * Los tres endpoints son públicos o solo requieren rol `cliente`
- * (x-roles), sin escritura: no hay riesgo de invocar un endpoint que
- * Backend todavía no haya terminado de implementar en su rama paralela —el
- * contrato ya está fijo en openapi.yaml (ver PROMPT_IMPLEMENTACION.md, A.7).
+ * Ahora también consume `POST /orders/quote` y `POST /orders` para el flujo
+ * de cotización y creación de órdenes (RF-2.1).
  */
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
@@ -57,5 +56,22 @@ export class CatalogService {
       `${this.baseUrl}/inventory/check-availability`,
       { params },
     );
+  }
+
+  /** RF-2.1: Solicitar cotización de alquiler o venta */
+  createQuote(input: {
+    modelo_id: string;
+    tipo: 'alquiler' | 'venta';
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    direccion_entrega: string;
+    zona_id: string;
+  }): Observable<Quote> {
+    return this.http.post<Quote>(`${this.baseUrl}/orders/quote`, input);
+  }
+
+  /** Crear orden a partir de la cotización */
+  createOrder(input: OrderInput): Observable<Order> {
+    return this.http.post<Order>(`${this.baseUrl}/orders`, input);
   }
 }
