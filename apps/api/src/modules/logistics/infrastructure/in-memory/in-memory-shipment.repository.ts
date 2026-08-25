@@ -50,4 +50,14 @@ export class InMemoryShipmentRepository implements ShipmentRepository {
     this.shipments.set(id, actualizado);
     return actualizado;
   }
+
+  async actualizarEstadoEnvio(id: string, estadoEnvio: EstadoEnvio): Promise<Shipment> {
+    const shipment = this.shipments.get(id);
+    if (!shipment) {
+      throw new Error(`No existe un envío (shipment) con id "${id}".`);
+    }
+    const actualizado: Shipment = { ...shipment, estado_envio: estadoEnvio };
+    this.shipments.set(id, actualizado);
+    return actualizado;
+  }
 }

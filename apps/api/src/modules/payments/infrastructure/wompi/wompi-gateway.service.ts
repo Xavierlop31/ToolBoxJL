@@ -78,4 +78,33 @@ export class WompiGatewayService implements WompiGateway {
       montoMatriz: recargoLogistico - montoLogistica,
     };
   }
+
+  /**
+   * `POST {BASE_URL}/transactions/{id}/capture` — API pública de Wompi para
+   * capturar una transacción preautorizada (`hold`). *** IGUAL QUE EL RESTO
+   * DE ESTA CLASE: NUNCA FUE PROBADO CONTRA SANDBOX REAL *** — mismo
+   * criterio y misma advertencia que `iniciarTransaccion` (ver comentario de
+   * cabecera de la clase). Es responsabilidad de quien tenga credenciales de
+   * sandbox validar este mapeo antes de un despliegue real.
+   */
+  async capturarHold(wompiTransactionId: string): Promise<{ estado: "capturado" }> {
+    const response = await fetch(
+      `${WompiGatewayService.BASE_URL}/transactions/${wompiTransactionId}/capture`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.privateKey}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Wompi sandbox respondió ${response.status} al capturar el hold "${wompiTransactionId}".`,
+      );
+    }
+
+    return { estado: "capturado" };
+  }
 }

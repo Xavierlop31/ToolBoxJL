@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { MetodoPago } from "@toolboxjl/shared-types";
 import type { ToolboxWorld } from "../support/world";
+import { loadRecargoLogisticoPorKg } from "../../../src/modules/pricing/infrastructure/config/pricing.config";
 
 /** Traduce el texto de la tabla de Ejemplos del feature al MetodoPago interno. */
 function aMetodoPago(texto: string): MetodoPago {
@@ -69,7 +70,40 @@ When("elijo pagar con {string}", async function (this: ToolboxWorld, metodo: str
   );
 });
 
+/**
+ * Step compartido entre `03_pagos_garantia.feature` (Sprint 3) y
+ * `05_devoluciones_inspeccion_mora.feature` (Sprint 5, HU-5.2/Issue #15,
+ * escenario "Cliente elige la modalidad de devolución") — ambos features
+ * usan el mismo texto de Gherkin ("Entonces el resultado es \"...\""), y
+ * Cucumber no permite dos step definitions con el mismo patrón en archivos
+ * distintos (error de ambigüedad) — así que se extiende ACÁ, con las nuevas
+ * ramas primero, en vez de duplicar el step en
+ * `test/bdd/step-definitions/devoluciones-mora.steps.ts`.
+ */
 Then("el resultado es {string}", async function (this: ToolboxWorld, resultado: string) {
+  if (
+    resultado.includes("no se genera costo logístico adicional") ||
+    resultado.includes("se aplica la tarifa logística configurada")
+  ) {
+    // HU-5.2 (RF-4.1, Issue #15) — la regla de negocio ("en sede" sin costo
+    // adicional, "recogida a domicilio" con la tarifa duplicada) ya está
+    // implementada desde Sprint 4 en
+    // PricingCalculatorService.calcularRecargoLogistico (en `main`); este
+    // step solo conecta el escenario Gherkin a esa lógica ya existente,
+    // invocando CotizarOrdenUseCase con los dos `return_mode` — no agrega
+    // regla de negocio nueva (decisión del Tech Lead para este sprint).
+    assert.ok(this.ultimaCotizacion, "se esperaba una cotización calculada");
+    const recargoBase = Math.round((this.ultimoModelo?.peso_kg ?? 0) * loadRecargoLogisticoPorKg());
+    if (resultado.includes("no se genera costo logístico adicional")) {
+      assert.equal(this.returnModeEscenario, "en_sede");
+      assert.equal(this.ultimaCotizacion!.recargo_logistico, recargoBase);
+    } else {
+      assert.equal(this.returnModeEscenario, "recogida_domicilio");
+      assert.equal(this.ultimaCotizacion!.recargo_logistico, recargoBase * 2);
+    }
+    return;
+  }
+
   const pagoPrincipal = this.ultimoResultadoPago!.pagoPrincipal;
   const ordenActualizada = await this.obtenerOrden.ejecutar(this.ultimaOrden!.id, {
     id: this.usuarioActualId,

@@ -38,4 +38,12 @@ export interface ShipmentRepository {
     vehiculoId: string,
     estadoEnvio: EstadoEnvio,
   ): Promise<Shipment>;
+  /**
+   * Sprint 5 (RF-4.2, HU-5.1) — transiciona `estado_envio` sin tocar
+   * `vehiculo_id` (a diferencia de `asignarVehiculoYEstado`). Lo usa
+   * `InspectionModule/RegistrarInspeccionUseCase` para marcar un Shipment
+   * como `"retornado"` cuando se registra el checklist de recepción
+   * (`tipo: "recepcion"`) de una devolución.
+   */
+  actualizarEstadoEnvio(id: string, estadoEnvio: EstadoEnvio): Promise<Shipment>;
 }
