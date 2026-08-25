@@ -6,7 +6,7 @@ Característica: Tableros de Control, KPIs y Analítica
   Como Gerente, necesito visibilidad de la salud financiera y operativa del
   negocio para tomar decisiones de compra e inversión en inventario.
 
-  @Fase1 @PrioridadAlta
+  @HU-7.1 @Fase1 @PrioridadAlta
   Escenario: Gerente consulta ingresos totales desglosados
     Dado que soy un Gerente autenticado
     Cuando abro el dashboard de ingresos y selecciono un periodo
