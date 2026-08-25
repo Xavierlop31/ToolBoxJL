@@ -8,6 +8,7 @@ import { PaymentsModule } from "./modules/payments/interface/payments.module";
 import { FleetModule } from "./modules/fleet/interface/fleet.module";
 import { LogisticsModule } from "./modules/logistics/interface/logistics.module";
 import { InspectionsModule } from "./modules/inspections/interface/inspections.module";
+import { AuthOtpModule } from "./modules/auth-otp/interface/auth-otp.module";
 import { AnalyticsModule } from "./modules/analytics/interface/analytics.module";
 
 /**
@@ -35,10 +36,10 @@ import { AnalyticsModule } from "./modules/analytics/interface/analytics.module"
  * Sprint 5: + InspectionModule (Issues #14-#16 / HU-5.1 a 5.3 — checklist de
  * inspección con ejecución de garantía, modalidad de devolución y
  * facturación automática de mora, RF-4.1 a RF-4.3).
- * Sprint 6: + AnalyticsModule (Issue #19 / HU-7.1 — ingresos totales
- * desglosados, Fase 1 de Analítica). El otro entregable de Sprint 6
- * (Issue #18 / HU-6.2 — verificación OTP por WhatsApp) vive en un módulo
- * nuevo aparte (AuthOtpModule) que se agrega en su propio PR.
+ * Sprint 6: + AuthOtpModule (Issue #18 / HU-6.2 — verificación OTP por
+ * WhatsApp en dispositivo nuevo) + AnalyticsModule (Issue #19 / HU-7.1 —
+ * ingresos totales desglosados, Fase 1 de Analítica). Ambos entregables de
+ * Sprint 6, implementados en PRs separados.
  */
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { AnalyticsModule } from "./modules/analytics/interface/analytics.module"
     FleetModule,
     LogisticsModule,
     InspectionsModule,
+    AuthOtpModule,
     AnalyticsModule,
   ],
 })
