@@ -2,6 +2,13 @@
   display: block;
 }
 
+// <output> is inline by default; keep the same block layout/spacing the
+// previous <p role="status"> element had from the browser UA stylesheet.
+output {
+  display: block;
+  margin: 1em 0;
+}
+
 ul {
   list-style: none;
   padding: 0;
