@@ -1,0 +1,93 @@
+:host {
+  display: block;
+  font-family: var(--tbjl-font-family, sans-serif);
+  padding: var(--tbjl-space-8, 2rem);
+}
+
+h1 {
+  margin: 0 0 var(--tbjl-space-6, 1.5rem);
+  font-size: var(--tbjl-font-size-2xl, 1.5rem);
+  font-weight: var(--tbjl-font-weight-semibold, 600);
+  color: var(--tbjl-color-neutral-900, #111827);
+}
+
+.periodo-form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--tbjl-space-4, 1rem);
+  margin-bottom: var(--tbjl-space-6, 1.5rem);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tbjl-space-1, 0.25rem);
+
+  label {
+    font-size: var(--tbjl-font-size-sm, 0.875rem);
+    font-weight: var(--tbjl-font-weight-medium, 500);
+    color: var(--tbjl-color-neutral-700, #374151);
+  }
+
+  input {
+    padding: var(--tbjl-space-3, 0.75rem);
+    border: 1px solid var(--tbjl-color-border, #d7d9dd);
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    font-size: var(--tbjl-font-size-base, 1rem);
+  }
+}
+
+button[type='submit'] {
+  padding: var(--tbjl-space-3, 0.75rem) var(--tbjl-space-6, 1.5rem);
+  background: var(--tbjl-color-primary-500, #f2600c);
+  color: var(--tbjl-color-neutral-0, #fff);
+  border: none;
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  font-size: var(--tbjl-font-size-base, 1rem);
+  font-weight: var(--tbjl-font-weight-semibold, 600);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.form-error {
+  color: var(--tbjl-color-error, #c0362c);
+  font-size: var(--tbjl-font-size-sm, 0.875rem);
+}
+
+.revenue-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--tbjl-space-4, 1rem);
+  margin: 0;
+}
+
+.revenue-item {
+  background: var(--tbjl-color-card, #fff);
+  border: 1px solid var(--tbjl-color-border, #d7d9dd);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  padding: var(--tbjl-space-6, 1.5rem);
+
+  dt {
+    font-size: var(--tbjl-font-size-sm, 0.875rem);
+    color: var(--tbjl-color-neutral-500, #6b7280);
+  }
+
+  dd {
+    margin: var(--tbjl-space-1, 0.25rem) 0 0;
+    font-size: var(--tbjl-font-size-xl, 1.25rem);
+    font-weight: var(--tbjl-font-weight-semibold, 600);
+    color: var(--tbjl-color-neutral-900, #111827);
+  }
+}
+
+.revenue-total {
+  border-color: var(--tbjl-color-primary-500, #f2600c);
+
+  dd {
+    color: var(--tbjl-color-primary-500);
+  }
+}

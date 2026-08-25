@@ -37,6 +37,11 @@ yarn-error.log
 testem.log
 /typings
 
+# Playwright / playwright-bdd (BDD runner)
+/test-results
+/playwright-report
+/e2e-bdd/.features-gen
+
 # System files
 .DS_Store
 Thumbs.db

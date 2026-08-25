@@ -14,6 +14,15 @@ import type { SupabaseJwtPayload } from "./supabase-jwt-payload";
  * Falla explícitamente (sin fallback silencioso) si el token no trae un
  * `sub` o un rol de negocio reconocido, tal como pide la Definition of Done:
  * ningún usuario queda autenticado con un rol asumido por defecto.
+ *
+ * `telefono` (Sprint 6, HU-6.2 — AuthOtpModule) NO sigue ese mismo criterio
+ * estricto: si el claim no está, `UsuarioAutenticado.telefono` queda
+ * `null` en vez de fallar — a diferencia del rol, la enorme mayoría de
+ * endpoints de la plataforma no lo necesitan, así que exigirlo acá
+ * rechazaría el login de cualquier usuario para CUALQUIER endpoint. Solo
+ * `SolicitarOtpUseCase` (AuthOtpModule) lo necesita, y ahí sí falla
+ * explícito si falta (`TelefonoNoDisponibleError`, ver ese módulo para el
+ * detalle de la asunción sobre en qué claim del JWT viaja el teléfono).
  */
 @Injectable()
 export class VerificarAccesoUseCase {
@@ -36,10 +45,14 @@ export class VerificarAccesoUseCase {
 
     const email = typeof payload.email === "string" ? payload.email : null;
 
+    const telefonoCrudo = payload.app_metadata?.telefono ?? payload.user_metadata?.telefono;
+    const telefono = typeof telefonoCrudo === "string" ? telefonoCrudo : null;
+
     return {
       id: payload.sub,
       email,
       rol: rolCrudo,
+      telefono,
     };
   }
 }
