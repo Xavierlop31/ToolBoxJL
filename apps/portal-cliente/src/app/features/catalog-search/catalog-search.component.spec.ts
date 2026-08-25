@@ -42,6 +42,6 @@ describe('CatalogSearchComponent', () => {
     ]);
 
     fixture.detectChanges();
-    expect(fixture.componentInstance.results().length).toBe(1);
+    expect(fixture.componentInstance.results()).toHaveSize(1);
   });
 });

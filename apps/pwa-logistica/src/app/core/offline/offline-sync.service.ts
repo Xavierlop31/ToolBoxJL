@@ -22,11 +22,17 @@ export class OfflineSyncService {
 
   readonly pendingCount = signal(0);
 
+  // No se dispara ninguna operación async desde el constructor
+  // (typescript:S7059 — un constructor no puede ser `async`/`await`-eado).
+  // `refreshPendingCount()` ya se invoca explícitamente desde los flujos que
+  // mutan la cola offline: `enqueueOffline()` en los componentes que
+  // encolan cambios y el propio `flush()` de este servicio al reconectar;
+  // `pendingCount` no se lee todavía en ningún template, así que no hay
+  // consumidor que dependiera del valor inicial calculado en el arranque.
   constructor() {
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => void this.flush());
     }
-    void this.refreshPendingCount();
   }
 
   async refreshPendingCount(): Promise<void> {

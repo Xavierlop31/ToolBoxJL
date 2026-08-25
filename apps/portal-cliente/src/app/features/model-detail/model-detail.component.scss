@@ -1,3 +1,10 @@
+// <output> is inline by default; keep the same block layout/spacing the
+// previous <p role="status"> elements had from the browser UA stylesheet.
+output {
+  display: block;
+  margin: 1em 0;
+}
+
 .model-detail {
   max-width: 720px;
   margin: 0 auto;
@@ -233,7 +240,9 @@
 }
 
 .form-error {
-  color: #dc3545;
+  // #721c24 sobre #f8d7da da ~8.2:1 de contraste (WCAG AA exige 4.5:1 para
+  // texto normal); el rojo anterior (#dc3545) solo llegaba a ~3.4:1.
+  color: #721c24;
   background-color: #f8d7da;
   border: 1px solid #f5c6cb;
   padding: 0.75rem;

@@ -74,22 +74,22 @@
   }
 
   @if (queuedOffline()) {
-    <p class="form-info" role="status" data-testid="offline-queued-message">
+    <output class="form-info" data-testid="offline-queued-message">
       Sin conexión: el checklist quedó encolado y se va a sincronizar apenas
       vuelva la conectividad.
-    </p>
+    </output>
   }
 
   @if (result(); as checklist) {
     @if (checklist.garantia_ejecutada) {
-      <p role="status" data-testid="garantia-ejecutada">
+      <output data-testid="garantia-ejecutada">
         Se detectaron hallazgos — el depósito de garantía fue ejecutado.
-      </p>
+      </output>
     } @else {
-      <p role="status" data-testid="devolucion-conforme">
+      <output data-testid="devolucion-conforme">
         Devolución conforme — no se registraron hallazgos que ejecuten la
         garantía.
-      </p>
+      </output>
     }
   }
 </main>

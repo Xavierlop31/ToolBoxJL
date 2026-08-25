@@ -16,3 +16,10 @@
   border: 1px solid var(--tbjl-color-border, #ccc);
   border-radius: 4px;
 }
+
+// <output> is inline by default; keep the same block layout/spacing the
+// previous <p role="status"> elements had from the browser UA stylesheet.
+output {
+  display: block;
+  margin: 1em 0;
+}

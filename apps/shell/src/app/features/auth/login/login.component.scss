@@ -73,6 +73,7 @@ h1 {
 }
 
 .form-info {
+  display: block;
   margin: 0 0 var(--tbjl-space-4, 1rem);
   color: var(--tbjl-color-success, #1b8a5a);
   font-size: var(--tbjl-font-size-sm, 0.875rem);
@@ -107,11 +108,13 @@ h1 {
   color: var(--tbjl-color-neutral-500, #6b7280);
   font-size: var(--tbjl-font-size-xs, 0.75rem);
 
-  &::before,
-  &::after {
-    content: '';
+  // <hr> semántico en vez de un <div role="separator"> decorativo; mismo
+  // resultado visual que las pseudo-líneas ::before/::after anteriores.
+  hr {
     flex: 1;
     height: 1px;
+    margin: 0;
+    border: none;
     background: var(--tbjl-color-border, #d7d9dd);
   }
 }

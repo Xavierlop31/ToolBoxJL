@@ -1,6 +1,6 @@
 <main class="model-detail">
   @if (loading()) {
-    <p role="status">Cargando ficha del modelo…</p>
+    <output>Cargando ficha del modelo…</output>
   }
 
   @if (errorMessage()) {
@@ -53,9 +53,9 @@
               <p class="form-error" role="alert">{{ availabilityError() }}</p>
             }
             @if (unidadesDisponibles() !== null) {
-              <p data-testid="availability-result" role="status" class="availability-success">
+              <output data-testid="availability-result" class="availability-success">
                 {{ unidadesDisponibles() }} unidades disponibles para el rango seleccionado.
-              </p>
+              </output>
             }
           </div>
         }

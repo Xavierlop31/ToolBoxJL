@@ -52,7 +52,7 @@
         <p class="form-error" role="alert">{{ errorMessage() }}</p>
       }
       @if (infoMessage()) {
-        <p class="form-info" role="status">{{ infoMessage() }}</p>
+        <output class="form-info">{{ infoMessage() }}</output>
       }
 
       <button type="submit" class="btn-primary" [disabled]="loading()">
@@ -60,7 +60,11 @@
       </button>
     </form>
 
-    <div class="divider" role="separator">o</div>
+    <div class="divider">
+      <hr />
+      <span>o</span>
+      <hr />
+    </div>
 
     <button
       type="button"
