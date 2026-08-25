@@ -1,0 +1,42 @@
+<main class="revenue-dashboard">
+  <h1>Dashboard de ingresos</h1>
+
+  <form class="periodo-form" (ngSubmit)="consultar()" novalidate>
+    <div class="field">
+      <label for="periodo">Periodo</label>
+      <input id="periodo" type="month" [formControl]="periodoControl" />
+    </div>
+    <button type="submit" [disabled]="loading()">
+      {{ loading() ? 'Consultando…' : 'Consultar' }}
+    </button>
+  </form>
+
+  @if (loading()) {
+    <output>Cargando ingresos…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (revenue(); as r) {
+    <dl class="revenue-breakdown" data-testid="revenue-breakdown">
+      <div class="revenue-item" data-testid="revenue-ventas-directas">
+        <dt>Ventas Directas</dt>
+        <dd>{{ formatCop(r.ventas_directas) }}</dd>
+      </div>
+      <div class="revenue-item" data-testid="revenue-tarifas-alquiler">
+        <dt>Tarifas de Alquiler</dt>
+        <dd>{{ formatCop(r.tarifas_alquiler) }}</dd>
+      </div>
+      <div class="revenue-item" data-testid="revenue-cobros-mora">
+        <dt>Cobros por Mora</dt>
+        <dd>{{ formatCop(r.cobros_mora) }}</dd>
+      </div>
+      <div class="revenue-item revenue-total" data-testid="revenue-total">
+        <dt>Total</dt>
+        <dd>{{ formatCop(r.total) }}</dd>
+      </div>
+    </dl>
+  }
+</main>

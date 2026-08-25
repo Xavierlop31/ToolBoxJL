@@ -3,7 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 import { defineBddConfig } from 'playwright-bdd';
 
 /**
- * Conecta features/04_logistica_flota.feature (Sprint 4) a un runner real
+ * Conecta features/04_logistica_flota.feature (Sprint 4) y
+ * features/07_kpis_analitica.feature (Sprint 6) a un runner real
  * (Playwright-BDD), Definition of Done ampliada por SDD (CLAUDE.md §2).
  *
  * Alcance de panel-admin:
@@ -14,15 +15,21 @@ import { defineBddConfig } from 'playwright-bdd';
  *   no es verificable de forma determinística en un test E2E sin mockear
  *   el WebSocket de Supabase Realtime, así que queda fuera de este smoke
  *   test (documentado también en steps/shipments.steps.ts).
+ * - HU-7.1 (Issue #19): "Gerente consulta ingresos totales desglosados"
+ *   — único escenario `@Fase1` de 07_kpis_analitica.feature; los otros dos
+ *   (ROI, utilización) son `@Fase2` (Sprint 10) y quedan excluidos acá.
  *
  * RF-3.2 (recargo logístico por peso) es 100% backend (Issue #13, otra
  * rama en paralelo) y no tiene UI — no se incluye acá.
  */
 const testDir = defineBddConfig({
   featuresRoot: path.join(__dirname, '../../../features'),
-  features: [path.join(__dirname, '../../../features/04_logistica_flota.feature')],
+  features: [
+    path.join(__dirname, '../../../features/04_logistica_flota.feature'),
+    path.join(__dirname, '../../../features/07_kpis_analitica.feature'),
+  ],
   steps: path.join(__dirname, 'steps/*.steps.ts'),
-  tags: '@RF-3.1 or @RF-3.3',
+  tags: '@RF-3.1 or @RF-3.3 or @HU-7.1',
 });
 
 export default defineConfig({
