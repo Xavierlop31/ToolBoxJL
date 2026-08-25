@@ -154,6 +154,8 @@ model Order {
 
   items    OrderItem[]
   payments Payment[]
+  /// Sprint 4 — relación 1:1 ORDERS ||--|| SHIPMENTS (docs/DESIGN.md §4.1).
+  shipment Shipment?
 
   @@map("orders")
   @@index([clienteId])
@@ -216,4 +218,106 @@ model Payment {
 
   @@map("payments")
   @@index([orderId])
+}
+
+// ============================================================================
+// Sprint 4 (Issues #11-#13, HU-4.1 a 4.3 — FleetModule/LogisticsModule):
+// VEHICLES, SHIPMENTS, ROUTES (docs/DESIGN.md §4.1). `INSPECTION_CHECKLISTS`
+// (recogida/devolución) llega en Sprint 5 (InspectionModule) — no se modela
+// acá a propósito, mismo criterio que el resto de las migraciones por
+// sprint.
+// ============================================================================
+
+enum TipoVehiculo {
+  moto
+  camioneta
+  camion
+
+  @@map("tipo_vehiculo")
+}
+
+enum TipoEnvio {
+  entrega
+  recogida
+
+  @@map("tipo_envio")
+}
+
+enum EstadoEnvio {
+  pendiente_asignacion
+  en_ruta_entrega
+  entregado
+  en_ruta_recogida
+  retornado
+
+  @@map("estado_envio")
+}
+
+enum GeneradaPor {
+  agente_1
+  manual
+
+  @@map("generada_por")
+}
+
+/// Vehículo de la flota — RF-3.1. `zonas` se modela como `String[]` (uuid
+/// como texto, mismo criterio que `fotosUrls` en `ToolUnitStatusLog`) — ver
+/// nota de `packages/shared-types/src/vehicle.ts` sobre por qué este campo
+/// existe acá aunque el ER diagram de docs/DESIGN.md §4.1 no lo liste
+/// (openapi.yaml, autoridad #1 de CLAUDE.md §1, sí lo declara).
+model Vehicle {
+  id          String       @id @default(uuid()) @db.Uuid
+  tipo        TipoVehiculo
+  capacidadKg Float        @map("capacidad_kg")
+  capacidadM3 Float        @map("capacidad_m3")
+  zonas       String[]     @default([])
+  /// FK lógica a `public.users.id` (repartidor asignado al vehículo).
+  /// No se declara como relación de Prisma porque `users` no forma parte de
+  /// este schema (mismo criterio que `ToolUnitStatusLog.autorId`).
+  repartidorId String?  @map("repartidor_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  shipments Shipment[]
+  routes    Route[]
+
+  @@map("vehicles")
+}
+
+/// Envío asociado a una orden — RF-3.1/3.3. Relación 1:1 con `orders`
+/// (`orderId` único) — docs/DESIGN.md §4.1: `ORDERS ||--|| SHIPMENTS`. Se
+/// crea automáticamente cuando la orden queda `confirmada` (ver
+/// PaymentsModule/PagarOrdenUseCase) — sin endpoint propio de creación en
+/// openapi.yaml.
+model Shipment {
+  id          String      @id @default(uuid()) @db.Uuid
+  orderId     String      @unique @map("order_id") @db.Uuid
+  vehiculoId  String?     @map("vehiculo_id") @db.Uuid
+  tipo        TipoEnvio
+  estadoEnvio EstadoEnvio @default(pendiente_asignacion) @map("estado_envio")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  order    Order    @relation(fields: [orderId], references: [id])
+  vehiculo Vehicle? @relation(fields: [vehiculoId], references: [id])
+
+  @@map("shipments")
+  @@index([vehiculoId])
+  @@index([estadoEnvio])
+}
+
+/// Ruta diaria de reparto/recogida — RF-3.1. `paradas` es un array de
+/// `shipment_id` en orden de secuencia, modelado como `jsonb`
+/// (docs/DESIGN.md §4.1), no como relación normalizada (decisión del Tech
+/// Lead, Sprint 4).
+model Route {
+  id          String      @id @default(uuid()) @db.Uuid
+  vehiculoId  String      @map("vehiculo_id") @db.Uuid
+  fecha       DateTime    @db.Date
+  paradas     Json        @default("[]")
+  generadaPor GeneradaPor @default(manual) @map("generada_por")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  vehiculo Vehicle @relation(fields: [vehiculoId], references: [id])
+
+  @@map("routes")
+  @@index([vehiculoId])
 }

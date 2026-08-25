@@ -5,6 +5,8 @@ import { validarEnvDeAuth } from "./modules/auth/infrastructure/config/supabase-
 import { CatalogInventoryModule } from "./modules/catalog-inventory/interface/catalog-inventory.module";
 import { OrdersModule } from "./modules/orders/interface/orders.module";
 import { PaymentsModule } from "./modules/payments/interface/payments.module";
+import { FleetModule } from "./modules/fleet/interface/fleet.module";
+import { LogisticsModule } from "./modules/logistics/interface/logistics.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -25,6 +27,9 @@ import { PaymentsModule } from "./modules/payments/interface/payments.module";
  * Sprint 2: + OrdersModule (HU-2.1/2.2 — cotización y creación de órdenes).
  * Sprint 3: + PaymentsModule (HU-2.2/2.3/2.4 — pagos y depósito de
  * garantía, RF-2.2 a RF-2.4).
+ * Sprint 4: + FleetModule/LogisticsModule (Issues #11-#13 / HU-4.1 a 4.3 —
+ * flota, asignación de rutas y seguimiento de envíos en tiempo real,
+ * RF-3.1 a RF-3.3).
  */
 @Module({
   imports: [
@@ -36,6 +41,8 @@ import { PaymentsModule } from "./modules/payments/interface/payments.module";
     CatalogInventoryModule,
     OrdersModule,
     PaymentsModule,
+    FleetModule,
+    LogisticsModule,
   ],
 })
 export class AppModule {}

@@ -71,6 +71,7 @@ export class CrearOrdenUseCase {
       fechaInicio: input.fecha_inicio,
       fechaFin: input.fecha_fin,
       zonaId: input.zona_id,
+      returnMode: input.return_mode,
     });
 
     // 3. Persistir la orden
