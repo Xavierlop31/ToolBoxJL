@@ -13,7 +13,7 @@ Característica: Autenticación y Seguridad de Cuenta
     Entonces Supabase Auth valida mis credenciales
     Y obtengo acceso a la plataforma
 
-  @PrioridadAlta
+  @HU-6.2 @PrioridadAlta
   Escenario: Verificación por OTP de WhatsApp en dispositivo nuevo
     Dado que soy un usuario iniciando sesión desde un dispositivo nuevo o registrándome por primera vez
     Cuando el sistema detecta el dispositivo nuevo o el registro

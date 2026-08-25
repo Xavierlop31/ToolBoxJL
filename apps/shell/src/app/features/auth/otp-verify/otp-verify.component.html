@@ -1,0 +1,61 @@
+<main class="auth-screen">
+  <section class="auth-card" aria-labelledby="otp-title" data-testid="otp-verify-screen">
+    <h1 id="otp-title">Verificá este dispositivo</h1>
+    <p class="auth-subtitle">
+      Te enviamos un código de 6 dígitos por WhatsApp. Ingresalo para continuar.
+    </p>
+
+    <form [formGroup]="form" (ngSubmit)="verificar()" novalidate>
+      <div class="field">
+        <label for="codigo">Código de verificación</label>
+        <input
+          id="codigo"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          formControlName="codigo"
+          [attr.aria-invalid]="form.controls.codigo.invalid && form.controls.codigo.touched"
+        />
+        @if (form.controls.codigo.invalid && form.controls.codigo.touched) {
+          <p class="field-error" role="alert">Ingresá los 6 dígitos del código.</p>
+        }
+      </div>
+
+      @if (otpId() && !expired) {
+        <output class="countdown" data-testid="otp-countdown">
+          Expira en {{ secondsRemaining() }} segundos
+        </output>
+      }
+
+      @if (expired) {
+        <p class="form-error" role="alert" data-testid="otp-expired">
+          El código expiró. Solicitá uno nuevo.
+        </p>
+      }
+
+      @if (errorMessage()) {
+        <p class="form-error" role="alert" data-testid="otp-error">{{ errorMessage() }}</p>
+      }
+
+      <button
+        type="submit"
+        class="btn-primary"
+        data-testid="otp-verify-submit"
+        [disabled]="verifying() || requesting() || expired"
+      >
+        {{ verifying() ? 'Verificando…' : 'Verificar código' }}
+      </button>
+    </form>
+
+    <button
+      type="button"
+      class="link"
+      data-testid="otp-resend"
+      [disabled]="requesting()"
+      (click)="solicitarOtp()"
+    >
+      {{ requesting() ? 'Reenviando…' : 'Reenviar código' }}
+    </button>
+  </section>
+</main>
