@@ -39,3 +39,16 @@ export interface Order {
   zona_id: string;
   items?: OrderItem[];
 }
+
+export type MetodoPago = 'pse' | 'tarjeta' | 'contra_entrega';
+export type EstadoPago = 'pendiente' | 'hold' | 'capturado' | 'reembolsado' | 'fallido';
+
+export interface Payment {
+  id: string;
+  order_id: string;
+  tipo: 'pago_alquiler' | 'pago_venta' | 'deposito_garantia' | 'cobro_mora';
+  metodo: MetodoPago;
+  estado: EstadoPago;
+  monto: number;
+  wompi_transaction_id: string | null;
+}

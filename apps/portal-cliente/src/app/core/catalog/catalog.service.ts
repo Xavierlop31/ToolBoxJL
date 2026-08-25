@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { AvailabilityResult, ToolModel } from '../models/catalog.models';
-import { Quote, OrderInput, Order } from '../models/order.models';
+import { Quote, OrderInput, Order, Payment, MetodoPago } from '../models/order.models';
 
 export interface CatalogSearchParams {
   q?: string;
@@ -13,65 +13,44 @@ export interface CatalogSearchParams {
   fecha_fin?: string;
 }
 
-/**
- * Consume `GET /catalog/search`, `GET /catalog/models/{id}` y
- * `GET /inventory/check-availability` (openapi.yaml líneas 59-244) — RF-1.1
- * y RF-1.4 (features/01_catalogo_inventario.feature).
- *
- * Ahora también consume `POST /orders/quote` y `POST /orders` para el flujo
- * de cotización y creación de órdenes (RF-2.1).
- */
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class CatalogService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = environment.apiUrl;
+  private readonly apiUrl = environment.apiUrl;
 
   search(params: CatalogSearchParams = {}): Observable<ToolModel[]> {
     let httpParams = new HttpParams();
-    for (const [key, value] of Object.entries(params)) {
-      if (value) {
-        httpParams = httpParams.set(key, value);
-      }
-    }
-    return this.http.get<ToolModel[]>(`${this.baseUrl}/catalog/search`, {
-      params: httpParams,
-    });
+    if (params.q) httpParams = httpParams.set('q', params.q);
+    if (params.categoria) httpParams = httpParams.set('categoria', params.categoria);
+    if (params.fecha_inicio) httpParams = httpParams.set('fecha_inicio', params.fecha_inicio);
+    if (params.fecha_fin) httpParams = httpParams.set('fecha_fin', params.fecha_fin);
+
+    return this.http.get<ToolModel[]>(`${this.apiUrl}/catalog/search`, { params: httpParams });
   }
 
   getModelById(id: string): Observable<ToolModel> {
-    return this.http.get<ToolModel>(`${this.baseUrl}/catalog/models/${id}`);
+    return this.http.get<ToolModel>(`${this.apiUrl}/catalog/models/${id}`);
   }
 
-  /** RF-1.4: disponibilidad real de unidades no reservadas en un rango de fechas. */
-  checkAvailability(
-    modeloId: string,
-    fechaInicio: string,
-    fechaFin: string,
-  ): Observable<AvailabilityResult> {
+  checkAvailability(modeloId: string, fechaInicio: string, fechaFin: string): Observable<AvailabilityResult> {
     const params = new HttpParams()
       .set('modelo_id', modeloId)
       .set('fecha_inicio', fechaInicio)
       .set('fecha_fin', fechaFin);
-    return this.http.get<AvailabilityResult>(
-      `${this.baseUrl}/inventory/check-availability`,
-      { params },
-    );
+    return this.http.get<AvailabilityResult>(`${this.apiUrl}/inventory/check-availability`, { params });
   }
 
-  /** RF-2.1: Solicitar cotización de alquiler o venta */
-  createQuote(input: {
-    modelo_id: string;
-    tipo: 'alquiler' | 'venta';
-    fecha_inicio?: string;
-    fecha_fin?: string;
-    direccion_entrega: string;
-    zona_id: string;
-  }): Observable<Quote> {
-    return this.http.post<Quote>(`${this.baseUrl}/orders/quote`, input);
+  createQuote(input: OrderInput): Observable<Quote> {
+    return this.http.post<Quote>(`${this.apiUrl}/orders/quote`, input);
   }
 
-  /** Crear orden a partir de la cotización */
   createOrder(input: OrderInput): Observable<Order> {
-    return this.http.post<Order>(`${this.baseUrl}/orders`, input);
+    return this.http.post<Order>(`${this.apiUrl}/orders`, input);
+  }
+
+  payOrder(orderId: string, metodo: MetodoPago): Observable<Payment> {
+    return this.http.post<Payment>(`${this.apiUrl}/orders/${orderId}/pay`, { metodo });
   }
 }
