@@ -4,6 +4,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import type {
   EstadoUnidad,
   MetodoPago,
+  Payment,
   Rol,
   ToolModel,
   ToolUnit,
@@ -12,6 +13,7 @@ import type {
   Vehicle,
   Shipment,
   Route,
+  InspectionChecklist,
 } from "@toolboxjl/shared-types";
 
 import { ActualizarEstadoUnidadUseCase } from "../../../src/modules/catalog-inventory/application/actualizar-estado-unidad.use-case";
@@ -58,11 +60,22 @@ import { InMemoryRouteRepository } from "../../../src/modules/logistics/infrastr
 import { ListarPedidosPendientesUseCase } from "../../../src/modules/logistics/application/listar-pedidos-pendientes.use-case";
 import { AsignarRutasUseCase } from "../../../src/modules/logistics/application/asignar-rutas.use-case";
 import { ListarEnviosUseCase } from "../../../src/modules/logistics/application/listar-envios.use-case";
+import type { ShipmentRepository } from "../../../src/modules/logistics/domain/shipment.repository";
+import type { PaymentRepository } from "../../../src/modules/payments/domain/payment.repository";
+
+import { INSPECTION_CHECKLIST_REPOSITORY } from "../../../src/modules/inspections/infrastructure/inspections.tokens";
+import { InMemoryInspectionChecklistRepository } from "../../../src/modules/inspections/infrastructure/in-memory/in-memory-inspection-checklist.repository";
+import { RegistrarInspeccionUseCase } from "../../../src/modules/inspections/application/registrar-inspeccion.use-case";
+import {
+  ConsultarMoraUseCase,
+  type ComprobanteMora,
+} from "../../../src/modules/inspections/application/consultar-mora.use-case";
+import { EjecutarMoraCalculatorUseCase } from "../../../src/modules/inspections/application/ejecutar-mora-calculator.use-case";
 
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
- * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature` y
- * `04_logistica_flota.feature`.
+ * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
+ * `04_logistica_flota.feature` y `05_devoluciones_inspeccion_mora.feature`.
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -87,6 +100,13 @@ export class ToolboxWorld extends CucumberWorld {
   asignarRutas!: AsignarRutasUseCase;
   listarEnvios!: ListarEnviosUseCase;
 
+  registrarInspeccion!: RegistrarInspeccionUseCase;
+  consultarMora!: ConsultarMoraUseCase;
+  ejecutarMoraCalculator!: EjecutarMoraCalculatorUseCase;
+  /** Acceso directo a los repos in-memory — conveniencia para los steps de HU-5.1/5.3 (buscar el Shipment/Payment creados por otro caso de uso). */
+  shipmentRepository!: ShipmentRepository;
+  paymentRepository!: PaymentRepository;
+
   usuarioActualId!: string;
   rolActual!: Rol;
 
@@ -106,6 +126,12 @@ export class ToolboxWorld extends CucumberWorld {
   ultimasRutas?: Route[];
   ultimosEnvios?: Shipment[];
 
+  ultimoChecklist?: InspectionChecklist;
+  ultimosComprobantesMora?: Payment[];
+  ultimoComprobanteMora?: ComprobanteMora;
+  /** Modalidad de devolución fijada en el Given del escenario HU-5.2 (Esquema del escenario). */
+  returnModeEscenario?: "en_sede" | "recogida_domicilio";
+
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
       providers: [
@@ -122,6 +148,7 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: VEHICLE_REPOSITORY, useClass: InMemoryVehicleRepository },
         { provide: SHIPMENT_REPOSITORY, useClass: InMemoryShipmentRepository },
         { provide: ROUTE_REPOSITORY, useClass: InMemoryRouteRepository },
+        { provide: INSPECTION_CHECKLIST_REPOSITORY, useClass: InMemoryInspectionChecklistRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -138,6 +165,9 @@ export class ToolboxWorld extends CucumberWorld {
         ListarPedidosPendientesUseCase,
         AsignarRutasUseCase,
         ListarEnviosUseCase,
+        RegistrarInspeccionUseCase,
+        ConsultarMoraUseCase,
+        EjecutarMoraCalculatorUseCase,
       ],
     }).compile();
 
@@ -164,6 +194,12 @@ export class ToolboxWorld extends CucumberWorld {
     this.listarPedidosPendientes = this.moduleRef.get(ListarPedidosPendientesUseCase);
     this.asignarRutas = this.moduleRef.get(AsignarRutasUseCase);
     this.listarEnvios = this.moduleRef.get(ListarEnviosUseCase);
+
+    this.registrarInspeccion = this.moduleRef.get(RegistrarInspeccionUseCase);
+    this.consultarMora = this.moduleRef.get(ConsultarMoraUseCase);
+    this.ejecutarMoraCalculator = this.moduleRef.get(EjecutarMoraCalculatorUseCase);
+    this.shipmentRepository = this.moduleRef.get(SHIPMENT_REPOSITORY);
+    this.paymentRepository = this.moduleRef.get(PAYMENT_REPOSITORY);
 
     this.ultimosLogs = [];
   }
