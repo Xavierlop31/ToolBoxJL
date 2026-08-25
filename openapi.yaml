@@ -39,6 +39,13 @@ servers:
     description: Desarrollo local
 
 tags:
+  - name: Autenticación y Seguridad
+    description: >
+      Épica 6 — verificación adicional por OTP de WhatsApp cuando el login o
+      registro ocurre desde un dispositivo nuevo (HU-6.2). Las credenciales
+      en sí (correo/contraseña, Google) las valida Supabase Auth
+      directamente en el cliente; estos endpoints son el paso adicional de
+      verificación de dispositivo, no un login propio.
   - name: Catálogo e Inventario
     description: RF-1.1 a RF-1.4 — modelos, unidades físicas y su hoja de vida.
   - name: Cotización, Órdenes y Pagos
@@ -56,6 +63,87 @@ security:
   - bearerAuth: []
 
 paths:
+  /auth/otp/request:
+    post:
+      operationId: requestDeviceOtp
+      summary: Solicitar OTP de WhatsApp para dispositivo nuevo (HU-6.2)
+      description: >
+        Se invoca tras un login/registro exitoso en Supabase Auth cuando el
+        cliente detecta (o el backend determina) que el device_id no está
+        verificado para este usuario. Genera un OTP de 6 dígitos, lo persiste
+        con expiración configurable y lo envía por WhatsApp Cloud API al
+        teléfono registrado del usuario. El código nunca se devuelve en la
+        respuesta.
+      tags: ["Autenticación y Seguridad"]
+      x-roles: [cliente, admin, gerente, almacenista, repartidor]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id]
+              properties:
+                device_id:
+                  type: string
+                  description: Identificador estable del dispositivo/navegador generado por el cliente.
+      responses:
+        "201":
+          description: OTP generado y enviado por WhatsApp.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  otp_id: { type: string, format: uuid }
+                  expira_en: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429":
+          description: Se superó el límite de solicitudes de OTP para este usuario/dispositivo en la ventana configurada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/otp/verify:
+    post:
+      operationId: verifyDeviceOtp
+      summary: Verificar OTP y desbloquear el dispositivo nuevo (HU-6.2)
+      description: >
+        Valida el código ingresado contra el OTP vigente. Si es correcto
+        antes de expirar, marca el device_id como verificado para el usuario
+        autenticado, desbloqueando el acceso a las rutas protegidas desde ese
+        dispositivo.
+      tags: ["Autenticación y Seguridad"]
+      x-roles: [cliente, admin, gerente, almacenista, repartidor]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp_id, codigo, device_id]
+              properties:
+                otp_id: { type: string, format: uuid }
+                codigo: { type: string, description: "6 dígitos" }
+                device_id: { type: string }
+      responses:
+        "200":
+          description: OTP correcto — dispositivo verificado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verificado: { type: boolean }
+                  device_id: { type: string }
+        "400":
+          description: Código incorrecto, OTP expirado, o ya consumido.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /catalog/search:
     get:
       operationId: searchCatalog
