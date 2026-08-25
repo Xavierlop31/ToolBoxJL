@@ -1,4 +1,5 @@
 {
   "portal-cliente": "http://localhost:4201/remoteEntry.json",
-  "pwa-logistica": "http://localhost:4202/remoteEntry.json"
+  "pwa-logistica": "http://localhost:4202/remoteEntry.json",
+  "panel-admin": "http://localhost:4203/remoteEntry.json"
 }

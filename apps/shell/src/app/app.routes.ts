@@ -47,5 +47,21 @@ export const routes: Routes = [
         exposedModule: './Routes',
       }).then((m) => m.remoteRoutes),
   },
+  {
+    // Remote panel-admin (Sprint 4, Issues #11-#12 — RF-3.1/RF-3.3).
+    // `POST /fleet/vehicles` requiere rol admin y `GET /logistics/shipments`
+    // requiere rol gerente/admin (x-roles); acá solo gateamos sesión activa
+    // (`authGuard`) porque AuthService todavía no expone el rol del
+    // usuario (Sprint 0 solo resuelve sesión) — la verificación fina de rol
+    // queda pendiente, documentada, para un sprint posterior de hardening
+    // (mismo criterio ya aplicado a `/logistica`).
+    path: 'admin',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      loadRemoteModule({
+        remoteName: 'panel-admin',
+        exposedModule: './Routes',
+      }).then((m) => m.remoteRoutes),
+  },
   { path: '**', redirectTo: 'login' },
 ];
