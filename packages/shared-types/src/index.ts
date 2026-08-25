@@ -10,3 +10,4 @@ export * from "./payment";
 export * from "./vehicle";
 export * from "./shipment";
 export * from "./route";
+export * from "./inspection";
