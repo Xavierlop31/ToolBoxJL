@@ -16,6 +16,8 @@ import { OrdenNoPagableError } from "../domain/errors/orden-no-pagable.error";
 import { PAYMENT_REPOSITORY, WOMPI_GATEWAY } from "../infrastructure/payments.tokens";
 import type { PaymentRepository } from "../domain/payment.repository";
 import type { ResultadoSplitWompi, WompiGateway } from "../domain/wompi-gateway";
+import { SHIPMENT_REPOSITORY } from "../../logistics/infrastructure/logistics.tokens";
+import type { ShipmentRepository } from "../../logistics/domain/shipment.repository";
 
 export interface ResultadoPagoOrden {
   pagoPrincipal: Payment;
@@ -56,6 +58,8 @@ export class PagarOrdenUseCase {
     private readonly pagos: PaymentRepository,
     @Inject(WOMPI_GATEWAY)
     private readonly wompi: WompiGateway,
+    @Inject(SHIPMENT_REPOSITORY)
+    private readonly shipments: ShipmentRepository,
     private readonly cotizarOrden: CotizarOrdenUseCase,
   ) {}
 
@@ -91,6 +95,7 @@ export class PagarOrdenUseCase {
       fechaInicio: orden.fecha_inicio ?? undefined,
       fechaFin: orden.fecha_fin ?? undefined,
       zonaId: orden.zona_id,
+      returnMode: orden.return_mode,
     });
 
     const tipoPagoPrincipal = orden.tipo === "alquiler" ? "pago_alquiler" : "pago_venta";
@@ -160,6 +165,22 @@ export class PagarOrdenUseCase {
     // contra_entrega, que "reserva" el pago) → la orden queda confirmada y
     // disponible para GET /logistics/pending-orders (Sprint 4).
     await this.ordenes.actualizarEstado(orden.id, "confirmada");
+
+    // Sprint 4 (RF-3.1) — GAP cerrado por el Tech Lead: openapi.yaml no
+    // declara ningún endpoint para crear un Shipment directamente. Dado que
+    // `ORDERS ||--|| SHIPMENTS` es 1:1 (docs/DESIGN.md §4.1) y que
+    // `GET /logistics/pending-orders` sirve Shipments en
+    // `pendiente_asignacion`, el Shipment de tipo "entrega" se crea acá, de
+    // forma automática, apenas la orden queda confirmada. NO se crea un
+    // segundo Shipment de tipo "recogida" en este sprint — el ciclo de
+    // devolución/recogida es responsabilidad de InspectionModule (Sprint 5),
+    // fuera de alcance acá.
+    await this.shipments.crear({
+      orderId: orden.id,
+      tipo: "entrega",
+      estadoEnvio: "pendiente_asignacion",
+      vehiculoId: null,
+    });
 
     // RF-2.4 / HU-3.3: split simulado del recargo logístico del pago
     // principal entre cuenta matriz y proveedor logístico. No se persiste
