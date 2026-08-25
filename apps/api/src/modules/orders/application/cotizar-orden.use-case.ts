@@ -3,7 +3,8 @@ import { TOOL_MODEL_REPOSITORY } from "../../catalog-inventory/infrastructure/ca
 import type { ToolModelRepository } from "../../catalog-inventory/domain/tool-model.repository";
 import { ModeloNoEncontradoError } from "../../catalog-inventory/domain/errors/modelo-no-encontrado.error";
 import { PricingCalculatorService, type QuoteResult } from "../../pricing/domain/pricing-calculator.service";
-import { Dinero } from "@toolboxjl/shared-types";
+import { loadRecargoLogisticoPorKg } from "../../pricing/infrastructure/config/pricing.config";
+import { Dinero, type ModoRetorno } from "@toolboxjl/shared-types";
 
 export interface CotizarOrdenInput {
   modeloId: string;
@@ -11,11 +12,21 @@ export interface CotizarOrdenInput {
   fechaInicio?: string;
   fechaFin?: string;
   zonaId: string;
+  /**
+   * Modalidad de entrega/recogida (RF-3.2, HU-4.3) — determina si el recargo
+   * logístico es simple o doble (ver PricingCalculatorService). Opcional
+   * acá porque `POST /orders/quote` (openapi.yaml) no la recibe todavía en
+   * el body — el cliente recién la elige al crear la orden
+   * (`OrderInput.return_mode`, obligatorio ahí). Cuando no se provee, se
+   * asume `"en_sede"` (el escenario más común y el que muestra el recargo
+   * base en la cotización previa a la creación de la orden).
+   */
+  returnMode?: ModoRetorno;
 }
 
 @Injectable()
 export class CotizarOrdenUseCase {
-  private readonly pricingCalculator = new PricingCalculatorService();
+  private readonly pricingCalculator = new PricingCalculatorService(loadRecargoLogisticoPorKg());
 
   constructor(
     @Inject(TOOL_MODEL_REPOSITORY)
@@ -51,6 +62,7 @@ export class CotizarOrdenUseCase {
       costoCompra: Dinero.pesos(modelo.costo_compra ?? 0),
       pesoKg: modelo.peso_kg ?? 0,
       zonaId: input.zonaId,
+      returnMode: input.returnMode ?? "en_sede",
     });
 
     quote.modelo_id = input.modeloId;

@@ -21,6 +21,7 @@ describe("PricingCalculatorService", () => {
         costoCompra: Dinero.cero(),
         pesoKg: 5,
         zonaId: "uuid-1",
+        returnMode: "en_sede" as const,
       };
 
       const result = service.calcular(input);
@@ -48,6 +49,7 @@ describe("PricingCalculatorService", () => {
         costoCompra: Dinero.cero(),
         pesoKg: 0,
         zonaId: "uuid-2",
+        returnMode: "en_sede" as const,
       };
 
       const result = service.calcular(input);
@@ -70,6 +72,7 @@ describe("PricingCalculatorService", () => {
         costoCompra: Dinero.cero(),
         pesoKg: 2,
         zonaId: "uuid-3",
+        returnMode: "en_sede" as const,
       };
 
       const result = service.calcular(input);
@@ -93,6 +96,7 @@ describe("PricingCalculatorService", () => {
         costoCompra,
         pesoKg: 10,
         zonaId: "uuid-4",
+        returnMode: "en_sede" as const,
       };
 
       const result = service.calcular(input);
@@ -108,6 +112,63 @@ describe("PricingCalculatorService", () => {
     });
   });
 
+  describe("modalidad de entrega/recogida (RF-3.2, HU-4.3)", () => {
+    it("recargo en su valor base cuando return_mode es en_sede (un solo viaje)", () => {
+      const input = {
+        tipo: "alquiler" as const,
+        tarifaDia: Dinero.pesos(10000),
+        tarifaSemana: Dinero.pesos(60000),
+        depositoPct: 0.2,
+        dias: 3,
+        costoCompra: Dinero.cero(),
+        pesoKg: 4,
+        zonaId: "uuid-6",
+        returnMode: "en_sede" as const,
+      };
+
+      const result = service.calcular(input);
+
+      expect(result.recargo_logistico).toBe(2000); // 4 * 500, un solo viaje
+    });
+
+    it("recargo se duplica cuando return_mode es recogida_domicilio (dos viajes)", () => {
+      const input = {
+        tipo: "alquiler" as const,
+        tarifaDia: Dinero.pesos(10000),
+        tarifaSemana: Dinero.pesos(60000),
+        depositoPct: 0.2,
+        dias: 3,
+        costoCompra: Dinero.cero(),
+        pesoKg: 4,
+        zonaId: "uuid-7",
+        returnMode: "recogida_domicilio" as const,
+      };
+
+      const result = service.calcular(input);
+
+      expect(result.recargo_logistico).toBe(4000); // 4 * 500 * 2, entrega + recogida
+    });
+
+    it("el recargo por kg es configurable vía el constructor (RECARGO_LOGISTICO_POR_KG_COP)", () => {
+      const servicioConfigurado = new PricingCalculatorService(1000);
+      const input = {
+        tipo: "alquiler" as const,
+        tarifaDia: Dinero.pesos(10000),
+        tarifaSemana: Dinero.pesos(60000),
+        depositoPct: 0.2,
+        dias: 3,
+        costoCompra: Dinero.cero(),
+        pesoKg: 4,
+        zonaId: "uuid-8",
+        returnMode: "en_sede" as const,
+      };
+
+      const result = servicioConfigurado.calcular(input);
+
+      expect(result.recargo_logistico).toBe(4000); // 4 * 1000
+    });
+  });
+
   it("nunca usa number flotante para montos (todo pasa por Dinero)", () => {
     const tarifaDia = Dinero.pesos(10000);
     const tarifaSemana = Dinero.pesos(60000);
@@ -120,6 +181,7 @@ describe("PricingCalculatorService", () => {
       costoCompra: Dinero.cero(),
       pesoKg: 5,
       zonaId: "uuid-5",
+      returnMode: "en_sede" as const,
     };
 
     const result = service.calcular(input);
