@@ -1,0 +1,97 @@
+name: WhatsApp — registrar template OTP (Authentication)
+
+# Issue #18 (HU-6.2) — gap de producción documentado en
+# apps/api/src/modules/auth-otp/infrastructure/whatsapp/whatsapp-otp-gateway.service.ts:
+# el mensaje `text` que manda WhatsAppOtpGatewayService solo funciona
+# dentro de la ventana de conversación de 24h de Meta; un login/registro
+# desde dispositivo nuevo (el caso de uso real de HU-6.2) típicamente ocurre
+# FUERA de esa ventana. Meta exige un template de categoría "Authentication"
+# pre-aprobado para mandar OTPs fuera de esa ventana.
+#
+# Esta acción es administrativa/de una sola vez (someter el template a
+# revisión de Meta vía la WhatsApp Business Management API), no un chequeo
+# de CI — por eso NO corre en push/pull_request, solo `workflow_dispatch`
+# manual. La aprobación de Meta ocurre de su lado (minutos a ~24h) y no es
+# algo que este workflow pueda esperar de forma síncrona; el paso final solo
+# reporta el `id` y el `status` inicial devuelto por la API (normalmente
+# "PENDING").
+#
+# Después de que Meta apruebe el template, WhatsAppOtpGatewayService debe
+# actualizarse para mandar `type: "template"` (con este nombre/idioma) en
+# vez de `type: "text"` — eso es trabajo de código aparte, no de este
+# workflow.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  registrar-template:
+    name: Someter template OTP a revisión de Meta
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar que las credenciales de WhatsApp existen
+        id: check
+        env:
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+        run: |
+          if [ -z "$WHATSAPP_TOKEN" ] || [ -z "$WHATSAPP_BUSINESS_ACCOUNT_ID" ]; then
+            echo "WHATSAPP_TOKEN/WHATSAPP_BUSINESS_ACCOUNT_ID no están configurados."
+            exit 1
+          fi
+
+      # Secrets siempre vía `env:`, nunca interpolados en `run:` (mismo
+      # criterio que whatsapp-otp-integration.yml/deploy-railway.yml).
+      #
+      # Estructura del template "Authentication" según la WhatsApp Business
+      # Management API (POST /{WABA_ID}/message_templates): para esta
+      # categoría, Meta genera el texto del cuerpo automáticamente (no se
+      # escribe texto libre) — solo se configuran
+      # `add_security_recommendation` y `code_expiration_minutes`, más un
+      # botón "COPY_CODE" para copiar el OTP directo desde WhatsApp.
+      - name: Someter template a la WhatsApp Business Management API
+        env:
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+        run: |
+          status=$(curl -s -o /tmp/template_response.json -w "%{http_code}" \
+            "https://graph.facebook.com/v21.0/${WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates" \
+            -H "Authorization: Bearer ${WHATSAPP_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "toolboxjl_otp_verificacion",
+              "language": "es",
+              "category": "AUTHENTICATION",
+              "components": [
+                {
+                  "type": "BODY",
+                  "add_security_recommendation": true
+                },
+                {
+                  "type": "FOOTER",
+                  "code_expiration_minutes": 10
+                },
+                {
+                  "type": "BUTTONS",
+                  "buttons": [
+                    {
+                      "type": "OTP",
+                      "otp_type": "COPY_CODE",
+                      "text": "Copiar código"
+                    }
+                  ]
+                }
+              ]
+            }')
+
+          echo "HTTP status: $status"
+          echo "Respuesta de Meta:"
+          cat /tmp/template_response.json
+          echo ""
+
+          if [ "$status" != "200" ]; then
+            echo "::error::Meta rechazó la solicitud del template (HTTP $status) — ver respuesta arriba (motivo típico: nombre duplicado si ya se sometió antes, WABA no verificada, o falta de permiso whatsapp_business_management en el token)."
+            exit 1
+          fi
+
+          echo "Template sometido a revisión. Consultá el status (PENDING/APPROVED/REJECTED) en Meta Business Manager > WhatsApp Manager > Plantillas de mensajes, o vía GET /${WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates."
