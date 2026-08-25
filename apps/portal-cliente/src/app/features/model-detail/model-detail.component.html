@@ -12,31 +12,119 @@
     <p class="model-meta">{{ model.marca }} · {{ model.categoria }}</p>
     <p class="model-rate">Tarifa diaria: {{ model.tarifa_dia }} COP</p>
 
-    <section class="availability" aria-labelledby="availability-title">
-      <h2 id="availability-title">Consultar disponibilidad</h2>
+    <section class="quote-section" aria-labelledby="quote-title">
+      <h2 id="quote-title">Cotizar Alquiler o Compra</h2>
 
-      <form [formGroup]="form" (ngSubmit)="checkAvailability()" novalidate>
+      <form [formGroup]="form" (ngSubmit)="getQuote()" novalidate>
+        
+        @if (model.disponible_para_venta) {
+          <div class="field toggle-field">
+            <span class="label">Modalidad</span>
+            <div class="radio-group">
+              <label>
+                <input type="radio" value="alquiler" formControlName="tipo" />
+                Alquiler
+              </label>
+              <label>
+                <input type="radio" value="venta" formControlName="tipo" />
+                Compra (Venta)
+              </label>
+            </div>
+          </div>
+        }
+
+        @if (form.get('tipo')?.value === 'alquiler') {
+          <div class="date-fields">
+            <div class="field">
+              <label for="fechaInicio">Fecha inicio</label>
+              <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+            </div>
+            <div class="field">
+              <label for="fechaFin">Fecha fin</label>
+              <input id="fechaFin" type="date" formControlName="fechaFin" />
+            </div>
+          </div>
+
+          <div class="availability-check-wrapper">
+            <button type="button" class="btn-secondary" (click)="checkAvailability()" [disabled]="availabilityLoading()">
+              {{ availabilityLoading() ? 'Consultando disponibilidad…' : 'Consultar disponibilidad' }}
+            </button>
+            @if (availabilityError()) {
+              <p class="form-error" role="alert">{{ availabilityError() }}</p>
+            }
+            @if (unidadesDisponibles() !== null) {
+              <p data-testid="availability-result" role="status" class="availability-success">
+                {{ unidadesDisponibles() }} unidades disponibles para el rango seleccionado.
+              </p>
+            }
+          </div>
+        }
+
         <div class="field">
-          <label for="fechaInicio">Fecha inicio</label>
-          <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+          <label for="direccionEntrega">Dirección de entrega</label>
+          <input id="direccionEntrega" type="text" formControlName="direccionEntrega" placeholder="Ej. Calle 100 # 15-20" />
         </div>
+
         <div class="field">
-          <label for="fechaFin">Fecha fin</label>
-          <input id="fechaFin" type="date" formControlName="fechaFin" />
+          <label for="zonaId">Zona de entrega</label>
+          <select id="zonaId" formControlName="zonaId">
+            <option value="">Selecciona una zona</option>
+            @for (zona of zonas; track zona.id) {
+              <option [value]="zona.id">{{ zona.nombre }}</option>
+            }
+          </select>
         </div>
-        <button type="submit" [disabled]="availabilityLoading()">
-          {{ availabilityLoading() ? 'Consultando…' : 'Consultar disponibilidad' }}
+
+        <button type="submit" class="btn-primary" [disabled]="quoteLoading()">
+          {{ quoteLoading() ? 'Calculando cotización…' : 'Calcular Cotización' }}
         </button>
       </form>
 
-      @if (availabilityError()) {
-        <p class="form-error" role="alert">{{ availabilityError() }}</p>
+      @if (quoteError()) {
+        <p class="form-error" role="alert">{{ quoteError() }}</p>
       }
 
-      @if (unidadesDisponibles() !== null) {
-        <p data-testid="availability-result" role="status">
-          {{ unidadesDisponibles() }} unidades disponibles para el rango seleccionado.
-        </p>
+      <!-- Desglose de Cotización -->
+      @if (quoteResult(); as quote) {
+        <div class="quote-result" data-testid="quote-result">
+          <h3>Desglose de Cotización</h3>
+          <ul class="desglose-list">
+            @for (item of quote.desglose; track item.concepto) {
+              <li>
+                <span class="concepto">{{ item.concepto }}</span>
+                <span class="monto">{{ item.monto }} COP</span>
+              </li>
+            }
+          </ul>
+          <div class="quote-totals">
+            <p>Tarifa Base: <span>{{ quote.tarifa_base }} COP</span></p>
+            <p>Recargo Logístico: <span>{{ quote.recargo_logistico }} COP</span></p>
+            @if (quote.deposito_garantia > 0) {
+              <p>Depósito de Garantía: <span>{{ quote.deposito_garantia }} COP</span></p>
+            }
+            <p class="total-pay">Total a Pagar: <span data-testid="quote-total">{{ quote.total }} COP</span></p>
+          </div>
+
+          <button type="button" class="btn-confirm" (click)="confirmOrder()" [disabled]="orderLoading()">
+            {{ orderLoading() ? 'Confirmando orden…' : 'Confirmar y Crear Orden' }}
+          </button>
+        </div>
+      }
+
+      @if (orderError()) {
+        <p class="form-error" role="alert">{{ orderError() }}</p>
+      }
+
+      <!-- Orden Creada Exitosamente -->
+      @if (orderResult(); as order) {
+        <div class="order-success" data-testid="order-success">
+          <h3>¡Orden Creada Exitosamente!</h3>
+          <p>Tu orden ha sido registrada con el ID: <strong>{{ order.id }}</strong></p>
+          <p>Estado actual: <span class="badge-pending">{{ order.estado }}</span></p>
+          <div class="payment-next-steps">
+            <p><strong>Siguiente paso:</strong> El pago de tu orden está pendiente. En el siguiente sprint podrás realizar el pago seguro a través de nuestra pasarela Wompi.</p>
+          </div>
+        </div>
       }
     </section>
   }

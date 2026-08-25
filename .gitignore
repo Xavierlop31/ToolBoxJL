@@ -37,3 +37,4 @@ coverage/
 
 # Git worktrees used by Claude Code subagents
 .claude/worktrees/
+.aider*
