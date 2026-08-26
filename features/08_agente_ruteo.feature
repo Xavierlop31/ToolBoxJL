@@ -14,7 +14,7 @@ Característica: Agente 1 — Programador Inteligente de Rutas
     Y evalúa densidad por zona y capacidad de cada vehículo
     Y publica las rutas optimizadas vía POST /logistics/assign-routes antes de las 6:00 a.m.
 
-  @PrioridadAlta
+  @HU-8.2 @PrioridadAlta
   Escenario: Repartidor ve su ruta del día ya optimizada
     Dado que soy un Repartidor iniciando la PWA en la mañana y el Agente 1 ya publicó las rutas del día
     Cuando abro mi ruta asignada
