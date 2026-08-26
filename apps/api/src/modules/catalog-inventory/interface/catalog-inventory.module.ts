@@ -1,5 +1,6 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { AuthModule } from "../../auth/interface/auth.module";
+import { OrdersModule } from "../../orders/interface/orders.module";
 import { ActualizarEstadoUnidadUseCase } from "../application/actualizar-estado-unidad.use-case";
 import { BuscarCatalogoUseCase } from "../application/buscar-catalogo.use-case";
 import { ConsultarDisponibilidadUseCase } from "../application/consultar-disponibilidad.use-case";
@@ -35,9 +36,20 @@ import { InventoryController } from "./inventory.controller";
  * apps/api/test/bdd) NO importan este módulo tal cual: arman su propio
  * `TestingModule` con las implementaciones in-memory de
  * `infrastructure/in-memory`, así corren sin necesitar una base real.
+ *
+ * `forwardRef(() => OrdersModule)`: ciclo genuino entre módulos, no un error
+ * de diseño a corregir con un reordenamiento de imports. Este módulo necesita
+ * `ORDER_REPOSITORY` (que provee OrdersModule) solo para
+ * `ConsultarDisponibilidadUseCase`, que a su vez necesita saber qué unidades
+ * ya están reservadas; y OrdersModule necesita `TOOL_MODEL_REPOSITORY`/
+ * `TOOL_UNIT_REPOSITORY` (que provee este módulo) para cotizar y crear
+ * órdenes. Sin `forwardRef` en ambos lados, Nest no puede resolver el ciclo al
+ * construir el grafo de DI — falla en runtime con
+ * `UnknownDependenciesException`, no en tiempo de compilación, porque nada en
+ * CI arranca el `AppModule` real (ver nota de arriba sobre los tests BDD).
  */
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, forwardRef(() => OrdersModule)],
   controllers: [CatalogController, InventoryController],
   providers: [
     PrismaService,
