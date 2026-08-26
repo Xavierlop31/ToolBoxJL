@@ -25,10 +25,10 @@
       <h2>Utilización de inventario</h2>
 
       @if (utilization(); as u) {
-        <div class="utilization-global" data-testid="utilization-global">
+        <dl class="utilization-global" data-testid="utilization-global">
           <dt>Utilización global</dt>
           <dd>{{ formatPct(u.utilizacion_global_pct) }}</dd>
-        </div>
+        </dl>
 
         <ul class="utilization-list" data-testid="utilization-por-modelo">
           @for (item of u.por_modelo; track item.modelo_id) {
