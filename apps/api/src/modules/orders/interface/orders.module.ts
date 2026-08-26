@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { AuthModule } from "../../auth/interface/auth.module";
 import { CatalogInventoryModule } from "../../catalog-inventory/interface/catalog-inventory.module";
 import { CotizarOrdenUseCase } from "../application/cotizar-orden.use-case";
@@ -10,8 +10,15 @@ import { PrismaOrderRepository } from "../infrastructure/prisma/prisma-order.rep
 import { OrdersController } from "./orders.controller";
 import { PrismaService } from "../../catalog-inventory/infrastructure/prisma/prisma.service";
 
+/**
+ * `forwardRef(() => CatalogInventoryModule)`: lado espejo del ciclo genuino
+ * documentado en CatalogInventoryModule (ver el comentario de cabecera de ese
+ * módulo) — CatalogInventoryModule necesita `ORDER_REPOSITORY` de acá, y este
+ * módulo necesita `TOOL_MODEL_REPOSITORY`/`TOOL_UNIT_REPOSITORY` de allá para
+ * cotizar y crear órdenes.
+ */
 @Module({
-  imports: [AuthModule, CatalogInventoryModule],
+  imports: [AuthModule, forwardRef(() => CatalogInventoryModule)],
   controllers: [OrdersController],
   providers: [
     PrismaService,
