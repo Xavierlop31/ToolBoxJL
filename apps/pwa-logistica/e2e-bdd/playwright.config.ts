@@ -3,20 +3,24 @@ import { defineConfig, devices } from '@playwright/test';
 import { defineBddConfig } from 'playwright-bdd';
 
 /**
- * Conecta features/01_catalogo_inventario.feature y
- * features/05_devoluciones_inspeccion_mora.feature a un runner real
- * (Playwright-BDD), per PROMPT_IMPLEMENTACION.md A.2.
+ * Conecta features/01_catalogo_inventario.feature,
+ * features/05_devoluciones_inspeccion_mora.feature y
+ * features/08_agente_ruteo.feature a un runner real (Playwright-BDD), per
+ * PROMPT_IMPLEMENTACION.md A.2.
  *
  * Alcance de pwa-logistica: RF-1.2 ("el QR es escaneable desde la PWA"),
- * RF-1.3 (cambio de estado de una unidad) y, desde Sprint 5, RF-4.2
- * (checklist de inspección al recibir una devolución — HU-5.1, Issue #14).
- * El escaneo con cámara real se mockea (ver e2e-bdd/steps/inventory.steps.ts
- * y el seam `window.__E2E_QR_MOCK__` en QrScannerComponent) — no depende de
- * una cámara real, requisito explícito para correr en CI. `POST
- * /inspections` se mockea con `page.route` (ver
- * e2e-bdd/steps/inspection.steps.ts). RF-4.1 y RF-4.3 (mismo feature file)
- * quedan fuera de los `tags` de acá: son HU-5.2/5.3, sin UI nueva de
- * pwa-logistica este sprint (Backend, sin Issue de Frontend).
+ * RF-1.3 (cambio de estado de una unidad), desde Sprint 5, RF-4.2
+ * (checklist de inspección al recibir una devolución — HU-5.1, Issue #14)
+ * y, desde Sprint 7, HU-8.2 (Repartidor ve su ruta del día ya optimizada —
+ * Issue #23). El escaneo con cámara real se mockea (ver
+ * e2e-bdd/steps/inventory.steps.ts y el seam `window.__E2E_QR_MOCK__` en
+ * QrScannerComponent) — no depende de una cámara real, requisito explícito
+ * para correr en CI. `POST /inspections` se mockea con `page.route` (ver
+ * e2e-bdd/steps/inspection.steps.ts), igual que `GET /logistics/my-route`
+ * (ver e2e-bdd/steps/mi-ruta.steps.ts). RF-4.1 y RF-4.3 (feature 05) y el
+ * escenario "Batch nocturno..." (feature 08, HU-8.1) quedan fuera de los
+ * `tags` de acá: son alcance de Backend/IA, sin UI de pwa-logistica este
+ * sprint.
  */
 const testDir = defineBddConfig({
   featuresRoot: path.join(__dirname, '../../../features'),
@@ -26,9 +30,10 @@ const testDir = defineBddConfig({
       __dirname,
       '../../../features/05_devoluciones_inspeccion_mora.feature',
     ),
+    path.join(__dirname, '../../../features/08_agente_ruteo.feature'),
   ],
   steps: path.join(__dirname, 'steps/*.steps.ts'),
-  tags: '@RF-1.2 or @RF-1.3 or @RF-4.2',
+  tags: '@RF-1.2 or @RF-1.3 or @RF-4.2 or @HU-8.2',
 });
 
 export default defineConfig({
