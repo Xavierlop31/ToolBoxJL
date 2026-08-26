@@ -2,17 +2,21 @@
   "name": "@toolboxjl/workers",
   "version": "0.0.0",
   "private": true,
-  "description": "ToolBox JL — jobs batch standalone (Railway, cron externo). Sprint 5: MoraCalculatorJob (RF-4.3, HU-5.3). NO comparte NestJS con apps/api — cada job es un script de una sola pasada que corre y termina, sin servidor persistente.",
+  "description": "ToolBox JL — jobs batch standalone (Railway, cron externo). Sprint 5: MoraCalculatorJob (RF-4.3, HU-5.3). Sprint 7: RouteSchedulerJob / Agente 1 (RF-3.1, HU-8.1). NO comparte NestJS con apps/api — cada job es un script de una sola pasada que corre y termina, sin servidor persistente.",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "jest",
-    "mora:calcular": "ts-node -T src/main.ts"
+    "test": "jest && cucumber-js --config cucumber.cjs",
+    "test:integration:agente1": "jest --config jest.integration.config.js",
+    "mora:calcular": "ts-node -T src/main.ts",
+    "agente1:ejecutar": "ts-node -T src/route-scheduler-job.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
     "@prisma/client": "^6.2.1"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "^11.2.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^24.13.3",
     "jest": "^29.7.0",
