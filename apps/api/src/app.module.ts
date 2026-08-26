@@ -11,6 +11,8 @@ import { InspectionsModule } from "./modules/inspections/interface/inspections.m
 import { AuthOtpModule } from "./modules/auth-otp/interface/auth-otp.module";
 import { AnalyticsModule } from "./modules/analytics/interface/analytics.module";
 import { WhatsAppWebhookModule } from "./modules/whatsapp-webhook/interface/whatsapp-webhook.module";
+import { CartModule } from "./modules/cart/interface/cart.module";
+import { VoiceAgentModule } from "./modules/voice-agent/interface/voice-agent.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -44,6 +46,13 @@ import { WhatsAppWebhookModule } from "./modules/whatsapp-webhook/interface/what
  * Sprint 8: + WhatsAppWebhookModule (Issues #24/#25 / HU-9.1/9.2 — Agente 2:
  * webhook entrante de WhatsApp Cloud API + orquestación de tool calling con
  * Claude, ver ese módulo para el detalle de la decisión de arquitectura).
+ * Sprint 9: + CartModule (carrito de compras, GET /cart, POST
+ * /cart/add-item) + VoiceAgentModule (POST /voice-agent/livekit-token —
+ * emisión de tokens de sala LiveKit para el Agente 3, Conserje de Voz).
+ * Issues #26/#27 / HU-10.1/10.2. Ver cart/interface/cart.module.ts y
+ * voice-agent/application/emitir-token-livekit.use-case.ts para la decisión
+ * de arquitectura clave de este sprint (el Agente 3 no tiene cuenta de
+ * servicio propia).
  */
 @Module({
   imports: [
@@ -61,6 +70,8 @@ import { WhatsAppWebhookModule } from "./modules/whatsapp-webhook/interface/what
     AuthOtpModule,
     AnalyticsModule,
     WhatsAppWebhookModule,
+    CartModule,
+    VoiceAgentModule,
   ],
 })
 export class AppModule {}

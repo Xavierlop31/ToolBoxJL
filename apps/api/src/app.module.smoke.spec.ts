@@ -55,6 +55,12 @@ describe("AppModule (smoke — arranque real, sin mocks de DI)", () => {
     WHATSAPP_TOKEN: "smoke-token",
     WHATSAPP_PHONE_NUMBER_ID: "0000000000",
     WHATSAPP_BUSINESS_ACCOUNT_ID: "0000000000",
+    // VoiceAgentModule (Sprint 9) — LivekitAccessTokenIssuerService también
+    // valida sus credenciales al construirse (mismo criterio que
+    // WompiGatewayService arriba).
+    LIVEKIT_API_KEY: "smoke-livekit-key",
+    LIVEKIT_API_SECRET: "smoke-livekit-secret",
+    LIVEKIT_URL: "wss://smoke-test.livekit.cloud",
   } as const;
 
   let envOriginal: NodeJS.ProcessEnv;
@@ -70,18 +76,28 @@ describe("AppModule (smoke — arranque real, sin mocks de DI)", () => {
     jest.resetModules();
   });
 
-  it("resuelve el grafo de dependencias completo sin UnknownDependenciesException", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Test } = require("@nestjs/testing") as typeof import("@nestjs/testing");
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { AppModule } = require("./app.module") as typeof import("./app.module");
+  it(
+    "resuelve el grafo de dependencias completo sin UnknownDependenciesException",
+    async () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { Test } = require("@nestjs/testing") as typeof import("@nestjs/testing");
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { AppModule } = require("./app.module") as typeof import("./app.module");
 
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+      const moduleRef: TestingModule = await Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
 
-    expect(moduleRef).toBeDefined();
+      expect(moduleRef).toBeDefined();
 
-    await moduleRef.close();
-  });
+      await moduleRef.close();
+    },
+    // Timeout explícito (default de Jest: 5000ms) — este test compila el
+    // grafo de DI REAL completo (cada vez más grande: CartModule y
+    // VoiceAgentModule se sumaron en Sprint 9), y bajo CI con Turborepo
+    // corriendo 10 tareas en paralelo puede superar el default. No es un
+    // test lento por diseño, es real compilación de módulos — 20s da
+    // margen sin ocultar una regresión genuina de performance.
+    20_000,
+  );
 });
