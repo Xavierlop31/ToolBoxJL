@@ -60,7 +60,14 @@ import { InMemoryRouteRepository } from "../../../src/modules/logistics/infrastr
 import { ListarPedidosPendientesUseCase } from "../../../src/modules/logistics/application/listar-pedidos-pendientes.use-case";
 import { AsignarRutasUseCase } from "../../../src/modules/logistics/application/asignar-rutas.use-case";
 import { ListarEnviosUseCase } from "../../../src/modules/logistics/application/listar-envios.use-case";
+import {
+  VerMiRutaUseCase,
+  type RutaRepartidor,
+} from "../../../src/modules/logistics/application/ver-mi-ruta.use-case";
 import type { ShipmentRepository } from "../../../src/modules/logistics/domain/shipment.repository";
+import type { RouteRepository } from "../../../src/modules/logistics/domain/route.repository";
+import type { VehicleRepository } from "../../../src/modules/fleet/domain/vehicle.repository";
+import type { OrderRepository } from "../../../src/modules/orders/domain/order.repository";
 import type { PaymentRepository } from "../../../src/modules/payments/domain/payment.repository";
 
 import { INSPECTION_CHECKLIST_REPOSITORY } from "../../../src/modules/inspections/infrastructure/inspections.tokens";
@@ -119,6 +126,11 @@ export class ToolboxWorld extends CucumberWorld {
   listarPedidosPendientes!: ListarPedidosPendientesUseCase;
   asignarRutas!: AsignarRutasUseCase;
   listarEnvios!: ListarEnviosUseCase;
+  verMiRuta!: VerMiRutaUseCase;
+  /** Acceso directo — conveniencia para los steps de HU-8.2 (sembrar Vehicle/Route/Order directo, sin pasar por un caso de uso de alta). */
+  vehicleRepository!: VehicleRepository;
+  routeRepository!: RouteRepository;
+  orderRepository!: OrderRepository;
 
   registrarInspeccion!: RegistrarInspeccionUseCase;
   consultarMora!: ConsultarMoraUseCase;
@@ -149,6 +161,8 @@ export class ToolboxWorld extends CucumberWorld {
   ultimoVehiculo?: Vehicle;
   ultimasRutas?: Route[];
   ultimosEnvios?: Shipment[];
+  ultimaMiRuta?: RutaRepartidor;
+  errorMiRuta?: Error;
 
   ultimoChecklist?: InspectionChecklist;
   ultimosComprobantesMora?: Payment[];
@@ -210,6 +224,7 @@ export class ToolboxWorld extends CucumberWorld {
         ListarPedidosPendientesUseCase,
         AsignarRutasUseCase,
         ListarEnviosUseCase,
+        VerMiRutaUseCase,
         RegistrarInspeccionUseCase,
         ConsultarMoraUseCase,
         EjecutarMoraCalculatorUseCase,
@@ -242,6 +257,10 @@ export class ToolboxWorld extends CucumberWorld {
     this.listarPedidosPendientes = this.moduleRef.get(ListarPedidosPendientesUseCase);
     this.asignarRutas = this.moduleRef.get(AsignarRutasUseCase);
     this.listarEnvios = this.moduleRef.get(ListarEnviosUseCase);
+    this.verMiRuta = this.moduleRef.get(VerMiRutaUseCase);
+    this.vehicleRepository = this.moduleRef.get(VEHICLE_REPOSITORY);
+    this.routeRepository = this.moduleRef.get(ROUTE_REPOSITORY);
+    this.orderRepository = this.moduleRef.get(ORDER_REPOSITORY);
 
     this.registrarInspeccion = this.moduleRef.get(RegistrarInspeccionUseCase);
     this.consultarMora = this.moduleRef.get(ConsultarMoraUseCase);

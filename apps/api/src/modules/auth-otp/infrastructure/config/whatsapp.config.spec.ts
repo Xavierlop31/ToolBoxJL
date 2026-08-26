@@ -3,6 +3,7 @@ import {
   loadOtpRateLimitMaximo,
   loadOtpRateLimitVentanaMinutos,
   loadWhatsAppCredentials,
+  loadWhatsAppOtpTemplateConfig,
 } from "./whatsapp.config";
 
 describe("loadWhatsAppCredentials", () => {
@@ -72,5 +73,36 @@ describe("loadOtpRateLimitVentanaMinutos", () => {
     expect(
       loadOtpRateLimitVentanaMinutos({ OTP_RATE_LIMIT_VENTANA_MINUTOS: "30" } as NodeJS.ProcessEnv),
     ).toBe(30);
+  });
+});
+
+describe("loadWhatsAppOtpTemplateConfig", () => {
+  it("devuelve null si no está definida ninguna de las 2 variables (estado esperado hoy — docs/DESIGN.md §7.1)", () => {
+    expect(loadWhatsAppOtpTemplateConfig({} as NodeJS.ProcessEnv)).toBeNull();
+  });
+
+  it("devuelve null si solo está definida WHATSAPP_OTP_TEMPLATE_NAME", () => {
+    expect(
+      loadWhatsAppOtpTemplateConfig({
+        WHATSAPP_OTP_TEMPLATE_NAME: "toolboxjl_otp_verificacion",
+      } as NodeJS.ProcessEnv),
+    ).toBeNull();
+  });
+
+  it("devuelve null si solo está definida WHATSAPP_OTP_TEMPLATE_LANG", () => {
+    expect(
+      loadWhatsAppOtpTemplateConfig({
+        WHATSAPP_OTP_TEMPLATE_LANG: "es",
+      } as NodeJS.ProcessEnv),
+    ).toBeNull();
+  });
+
+  it("devuelve name/lang cuando ambas están definidas", () => {
+    expect(
+      loadWhatsAppOtpTemplateConfig({
+        WHATSAPP_OTP_TEMPLATE_NAME: "toolboxjl_otp_verificacion",
+        WHATSAPP_OTP_TEMPLATE_LANG: "es",
+      } as NodeJS.ProcessEnv),
+    ).toEqual({ name: "toolboxjl_otp_verificacion", lang: "es" });
   });
 });
