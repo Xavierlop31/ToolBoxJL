@@ -64,8 +64,13 @@ export const ADD_TO_CART_TOOL: Anthropic.Tool = {
     type: "object",
     properties: {
       modelo_id: { type: "string", format: "uuid", description: "UUID del modelo confirmado por el cliente." },
-      cantidad: { type: "integer", minimum: 1, description: "Cantidad de unidades. Default 1 si el cliente no especificó otra cosa." },
-      dias: { type: "integer", minimum: 1, description: "Cantidad de días de alquiler, si el cliente los mencionó." },
+      // Sin "minimum" — la API de Anthropic rechaza esa keyword en tools
+      // (400: "For 'integer' type, property 'minimum' is not supported",
+      // detectado en el workflow de integración real). La restricción
+      // ">= 1" queda en la descripción para el modelo y la valida de
+      // verdad POST /cart/add-item server-side (class-validator).
+      cantidad: { type: "integer", description: "Cantidad de unidades, siempre >= 1. Default 1 si el cliente no especificó otra cosa." },
+      dias: { type: "integer", description: "Cantidad de días de alquiler (>= 1), si el cliente los mencionó." },
     },
     required: ["modelo_id", "cantidad"],
     additionalProperties: false,
