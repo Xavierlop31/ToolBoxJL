@@ -46,6 +46,12 @@ tags:
       en sí (correo/contraseña, Google) las valida Supabase Auth
       directamente en el cliente; estos endpoints son el paso adicional de
       verificación de dispositivo, no un login propio.
+  - name: Agente 2 — WhatsApp
+    description: >
+      Épica 9 — canal entrante/saliente del Agente 2 (Asistente Bidireccional
+      de WhatsApp, TRD §4.2). Recordatorio de voz 24h antes del vencimiento
+      (HU-9.1) y extensión de alquiler por voz (HU-9.2, que además reusa
+      `GET /inventory/check-availability` y `POST /rentals/extend`).
   - name: Catálogo e Inventario
     description: RF-1.1 a RF-1.4 — modelos, unidades físicas y su hoja de vida.
   - name: Cotización, Órdenes y Pagos
@@ -143,6 +149,77 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /webhooks/whatsapp:
+    get:
+      operationId: verifyWhatsAppWebhook
+      summary: Verificación del webhook de WhatsApp Cloud API (handshake de Meta)
+      description: >
+        Meta llama este endpoint UNA vez al configurar/reconfigurar la
+        suscripción del webhook en el panel de WhatsApp Business — no lo
+        invoca ningún cliente de la plataforma. Autenticación propia de
+        Meta (no bearer JWT): si `hub.verify_token` coincide con
+        `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, se responde el valor de
+        `hub.challenge` tal cual, como texto plano; si no coincide, 403.
+      tags: [Agente 2 — WhatsApp]
+      security: []
+      x-roles: [público]
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema: { type: string, enum: [subscribe] }
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema: { type: string }
+        - name: hub.challenge
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Token válido — se devuelve hub.challenge como texto plano.
+          content:
+            text/plain:
+              schema: { type: string }
+        "403":
+          description: hub.verify_token no coincide con WHATSAPP_WEBHOOK_VERIFY_TOKEN.
+
+    post:
+      operationId: receiveWhatsAppWebhook
+      summary: Eventos entrantes de WhatsApp Cloud API (mensajes de texto/audio, estados)
+      description: >
+        Meta envía acá cada mensaje entrante (texto o nota de voz) y cada
+        cambio de estado de un mensaje saliente. Autenticado por firma
+        (`X-Hub-Signature-256`, HMAC-SHA256 del body con
+        `WHATSAPP_APP_SECRET`), no por bearer JWT — un request sin firma
+        válida se descarta con 401 antes de procesar nada. El shape exacto
+        del payload lo define Meta (estructura anidada
+        `entry[].changes[].value.messages[]`, ver documentación pública de
+        WhatsApp Cloud API) — acá se modela laxo (`object` libre) en vez de
+        replicarlo campo por campo, para no acoplar el contrato a los
+        cambios de shape que Meta introduce con el tiempo.
+        Procesamiento: SIEMPRE responde 200 de inmediato (antes de 5s, límite
+        de Meta) y encola el procesamiento real (transcripción, tool calling
+        del Agente 2, respuesta) de forma asíncrona — si se demora en
+        responder o responde distinto de 200, Meta reintenta la entrega y
+        puede duplicar el evento.
+      tags: [Agente 2 — WhatsApp]
+      security: []
+      x-roles: [público]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload crudo de WhatsApp Cloud API (webhook de mensajes).
+      responses:
+        "200":
+          description: Evento recibido (aceptado para procesamiento asíncrono).
+        "401":
+          description: Firma X-Hub-Signature-256 ausente o inválida.
 
   /catalog/search:
     get:
