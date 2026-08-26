@@ -98,9 +98,26 @@ import { SolicitarOtpUseCase, type OtpSolicitado } from "../../../src/modules/au
 import { VerificarOtpUseCase, type OtpVerificado } from "../../../src/modules/auth-otp/application/verificar-otp.use-case";
 import type { DeviceVerificationRepository } from "../../../src/modules/auth-otp/domain/device-verification.repository";
 
-import { REVENUE_REPOSITORY } from "../../../src/modules/analytics/infrastructure/analytics.tokens";
+import {
+  DELIVERY_PRODUCTIVITY_REPOSITORY,
+  REVENUE_REPOSITORY,
+  ROI_REPOSITORY,
+  UTILIZATION_REPOSITORY,
+} from "../../../src/modules/analytics/infrastructure/analytics.tokens";
 import { InMemoryRevenueRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-revenue.repository";
+import { InMemoryRoiRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-roi.repository";
+import { InMemoryUtilizationRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-utilization.repository";
+import { InMemoryDeliveryProductivityRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-delivery-productivity.repository";
 import { ConsultarIngresosUseCase } from "../../../src/modules/analytics/application/consultar-ingresos.use-case";
+import { ConsultarRoiUseCase, type RoiPorModelo } from "../../../src/modules/analytics/application/consultar-roi.use-case";
+import {
+  ConsultarUtilizacionUseCase,
+  type UtilizacionRespuesta,
+} from "../../../src/modules/analytics/application/consultar-utilizacion.use-case";
+import {
+  ConsultarProductividadRepartidoresUseCase,
+  type ProductividadRespuesta,
+} from "../../../src/modules/analytics/application/consultar-productividad-repartidores.use-case";
 
 import { CART_REPOSITORY } from "../../../src/modules/cart/infrastructure/cart.tokens";
 import { InMemoryCartRepository } from "../../../src/modules/cart/infrastructure/in-memory/in-memory-cart.repository";
@@ -110,9 +127,9 @@ import { AgregarItemCarritoUseCase } from "../../../src/modules/cart/application
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
  * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
- * `04_logistica_flota.feature`, `05_devoluciones_inspeccion_mora.feature` y
- * `06_autenticacion_seguridad.feature` y `07_kpis_analitica.feature` (solo
- * el escenario `@Fase1`).
+ * `04_logistica_flota.feature`, `05_devoluciones_inspeccion_mora.feature`,
+ * `06_autenticacion_seguridad.feature` y `07_kpis_analitica.feature`
+ * (los 3 escenarios: `@Fase1` HU-7.1 y `@Fase2` HU-7.2/HU-7.3, Sprint 10).
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -153,6 +170,18 @@ export class ToolboxWorld extends CucumberWorld {
   consultarIngresos!: ConsultarIngresosUseCase;
   /** Acceso directo — conveniencia para el step Given de HU-7.1 (sembrar pagos con fecha controlable). */
   revenueRepository!: InMemoryRevenueRepository;
+
+  consultarRoi!: ConsultarRoiUseCase;
+  consultarUtilizacion!: ConsultarUtilizacionUseCase;
+  consultarProductividad!: ConsultarProductividadRepartidoresUseCase;
+  /** Acceso directo — conveniencia para los steps de HU-7.2/7.3 (Sprint 10, Issues #20/#21). */
+  roiRepository!: InMemoryRoiRepository;
+  utilizationRepository!: InMemoryUtilizationRepository;
+  deliveryProductivityRepository!: InMemoryDeliveryProductivityRepository;
+
+  ultimoRoi?: RoiPorModelo[];
+  ultimaUtilizacion?: UtilizacionRespuesta;
+  ultimaProductividad?: ProductividadRespuesta[];
 
   obtenerCarrito!: ObtenerCarritoUseCase;
   agregarItemCarrito!: AgregarItemCarritoUseCase;
@@ -239,6 +268,9 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: WHATSAPP_OTP_GATEWAY, useClass: InMemoryWhatsAppOtpGateway },
         VerificarAccesoUseCase,
         { provide: REVENUE_REPOSITORY, useClass: InMemoryRevenueRepository },
+        { provide: ROI_REPOSITORY, useClass: InMemoryRoiRepository },
+        { provide: UTILIZATION_REPOSITORY, useClass: InMemoryUtilizationRepository },
+        { provide: DELIVERY_PRODUCTIVITY_REPOSITORY, useClass: InMemoryDeliveryProductivityRepository },
         { provide: CART_REPOSITORY, useClass: InMemoryCartRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
@@ -264,6 +296,9 @@ export class ToolboxWorld extends CucumberWorld {
         SolicitarOtpUseCase,
         VerificarOtpUseCase,
         ConsultarIngresosUseCase,
+        ConsultarRoiUseCase,
+        ConsultarUtilizacionUseCase,
+        ConsultarProductividadRepartidoresUseCase,
         ObtenerCarritoUseCase,
         AgregarItemCarritoUseCase,
       ],
@@ -312,6 +347,13 @@ export class ToolboxWorld extends CucumberWorld {
 
     this.consultarIngresos = this.moduleRef.get(ConsultarIngresosUseCase);
     this.revenueRepository = this.moduleRef.get(REVENUE_REPOSITORY);
+
+    this.consultarRoi = this.moduleRef.get(ConsultarRoiUseCase);
+    this.consultarUtilizacion = this.moduleRef.get(ConsultarUtilizacionUseCase);
+    this.consultarProductividad = this.moduleRef.get(ConsultarProductividadRepartidoresUseCase);
+    this.roiRepository = this.moduleRef.get(ROI_REPOSITORY);
+    this.utilizationRepository = this.moduleRef.get(UTILIZATION_REPOSITORY);
+    this.deliveryProductivityRepository = this.moduleRef.get(DELIVERY_PRODUCTIVITY_REPOSITORY);
 
     this.obtenerCarrito = this.moduleRef.get(ObtenerCarritoUseCase);
     this.agregarItemCarrito = this.moduleRef.get(AgregarItemCarritoUseCase);
