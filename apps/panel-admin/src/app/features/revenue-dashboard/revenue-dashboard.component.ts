@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { AnalyticsService } from '../../core/analytics/analytics.service';
 import { RevenueBreakdown } from '../../core/models/analytics.models';
@@ -18,7 +19,7 @@ import { RevenueBreakdown } from '../../core/models/analytics.models';
 @Component({
   selector: 'app-revenue-dashboard',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './revenue-dashboard.component.html',
   styleUrl: './revenue-dashboard.component.scss',
 })

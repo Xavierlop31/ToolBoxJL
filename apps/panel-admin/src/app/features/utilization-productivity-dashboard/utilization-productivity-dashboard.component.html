@@ -1,0 +1,77 @@
+<main class="utilization-productivity-dashboard">
+  <header class="dashboard-header">
+    <h1>Utilización de inventario y productividad de repartidores</h1>
+    <button type="button" (click)="consultar()" [disabled]="loading()">
+      {{ loading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </header>
+
+  <nav class="analytics-nav" aria-label="Dashboards de analítica">
+    <a routerLink="../ingresos">Ingresos</a>
+    <a routerLink="../roi">ROI por herramienta</a>
+    <a routerLink="../utilizacion-productividad" aria-current="page">Utilización y productividad</a>
+  </nav>
+
+  @if (loading()) {
+    <output>Cargando…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <section class="utilization-section" data-testid="utilization-section">
+      <h2>Utilización de inventario</h2>
+
+      @if (utilization(); as u) {
+        <div class="utilization-global" data-testid="utilization-global">
+          <dt>Utilización global</dt>
+          <dd>{{ formatPct(u.utilizacion_global_pct) }}</dd>
+        </div>
+
+        <ul class="utilization-list" data-testid="utilization-por-modelo">
+          @for (item of u.por_modelo; track item.modelo_id) {
+            <li class="utilization-item" data-testid="utilization-row">
+              <span class="utilization-modelo">{{ item.modelo_id }}</span>
+              <span class="utilization-pct">{{ formatPct(item.utilizacion_pct) }}</span>
+            </li>
+          } @empty {
+            <li>No hay datos de utilización por modelo.</li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="productivity-section" data-testid="productivity-section">
+      <h2>Productividad de repartidores</h2>
+
+      <table class="productivity-table" data-testid="productivity-table">
+        <thead>
+          <tr>
+            <th scope="col">Repartidor</th>
+            <th scope="col">Entregas exitosas</th>
+            <th scope="col">Ruta asignada</th>
+            <th scope="col">Productividad</th>
+            <th scope="col">Tiempo promedio por punto</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of productivity(); track item.repartidor_id) {
+            <tr data-testid="productivity-row">
+              <td>{{ item.repartidor_id }}</td>
+              <td>{{ item.entregas_exitosas }}</td>
+              <td>{{ item.ruta_asignada }}</td>
+              <td>{{ productividadPct(item) }}</td>
+              <td>{{ formatMin(item.tiempo_promedio_min) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">No hay datos de productividad para mostrar.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+</main>
