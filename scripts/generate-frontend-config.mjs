@@ -50,7 +50,13 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
  * cliente (portal-cliente y pwa-logistica hablan solo con la API).
  */
 const APPS = {
-  shell: { supabase: true },
+  // `apiUrl`: agregado a shell en Sprint 6 (HU-6.2, Issue #18) — OtpService
+  // llama directo a POST /auth/otp/request y /auth/otp/verify. Si este mapa
+  // queda desactualizado respecto al environment.ts real de la app, el
+  // síntoma es un error de TypeScript en el build de Vercel ("Property
+  // 'apiUrl' does not exist on type...") — no un error de este script (que
+  // corre sin problema, solo que genera un objeto incompleto).
+  shell: { apiUrl: true, supabase: true },
   "portal-cliente": { apiUrl: true },
   "panel-admin": { apiUrl: true, supabase: true },
   "pwa-logistica": { apiUrl: true },
