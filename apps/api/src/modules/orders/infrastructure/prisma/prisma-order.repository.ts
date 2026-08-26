@@ -137,4 +137,13 @@ export class PrismaOrderRepository implements OrderRepository {
     });
     return encontradas.map(aDominio);
   }
+
+  async extenderFecha(id: string, nuevaFechaFin: string): Promise<Order> {
+    const actualizado = await this.prisma.order.update({
+      where: { id },
+      data: { fechaFin: new Date(nuevaFechaFin) },
+      include: { items: true },
+    });
+    return aDominio(actualizado);
+  }
 }

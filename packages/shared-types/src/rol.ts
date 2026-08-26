@@ -22,17 +22,17 @@ export const ROLES_HUMANOS = [
  * roles de servicio de los Agentes de IA que ya tienen JWT propio emitido
  * por AgentsModule (Sprint 7+; TRD §4, PROMPT_IMPLEMENTACION.md A.6).
  *
- * `"agente-1"` (Route Scheduler, Sprint 7) es el primero — `"agente-2"`
- * (WhatsApp) y `"agente-3"` (Voz) se agregan recién en sus propios sprints
- * (8/9), no antes, para no declarar acceso a un JWT de servicio que todavía
- * no existe.
+ * `"agente-1"` (Route Scheduler, Sprint 7) fue el primero — `"agente-2"`
+ * (WhatsApp, Sprint 8) se agrega acá. `"agente-3"` (Voz) se agrega recién en
+ * su propio sprint (9), no antes, para no declarar acceso a un JWT de
+ * servicio que todavía no existe.
  *
  * Es la fuente de verdad única para el conjunto de roles: tanto el guard de
  * RBAC de apps/api como cualquier frontend que necesite condicionar UI por
  * rol deben importar `Rol`/`ROLES`/`ROLES_HUMANOS` desde acá en lugar de
  * redeclarar la lista.
  */
-export const ROLES = [...ROLES_HUMANOS, "agente-1"] as const;
+export const ROLES = [...ROLES_HUMANOS, "agente-1", "agente-2"] as const;
 
 export type Rol = (typeof ROLES)[number];
 

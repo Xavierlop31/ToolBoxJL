@@ -17,11 +17,14 @@ import { SupabaseAuthGuard } from "../../auth/interface/guards/supabase-auth.gua
 import { CotizarOrdenUseCase } from "../application/cotizar-orden.use-case";
 import { CrearOrdenUseCase } from "../application/crear-orden.use-case";
 import { ObtenerOrdenUseCase } from "../application/obtener-orden.use-case";
+import { ExtenderAlquilerUseCase } from "../application/extender-alquiler.use-case";
 import { CotizarOrdenDto } from "./dto/cotizar-orden.dto";
 import { CrearOrdenDto } from "./dto/crear-orden.dto";
+import { ExtenderAlquilerDto } from "./dto/extender-alquiler.dto";
 import { ModeloNoEncontradoError } from "../../catalog-inventory/domain/errors/modelo-no-encontrado.error";
 import { SinUnidadesDisponiblesError } from "../domain/errors/sin-unidades-disponibles.error";
 import { OrdenNoEncontradaError } from "../domain/errors/orden-no-encontrada.error";
+import { OrdenNoExtensibleError } from "../domain/errors/orden-no-extensible.error";
 import type { Order, UsuarioAutenticado } from "@toolboxjl/shared-types";
 import type { QuoteResult } from "../../pricing/domain/pricing-calculator.service";
 
@@ -32,6 +35,7 @@ export class OrdersController {
     private readonly cotizarOrden: CotizarOrdenUseCase,
     private readonly crearOrden: CrearOrdenUseCase,
     private readonly obtenerOrden: ObtenerOrdenUseCase,
+    private readonly extenderAlquiler: ExtenderAlquilerUseCase,
   ) {}
 
   @Roles("cliente")
@@ -82,6 +86,36 @@ export class OrdersController {
     } catch (error) {
       if (error instanceof OrdenNoEncontradaError) {
         throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * `x-roles: [cliente, agente-2]` (openapi.yaml). El Agente 2 (WhatsApp)
+   * invoca este endpoint vía tool calling tras confirmar disponibilidad
+   * futura y ofrecer el modo de cobro en la conversación — ver
+   * `apps/api/src/modules/whatsapp-webhook/` y TRD §4.2. openapi.yaml no
+   * declara 404 para este endpoint (solo 400/401) — "orden no encontrada"
+   * mapea a 400, mismo criterio que `crearUnidad` para
+   * `ModeloNoEncontradoError`.
+   */
+  @Roles("cliente", "agente-2")
+  @Post("rentals/extend")
+  @HttpCode(200)
+  async extender(
+    @Body() dto: ExtenderAlquilerDto,
+    @UsuarioActual() usuario: UsuarioAutenticado,
+  ): Promise<Order> {
+    try {
+      return await this.extenderAlquiler.ejecutar(dto.order_id, dto.nueva_fecha_fin, dto.modo_cobro, usuario);
+    } catch (error) {
+      if (
+        error instanceof OrdenNoEncontradaError ||
+        error instanceof OrdenNoExtensibleError ||
+        error instanceof SinUnidadesDisponiblesError
+      ) {
+        throw new BadRequestException(error.message);
       }
       throw error;
     }

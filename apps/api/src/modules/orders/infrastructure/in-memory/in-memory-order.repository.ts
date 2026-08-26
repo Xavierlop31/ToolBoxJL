@@ -95,4 +95,14 @@ export class InMemoryOrderRepository implements OrderRepository {
         new Date(orden.fecha_fin) < ahora,
     );
   }
+
+  async extenderFecha(id: string, nuevaFechaFin: string): Promise<Order> {
+    const orden = this.ordenes.get(id);
+    if (!orden) {
+      throw new Error(`No existe una orden con id "${id}".`);
+    }
+    const actualizada: Order = { ...orden, fecha_fin: nuevaFechaFin };
+    this.ordenes.set(id, actualizada);
+    return actualizada;
+  }
 }

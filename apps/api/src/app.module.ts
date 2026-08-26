@@ -10,6 +10,7 @@ import { LogisticsModule } from "./modules/logistics/interface/logistics.module"
 import { InspectionsModule } from "./modules/inspections/interface/inspections.module";
 import { AuthOtpModule } from "./modules/auth-otp/interface/auth-otp.module";
 import { AnalyticsModule } from "./modules/analytics/interface/analytics.module";
+import { WhatsAppWebhookModule } from "./modules/whatsapp-webhook/interface/whatsapp-webhook.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -40,6 +41,9 @@ import { AnalyticsModule } from "./modules/analytics/interface/analytics.module"
  * WhatsApp en dispositivo nuevo) + AnalyticsModule (Issue #19 / HU-7.1 —
  * ingresos totales desglosados, Fase 1 de Analítica). Ambos entregables de
  * Sprint 6, implementados en PRs separados.
+ * Sprint 8: + WhatsAppWebhookModule (Issues #24/#25 / HU-9.1/9.2 — Agente 2:
+ * webhook entrante de WhatsApp Cloud API + orquestación de tool calling con
+ * Claude, ver ese módulo para el detalle de la decisión de arquitectura).
  */
 @Module({
   imports: [
@@ -56,6 +60,7 @@ import { AnalyticsModule } from "./modules/analytics/interface/analytics.module"
     InspectionsModule,
     AuthOtpModule,
     AnalyticsModule,
+    WhatsAppWebhookModule,
   ],
 })
 export class AppModule {}

@@ -4,7 +4,14 @@ import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // `rawBody: true` (Sprint 8, Agente 2): expone `req.rawBody` (Buffer) en
+  // todos los requests, sin alterar el parseo normal a `req.body` — lo
+  // necesita `WhatsAppSignatureGuard` para verificar `X-Hub-Signature-256`
+  // sobre los bytes EXACTOS del body de POST /webhooks/whatsapp (la firma no
+  // es válida sobre un JSON re-serializado). Costo despreciable para el
+  // resto de los endpoints (solo guarda el buffer ya leído, no lee dos veces
+  // el stream).
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // openapi.yaml declara los paths sin prefijo (ej. /catalog/search) pero el
   // bloque `servers` fija /api/v1 (ver openapi.yaml líneas 16-20, nota de
