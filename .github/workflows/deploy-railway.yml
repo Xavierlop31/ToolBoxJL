@@ -35,6 +35,9 @@ on:
       - "packages/**"
       - "railway.*.json"
       - "pnpm-lock.yaml"
+      # Sin esto, un cambio al propio workflow no dispara nada: se mergea a
+      # main y no pasa nada, porque ninguno de los paths de arriba cambio.
+      - ".github/workflows/deploy-railway.yml"
 
 concurrency:
   group: deploy-railway-${{ github.ref }}
