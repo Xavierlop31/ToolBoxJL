@@ -26,6 +26,18 @@ name: Deploy Railway
 # pero su primer paso comprueba si el secreto necesario existe y, si no,
 # termina limpio (exit 0) en lugar de fallar en rojo.
 
+#
+# `workflow_dispatch` permite disparar el deploy a mano desde cualquier rama.
+# Existe para poder VALIDAR este workflow (y la config de config-as-code y de
+# variables de runtime de cada servicio en el dashboard) antes del merge
+# `dev` → `main`, que es el gate semi-irreversible de cierre de sprint
+# (CLAUDE.md §4). Sin esto, la primera ejecución real de un deploy a Railway
+# sería justo en ese merge — un mal momento para descubrir que algo falla.
+#
+# *** Ojo: despliega la rama desde la que se dispara, al servicio REAL. ***
+# Mientras no haya nada productivo corriendo en Railway, eso es exactamente lo
+# que queremos. Cuando lo haya, este disparador debe restringirse (o quitarse).
+
 on:
   push:
     branches: [main]
@@ -35,6 +47,7 @@ on:
       - "packages/**"
       - "railway.*.json"
       - "pnpm-lock.yaml"
+  workflow_dispatch: {}
 
 concurrency:
   group: deploy-railway-${{ github.ref }}
