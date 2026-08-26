@@ -14,6 +14,7 @@ import type {
   Route,
   InspectionChecklist,
   UsuarioAutenticado,
+  Cart,
 } from "@toolboxjl/shared-types";
 
 import { ActualizarEstadoUnidadUseCase } from "../../../src/modules/catalog-inventory/application/actualizar-estado-unidad.use-case";
@@ -101,6 +102,11 @@ import { REVENUE_REPOSITORY } from "../../../src/modules/analytics/infrastructur
 import { InMemoryRevenueRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-revenue.repository";
 import { ConsultarIngresosUseCase } from "../../../src/modules/analytics/application/consultar-ingresos.use-case";
 
+import { CART_REPOSITORY } from "../../../src/modules/cart/infrastructure/cart.tokens";
+import { InMemoryCartRepository } from "../../../src/modules/cart/infrastructure/in-memory/in-memory-cart.repository";
+import { ObtenerCarritoUseCase } from "../../../src/modules/cart/application/obtener-carrito.use-case";
+import { AgregarItemCarritoUseCase } from "../../../src/modules/cart/application/agregar-item-carrito.use-case";
+
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
  * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
@@ -147,6 +153,12 @@ export class ToolboxWorld extends CucumberWorld {
   consultarIngresos!: ConsultarIngresosUseCase;
   /** Acceso directo — conveniencia para el step Given de HU-7.1 (sembrar pagos con fecha controlable). */
   revenueRepository!: InMemoryRevenueRepository;
+
+  obtenerCarrito!: ObtenerCarritoUseCase;
+  agregarItemCarrito!: AgregarItemCarritoUseCase;
+  /** Conveniencia para el step Given de HU-10.2 (herramienta que el Agente 3 "recomendó" antes de la confirmación verbal). */
+  herramientaRecomendada?: ToolModel;
+  ultimoCarrito?: Cart;
 
   usuarioActualId!: string;
   rolActual!: Rol;
@@ -227,6 +239,7 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: WHATSAPP_OTP_GATEWAY, useClass: InMemoryWhatsAppOtpGateway },
         VerificarAccesoUseCase,
         { provide: REVENUE_REPOSITORY, useClass: InMemoryRevenueRepository },
+        { provide: CART_REPOSITORY, useClass: InMemoryCartRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -251,6 +264,8 @@ export class ToolboxWorld extends CucumberWorld {
         SolicitarOtpUseCase,
         VerificarOtpUseCase,
         ConsultarIngresosUseCase,
+        ObtenerCarritoUseCase,
+        AgregarItemCarritoUseCase,
       ],
     }).compile();
 
@@ -297,6 +312,9 @@ export class ToolboxWorld extends CucumberWorld {
 
     this.consultarIngresos = this.moduleRef.get(ConsultarIngresosUseCase);
     this.revenueRepository = this.moduleRef.get(REVENUE_REPOSITORY);
+
+    this.obtenerCarrito = this.moduleRef.get(ObtenerCarritoUseCase);
+    this.agregarItemCarrito = this.moduleRef.get(AgregarItemCarritoUseCase);
 
     this.ultimosLogs = [];
   }
