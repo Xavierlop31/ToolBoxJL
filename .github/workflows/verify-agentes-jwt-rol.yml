@@ -1,0 +1,75 @@
+name: Verificar rol en JWT de cuentas de servicio (Agente 1/2)
+
+# Diagnóstico descartable, NO forma parte del pipeline: confirma que el
+# Custom Access Token Hook de Supabase realmente copia app_metadata.rol al
+# claim del JWT para las cuentas de servicio recién creadas
+# (agente-ruteo@toolboxjl.internal, agente-whatsapp@toolboxjl.internal) —
+# el gap que había quedado sin verificar (ver auth-gateway.ts de Agente 1/2).
+# Solo imprime los claims decodificados (rol/sub/email/exp), nunca el JWT
+# completo ni la password. Se dispara a mano y se borra el archivo después.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  verify:
+    name: Login real de las 2 cuentas de servicio + decode de claims
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar Agente 1 (agente-ruteo)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          EMAIL: ${{ secrets.AGENTE_1_SERVICE_EMAIL }}
+          PASSWORD: ${{ secrets.AGENTE_1_SERVICE_PASSWORD }}
+        run: |
+          set -e
+          RESP=$(curl -s -X POST "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PASSWORD}\"}")
+          TOKEN=$(echo "$RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Agente 1 — login FALLÓ. Respuesta (sin token): $(echo "$RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);console.log(j.error_description||j.msg||j.error||'sin detalle')}catch(e){console.log('respuesta no-JSON')}})")"
+            exit 1
+          fi
+          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2)
+          node -e "
+            let p = process.argv[1].replace(/-/g,'+').replace(/_/g,'/');
+            while (p.length % 4) p += '=';
+            const claims = JSON.parse(Buffer.from(p, 'base64').toString('utf8'));
+            console.log('Agente 1 — sub:', claims.sub);
+            console.log('Agente 1 — email:', claims.email);
+            console.log('Agente 1 — rol (claim raíz):', claims.rol);
+            console.log('Agente 1 — app_metadata.rol:', claims.app_metadata && claims.app_metadata.rol);
+            console.log('Agente 1 — exp:', new Date(claims.exp * 1000).toISOString());
+          " "$PAYLOAD"
+
+      - name: Verificar Agente 2 (agente-whatsapp)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          EMAIL: ${{ secrets.AGENTE_2_SERVICE_EMAIL }}
+          PASSWORD: ${{ secrets.AGENTE_2_SERVICE_PASSWORD }}
+        run: |
+          set -e
+          RESP=$(curl -s -X POST "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PASSWORD}\"}")
+          TOKEN=$(echo "$RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Agente 2 — login FALLÓ. Respuesta (sin token): $(echo "$RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);console.log(j.error_description||j.msg||j.error||'sin detalle')}catch(e){console.log('respuesta no-JSON')}})")"
+            exit 1
+          fi
+          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2)
+          node -e "
+            let p = process.argv[1].replace(/-/g,'+').replace(/_/g,'/');
+            while (p.length % 4) p += '=';
+            const claims = JSON.parse(Buffer.from(p, 'base64').toString('utf8'));
+            console.log('Agente 2 — sub:', claims.sub);
+            console.log('Agente 2 — email:', claims.email);
+            console.log('Agente 2 — rol (claim raíz):', claims.rol);
+            console.log('Agente 2 — app_metadata.rol:', claims.app_metadata && claims.app_metadata.rol);
+            console.log('Agente 2 — exp:', new Date(claims.exp * 1000).toISOString());
+          " "$PAYLOAD"
