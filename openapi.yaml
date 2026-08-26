@@ -791,9 +791,18 @@ paths:
     post:
       operationId: addCartItem
       summary: Agregar producto al carrito
-      description: Invocado directamente por el Cliente o por el Agente 3 vía tool calling (TRD §4.3).
+      description: >
+        Invocado directamente por el Cliente o, vía tool calling, por el
+        Agente 3 (Conserje de Voz, TRD §4.3) tras confirmación verbal. El
+        Agente 3 NO tiene una cuenta de servicio propia (a diferencia de los
+        Agentes 1/2): llama este endpoint reenviando el mismo JWT de
+        Supabase del cliente autenticado que abrió la sesión de voz (ver
+        `POST /voice-agent/livekit-token`) — el request llega autenticado
+        como `cliente`, nunca como un rol de servicio separado. Sprint 9
+        solo soporta clientes ya autenticados (visitante anónimo queda fuera
+        de alcance, ver ADR de Sprint 9).
       tags: [Carrito y Conserje de Voz]
-      x-roles: [cliente, agente-3]
+      x-roles: [cliente]
       requestBody:
         required: true
         content:
@@ -806,6 +815,36 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Cart" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /voice-agent/livekit-token:
+    post:
+      operationId: issueVoiceAgentLivekitToken
+      summary: Emitir token de sala LiveKit para iniciar sesión de voz (Agente 3)
+      description: >
+        HU-10.1/10.2, TRD §4.3 ("tokens de sala de corta duración emitidos
+        por el backend"). El backend arma una sala LiveKit nueva (o se une a
+        una existente del cliente), emite un token de corta duración
+        (`LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET`) y embebe el JWT de Supabase
+        del propio cliente (el mismo Bearer usado para esta llamada) como
+        metadata del participante — el proceso del Agente 3
+        (`apps/voice-agent`) lo lee ahí y lo reenvía tal cual al invocar
+        `GET /cart`/`POST /cart/add-item`/`GET /catalog/search` en nombre de
+        este cliente. No crea ninguna cuenta de servicio nueva.
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      responses:
+        "200":
+          description: Credenciales de sala LiveKit para el widget de voz.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, token, room]
+                properties:
+                  url: { type: string, description: "URL del servidor LiveKit (wss://...)." }
+                  token: { type: string, description: "Token de acceso de corta duración del participante." }
+                  room: { type: string, description: "Nombre de la sala LiveKit." }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /analytics/revenue:
