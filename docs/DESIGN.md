@@ -83,7 +83,7 @@ Each module below is a NestJS module internally layered as `domain/ → applicat
 4. **FleetModule / LogisticsModule** — vehicles (type, weight/volume capacity, zones), shipments, real-time shipment tracking (Supabase Realtime), daily routes. *(RF-3.1, RF-3.3)*
 5. **InspectionModule** — delivery/return checklists with photo evidence, triggers deposit execution on damage; late-fee calculation job. *(RF-4.1–RF-4.3)*
 6. **AnalyticsModule** — revenue, ROI per tool, inventory utilization, courier productivity KPIs.
-7. **AuthModule** — Supabase Auth (JWT, Google OAuth) plus a custom WhatsApp OTP 2FA step (not natively provided by Supabase Auth), RBAC guards for the five roles (`admin`, `gerente`, `almacenista`, `repartidor`, `cliente`).
+7. **AuthModule** — Supabase Auth (JWT, Google OAuth) plus a custom WhatsApp OTP 2FA step (not natively provided by Supabase Auth), RBAC guards for the five roles (`admin`, `gerente`, `almacenista`, `repartidor`, `cliente`). *The WhatsApp OTP step ships with a known platform limitation — see §7.1.*
 8. **AgentsModule** — tool-calling surface consumed by the three AI agents (§7); wraps the same use cases exposed to human users, so agent actions and human actions share identical business rules.
 
 A shared kernel (`SharedKernel`) holds cross-cutting value objects: `Dinero` (COP integer), `Zona`, `Rol`.
@@ -335,6 +335,61 @@ Unlike the original draft (a single generic "Notification & AI" box), the platfo
 | **Agent 3 — Web Voice Concierge** | Customer opens the portal's floating voice widget | `GET /catalog/search`, `POST /cart/add-item` | LiveKit Agents (real-time WebRTC session) + Deepgram (streaming STT) + ElevenLabs (streaming TTS) |
 
 Target end-to-end voice latency: **< 2.5 s** (see §8, NFR-2). Full specification (guardrails, failure handling, example conversation): see `03_TRD_ToolBoxJL.docx`, §4.
+
+### 7.1 Known platform limitation — WhatsApp OTP delivery (HU-6.2 / RF-6.2)
+
+**Status:** accepted limitation, not a defect. Decided by the Architect on 2026-08-25.
+
+The WhatsApp OTP second factor (§3.7, Issue #18) is implemented and functional, but its
+production reach is capped by a Meta platform gate that is **outside this project's control**.
+
+**What the platform enforces.** Meta allows a business to send a free-form (`type: "text"`)
+WhatsApp message only inside the 24-hour *customer service window*, which opens when the
+customer messages the business. Sending outside that window requires a pre-approved
+**message template**. A template that delivers a login code must be of category
+**AUTHENTICATION**, and Meta gates that category behind **business verification**
+(legal-entity documents, proof of address, verified domain).
+
+**Why it cannot be met here.** ToolBox JL is an academic project, not a registered legal
+entity, so business verification cannot be completed. This was confirmed empirically, not
+assumed — the WhatsApp Business Account reports:
+
+```
+status                       ACTIVE        (no account restriction)
+account_review_status        APPROVED      (WABA reviewed and approved by Meta)
+business_verification_status not_verified  ← the blocking condition
+```
+
+Creating an AUTHENTICATION template fails with *"This WhatsApp Business Account doesn't have
+permission to create a message template"*, in the WhatsApp Manager UI and through the
+Business Management API alike. Re-declaring the same content under the **UTILITY** category
+was also evaluated and rejected: Meta's classifier flags the content pre-submission
+(*"This message template will be rejected"*). Rewording it to evade that classifier was
+deliberately **not** pursued — it is policy evasion, it fails on review anyway, and it is not
+a defensible engineering practice.
+
+**Consequence in production.** The OTP reaches the customer only if they have messaged the
+business within the previous 24 hours. A login from a new device — the actual trigger of
+HU-6.2 — typically falls outside that window.
+
+**Consequence for demos and acceptance.** None. The Gherkin scenarios for HU-6.2 run against
+the in-memory OTP gateway and depend on nothing from Meta. For a live end-to-end
+demonstration, the recipient sends any message to the business number first, which opens the
+24-hour window; the full flow then works as specified.
+
+**How this is unblocked later.** No code change is required at the point of approval. The
+template name and language are configuration (`WHATSAPP_OTP_TEMPLATE_NAME`,
+`WHATSAPP_OTP_TEMPLATE_LANG`): when both are set, the gateway sends `type: "template"`;
+when unset, it falls back to `type: "text"`. On a verified business portfolio, approving the
+template and setting two environment variables is the whole migration.
+
+**Secondary impact — Sprint 8 (Agent 2, WhatsApp Assistant).** `business_verification_status:
+not_verified` also caps messaging at 250 unique recipients per 24 hours and limits the
+template quota. Agent 2's 24h-before reminder job is subject to the same window constraint
+described above.
+
+`.github/workflows/whatsapp-register-otp-template.yml` (the manual job that submits the
+template to Meta) is retained but **cannot succeed until business verification is granted**.
 
 ---
 
