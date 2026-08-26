@@ -19,11 +19,14 @@ module.exports = {
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],
     format: ["progress"],
-    // `07_kpis_analitica.feature` tiene 2 escenarios `@Fase2` (ROI,
-    // utilización/productividad — Sprint 10, Issues #20/#21) sin step
-    // definitions a propósito (Issue #19 solo cubre el escenario `@Fase1`,
-    // ver kpis-analitica.steps.ts). Sin un filtro, esos escenarios
-    // quedarían "undefined" y romperían la corrida.
+    // `07_kpis_analitica.feature` tenía 2 escenarios `@Fase2` (ROI —
+    // `@HU-7.2` — y utilización/productividad — `@HU-7.3`) sin step
+    // definitions (Sprint 6, Issue #19, solo cubría el escenario `@Fase1`).
+    // Sprint 10 (Issues #20/#21) los conecta contra
+    // ConsultarRoiUseCase/ConsultarUtilizacionUseCase/
+    // ConsultarProductividadRepartidoresUseCase — ver kpis-analitica.steps.ts
+    // — por eso se agregan `@HU-7.2`/`@HU-7.3` a las excepciones de abajo,
+    // mismo criterio que `@HU-8.2`/`@HU-9.2`/`@HU-10.2`.
     //
     // `08_agente_ruteo.feature` (Sprint 7) agrega el mismo problema pero
     // matizado: sus 2 escenarios son `@Fase2`, pero solo uno de los dos se
@@ -54,10 +57,11 @@ module.exports = {
     // harness de latencia real, no a este backend.
     //
     // Por eso el filtro ya no es un `not @Fase2` a secas: se agregan las
-    // excepciones `or @HU-8.2 or @HU-9.2 or @HU-10.2` para dejar pasar
-    // específicamente esos escenarios aunque estén tageados `@Fase2`.
-    // Cualquier otro escenario `@Fase2` sin su propia excepción explícita
-    // acá queda excluido por default — es el comportamiento seguro.
-    tags: "not @Fase2 or @HU-8.2 or @HU-9.2 or @HU-10.2",
+    // excepciones `or @HU-7.2 or @HU-7.3 or @HU-8.2 or @HU-9.2 or @HU-10.2`
+    // para dejar pasar específicamente esos escenarios aunque estén
+    // tageados `@Fase2`. Cualquier otro escenario `@Fase2` sin su propia
+    // excepción explícita acá queda excluido por default — es el
+    // comportamiento seguro.
+    tags: "not @Fase2 or @HU-7.2 or @HU-7.3 or @HU-8.2 or @HU-9.2 or @HU-10.2",
   },
 };
