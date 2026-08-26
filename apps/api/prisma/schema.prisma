@@ -96,7 +96,9 @@ model ToolModel {
 
   disponibleParaVenta Boolean @default(true) @map("disponible_para_venta")
 
-  unidades ToolUnit[]
+  unidades  ToolUnit[]
+  /// Sprint 9 — líneas de carrito que referencian este modelo (CartModule).
+  cartItems CartItem[]
 
   @@map("tool_models")
 }
@@ -403,4 +405,51 @@ model DeviceVerification {
 
   @@map("device_verifications")
   @@unique([usuarioId, deviceId])
+}
+
+// ============================================================================
+// Sprint 9 (Issues #26/#27, HU-10.1/10.2 — CartModule, Agente 3: Conserje de
+// Voz). `carts`/`cart_items` NO están en docs/DESIGN.md §4.1 (ER diagram
+// anterior a la Épica 10) — se agregan siguiendo el contrato de
+// openapi.yaml `#/components/schemas/Cart`/`CartItem` (fuente de verdad #1,
+// CLAUDE.md §1), mismo criterio de nombres/mapeo que el resto del schema.
+// Un carrito por cliente (`clienteId` único) — ver
+// apps/api/src/modules/cart/domain/cart.repository.ts para el detalle de
+// diseño.
+// ============================================================================
+
+/// Carrito activo de un cliente — RF de Agente 3 (TRD §4.3). `clienteId` es
+/// una FK lógica a `public.users.id` (Supabase Auth), sin relación de Prisma
+/// declarada — mismo criterio que `Order.clienteId`.
+model Cart {
+  id        String   @id @default(uuid()) @db.Uuid
+  clienteId String   @unique @map("cliente_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items CartItem[]
+
+  @@map("carts")
+}
+
+/// Línea de carrito — un modelo por línea (`@@unique([cartId, modeloId])`:
+/// `POST /cart/add-item` SUMA cantidad en vez de duplicar la línea cuando el
+/// modelo ya está en el carrito, ver AgregarItemCarritoUseCase).
+model CartItem {
+  id       String @id @default(uuid()) @db.Uuid
+  cartId   String @map("cart_id") @db.Uuid
+  modeloId String @map("modelo_id") @db.Uuid
+  cantidad Int
+  /// Días de alquiler solicitados para esta línea — `null` cuando la línea
+  /// es de venta (ver cart-pricing.service.ts: se infiere alquiler/venta de
+  /// la presencia de este campo, no hay un `tipo` explícito en `CartItem`,
+  /// openapi.yaml).
+  dias     Int?
+
+  cart   Cart      @relation(fields: [cartId], references: [id])
+  modelo ToolModel @relation(fields: [modeloId], references: [id])
+
+  @@unique([cartId, modeloId])
+  @@map("cart_items")
+  @@index([cartId])
 }

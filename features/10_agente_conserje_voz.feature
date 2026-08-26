@@ -6,7 +6,7 @@ Característica: Agente 3 — Conserje Web de Búsqueda y Venta por Voz
   Como cliente en el sitio web, quiero poder pedir por voz lo que necesito y
   que se agregue solo al carrito.
 
-  @PrioridadAlta
+  @HU-10.1 @PrioridadAlta
   Escenario: Cliente busca una herramienta por voz con baja latencia
     Dado que soy un Cliente en el sitio web usando el widget de voz
     Cuando le pido por voz una herramienta y por cuántos días la necesito
@@ -14,7 +14,7 @@ Característica: Agente 3 — Conserje Web de Búsqueda y Venta por Voz
     Y el agente interpreta mi solicitud, filtra el catálogo y me recomienda una herramienta idónea
     Y la latencia total de la respuesta es menor a 2.5 segundos
 
-  @PrioridadAlta
+  @HU-10.2 @PrioridadAlta
   Escenario: Artículo recomendado se agrega automáticamente al carrito
     Dado que el Agente 3 me recomendó una herramienta por voz
     Cuando confirmo verbalmente que la quiero
