@@ -1,0 +1,28 @@
+{
+  "name": "@toolboxjl/voice-agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ToolBox JL — Agente 3, Conserje Web de Voz (Sprint 9, Issues #26/#27, HU-10.1/10.2, TRD §4.3). A diferencia de apps/workers (jobs de una sola pasada, cron externo), este app es un PROCESO PERSISTENTE: arranca, expone un servidor HTTP mínimo en $PORT para recibir webhooks de LiveKit (room_started/participant_joined) y se queda corriendo, uniéndose a cada sala nueva del widget de voz para correr el pipeline Deepgram STT -> Claude (tool calling) -> ElevenLabs TTS por turno. Entry point de producción: `node dist/main.js` (build previo con `pnpm build`). NO corre como cron de Railway — necesita un servicio Railway aparte configurado como proceso de larga duración con el puerto HTTP expuesto (ver .env.example, PORT).",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "jest && cucumber-js --config cucumber.cjs",
+    "test:integration:agente3": "jest --config jest.integration.config.js",
+    "start": "node dist/main.js",
+    "agente3:iniciar": "ts-node -T src/main.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
+    "@livekit/rtc-node": "^0.13.34",
+    "livekit-server-sdk": "^2.18.0"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.2.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^24.13.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

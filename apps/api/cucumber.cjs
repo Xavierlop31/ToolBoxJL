@@ -12,7 +12,9 @@ module.exports = {
       "../../features/05_devoluciones_inspeccion_mora.feature",
       "../../features/06_autenticacion_seguridad.feature",
       "../../features/07_kpis_analitica.feature",
-      "../../features/08_agente_ruteo.feature"
+      "../../features/08_agente_ruteo.feature",
+      "../../features/09_agente_whatsapp.feature",
+      "../../features/10_agente_conserje_voz.feature"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],
@@ -30,11 +32,32 @@ module.exports = {
     // conecta el subagente de IA contra `apps/workers`, no contra este
     // TestingModule de `apps/api` — así que acá debe seguir excluido.
     //
-    // Por eso el filtro ya no es un `not @Fase2` a secas: se agrega la
-    // excepción `or @HU-8.2` para dejar pasar específicamente ese escenario
-    // aunque esté tageado `@Fase2` (ver `@HU-8.2` en el feature). Cualquier
-    // otro escenario `@Fase2` sin su propia excepción explícita acá queda
-    // excluido por default — es el comportamiento seguro.
-    tags: "not @Fase2 or @HU-8.2",
+    // `09_agente_whatsapp.feature` (Sprint 8) es el mismo caso: 2 escenarios
+    // `@Fase2`, pero solo HU-9.2 ("Cliente extiende su alquiler por voz",
+    // agente-whatsapp.steps.ts, Issue #25) se conecta acá — el webhook
+    // entrante y el loop de tool calling viven en `apps/api`. HU-9.1
+    // ("Recordatorio de voz...", Issue #24) es el `WhatsAppReminderJob`
+    // standalone de `apps/workers`, igual que HU-8.1.
+    //
+    // `10_agente_conserje_voz.feature` (Sprint 9) mismo caso otra vez: 2
+    // escenarios `@Fase2`, pero solo HU-10.2 ("Artículo recomendado se
+    // agrega automáticamente al carrito", cart.steps.ts, Issues #26/#27) se
+    // conecta acá — es la única parte de este feature que le compete al
+    // backend de apps/api (la asignación al carrito tras
+    // POST /cart/add-item). HU-10.1 ("Cliente busca una herramienta por voz
+    // con baja latencia") NO tiene step definitions acá a propósito: "se
+    // abre una sesión LiveKit en tiempo real" y "la latencia total de la
+    // respuesta es menor a 2.5 segundos" no son verificables desde un
+    // TestingModule de NestJS sin un servidor LiveKit real ni un pipeline de
+    // voz de punta a punta — le corresponde al subagente `apps/voice-agent`
+    // (proceso del Agente 3, otro worktree) o a `qa-testing` medirlo con un
+    // harness de latencia real, no a este backend.
+    //
+    // Por eso el filtro ya no es un `not @Fase2` a secas: se agregan las
+    // excepciones `or @HU-8.2 or @HU-9.2 or @HU-10.2` para dejar pasar
+    // específicamente esos escenarios aunque estén tageados `@Fase2`.
+    // Cualquier otro escenario `@Fase2` sin su propia excepción explícita
+    // acá queda excluido por default — es el comportamiento seguro.
+    tags: "not @Fase2 or @HU-8.2 or @HU-9.2 or @HU-10.2",
   },
 };

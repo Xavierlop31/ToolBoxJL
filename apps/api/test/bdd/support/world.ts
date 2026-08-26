@@ -14,6 +14,7 @@ import type {
   Route,
   InspectionChecklist,
   UsuarioAutenticado,
+  Cart,
 } from "@toolboxjl/shared-types";
 
 import { ActualizarEstadoUnidadUseCase } from "../../../src/modules/catalog-inventory/application/actualizar-estado-unidad.use-case";
@@ -39,6 +40,10 @@ import { InMemoryOrderRepository } from "../../../src/modules/orders/infrastruct
 import { CotizarOrdenUseCase } from "../../../src/modules/orders/application/cotizar-orden.use-case";
 import { CrearOrdenUseCase } from "../../../src/modules/orders/application/crear-orden.use-case";
 import { ObtenerOrdenUseCase } from "../../../src/modules/orders/application/obtener-orden.use-case";
+import { ExtenderAlquilerUseCase } from "../../../src/modules/orders/application/extender-alquiler.use-case";
+import type { ProcesarMensajeEntranteResultado } from "../../../src/modules/whatsapp-webhook/application/procesar-mensaje-entrante.use-case";
+import type { InMemoryWhatsAppMediaGateway } from "../../../src/modules/whatsapp-webhook/infrastructure/whatsapp/in-memory-whatsapp-media.gateway";
+import type { InMemorySpeechToTextGateway } from "../../../src/modules/whatsapp-webhook/infrastructure/deepgram/in-memory-speech-to-text.gateway";
 import type { QuoteResult } from "../../../src/modules/pricing/domain/pricing-calculator.service";
 
 import { PAYMENT_REPOSITORY, WOMPI_GATEWAY } from "../../../src/modules/payments/infrastructure/payments.tokens";
@@ -97,6 +102,11 @@ import { REVENUE_REPOSITORY } from "../../../src/modules/analytics/infrastructur
 import { InMemoryRevenueRepository } from "../../../src/modules/analytics/infrastructure/in-memory/in-memory-revenue.repository";
 import { ConsultarIngresosUseCase } from "../../../src/modules/analytics/application/consultar-ingresos.use-case";
 
+import { CART_REPOSITORY } from "../../../src/modules/cart/infrastructure/cart.tokens";
+import { InMemoryCartRepository } from "../../../src/modules/cart/infrastructure/in-memory/in-memory-cart.repository";
+import { ObtenerCarritoUseCase } from "../../../src/modules/cart/application/obtener-carrito.use-case";
+import { AgregarItemCarritoUseCase } from "../../../src/modules/cart/application/agregar-item-carrito.use-case";
+
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
  * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
@@ -118,6 +128,7 @@ export class ToolboxWorld extends CucumberWorld {
   cotizarOrden!: CotizarOrdenUseCase;
   crearOrden!: CrearOrdenUseCase;
   obtenerOrden!: ObtenerOrdenUseCase;
+  extenderAlquiler!: ExtenderAlquilerUseCase;
 
   pagarOrden!: PagarOrdenUseCase;
   confirmarPagoContraEntrega!: ConfirmarPagoContraEntregaUseCase;
@@ -142,6 +153,12 @@ export class ToolboxWorld extends CucumberWorld {
   consultarIngresos!: ConsultarIngresosUseCase;
   /** Acceso directo — conveniencia para el step Given de HU-7.1 (sembrar pagos con fecha controlable). */
   revenueRepository!: InMemoryRevenueRepository;
+
+  obtenerCarrito!: ObtenerCarritoUseCase;
+  agregarItemCarrito!: AgregarItemCarritoUseCase;
+  /** Conveniencia para el step Given de HU-10.2 (herramienta que el Agente 3 "recomendó" antes de la confirmación verbal). */
+  herramientaRecomendada?: ToolModel;
+  ultimoCarrito?: Cart;
 
   usuarioActualId!: string;
   rolActual!: Rol;
@@ -186,6 +203,20 @@ export class ToolboxWorld extends CucumberWorld {
   periodoEscenario?: string;
   ultimosIngresos?: Awaited<ReturnType<ConsultarIngresosUseCase["ejecutar"]>>;
 
+  /**
+   * Conveniencia para los steps de HU-9.2 (Agente 2 — extensión de alquiler
+   * por voz, `agente-whatsapp.steps.ts`): registro de las llamadas HTTP que
+   * hizo el `fetchImpl` mockeado de `procesarMensajeEntrante` (para
+   * verificar que de verdad llamó GET /inventory/check-availability y
+   * POST /rentals/extend, no solo que devolvió un resultado) y el
+   * resultado/error final del procesamiento.
+   */
+  fetchCallsAgente2: { url: string; method: string }[] = [];
+  resultadoAgente2?: ProcesarMensajeEntranteResultado;
+  errorAgente2?: Error;
+  whatsappMediaGatewayAgente2?: InMemoryWhatsAppMediaGateway;
+  speechToTextGatewayAgente2?: InMemorySpeechToTextGateway;
+
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
       providers: [
@@ -208,6 +239,7 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: WHATSAPP_OTP_GATEWAY, useClass: InMemoryWhatsAppOtpGateway },
         VerificarAccesoUseCase,
         { provide: REVENUE_REPOSITORY, useClass: InMemoryRevenueRepository },
+        { provide: CART_REPOSITORY, useClass: InMemoryCartRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -218,6 +250,7 @@ export class ToolboxWorld extends CucumberWorld {
         CotizarOrdenUseCase,
         CrearOrdenUseCase,
         ObtenerOrdenUseCase,
+        ExtenderAlquilerUseCase,
         PagarOrdenUseCase,
         ConfirmarPagoContraEntregaUseCase,
         RegistrarVehiculoUseCase,
@@ -231,6 +264,8 @@ export class ToolboxWorld extends CucumberWorld {
         SolicitarOtpUseCase,
         VerificarOtpUseCase,
         ConsultarIngresosUseCase,
+        ObtenerCarritoUseCase,
+        AgregarItemCarritoUseCase,
       ],
     }).compile();
 
@@ -247,6 +282,7 @@ export class ToolboxWorld extends CucumberWorld {
     this.cotizarOrden = this.moduleRef.get(CotizarOrdenUseCase);
     this.crearOrden = this.moduleRef.get(CrearOrdenUseCase);
     this.obtenerOrden = this.moduleRef.get(ObtenerOrdenUseCase);
+    this.extenderAlquiler = this.moduleRef.get(ExtenderAlquilerUseCase);
 
     this.pagarOrden = this.moduleRef.get(PagarOrdenUseCase);
     this.confirmarPagoContraEntrega = this.moduleRef.get(
@@ -276,6 +312,9 @@ export class ToolboxWorld extends CucumberWorld {
 
     this.consultarIngresos = this.moduleRef.get(ConsultarIngresosUseCase);
     this.revenueRepository = this.moduleRef.get(REVENUE_REPOSITORY);
+
+    this.obtenerCarrito = this.moduleRef.get(ObtenerCarritoUseCase);
+    this.agregarItemCarrito = this.moduleRef.get(AgregarItemCarritoUseCase);
 
     this.ultimosLogs = [];
   }

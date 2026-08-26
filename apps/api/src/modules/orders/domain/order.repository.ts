@@ -55,4 +55,12 @@ export interface OrderRepository {
    * necesite una referencia cruzada al repositorio de pagos.
    */
   listarVencidasSinMora(ahora: Date): Promise<Order[]>;
+  /**
+   * Sprint 8 (RF-9.2, HU-9.2) — extiende `fecha_fin` de una orden de alquiler
+   * ya confirmada. No valida acá disponibilidad ni transición de estado
+   * permitida (eso es responsabilidad de `ExtenderAlquilerUseCase`, mismo
+   * criterio que `actualizarEstado`) — este método solo persiste la nueva
+   * fecha.
+   */
+  extenderFecha(id: string, nuevaFechaFin: string): Promise<Order>;
 }

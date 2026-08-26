@@ -11,8 +11,8 @@ describe("Rol", () => {
     ]);
   });
 
-  it("ROLES extiende ROLES_HUMANOS con el rol de servicio agente-1 (Sprint 7)", () => {
-    expect(ROLES).toEqual([...ROLES_HUMANOS, "agente-1"]);
+  it("ROLES extiende ROLES_HUMANOS con los roles de servicio agente-1 (Sprint 7) y agente-2 (Sprint 8)", () => {
+    expect(ROLES).toEqual([...ROLES_HUMANOS, "agente-1", "agente-2"]);
   });
 
   describe("esRolValido", () => {

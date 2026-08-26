@@ -9,7 +9,8 @@
     "test": "jest && cucumber-js --config cucumber.cjs",
     "test:integration:agente1": "jest --config jest.integration.config.js",
     "mora:calcular": "ts-node -T src/main.ts",
-    "agente1:ejecutar": "ts-node -T src/route-scheduler-job.ts"
+    "agente1:ejecutar": "ts-node -T src/route-scheduler-job.ts",
+    "agente2:recordatorio": "ts-node -T src/agente-2/reminder-job.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
