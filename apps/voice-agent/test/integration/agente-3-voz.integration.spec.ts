@@ -90,7 +90,10 @@ describeSi(Boolean(anthropicApiKey))(`Agente 3 — tool calling real contra Anth
       expect(toolUse).toBeDefined();
       expect((toolUse as { name?: string })?.name).toBe("search_catalog");
     },
-    30_000,
+    // 60s en vez de 30s: una llamada real con 3 tools + system prompt puede
+    // demorar más bajo latencia/carga variable de CI, y el SDK reintenta
+    // automáticamente algunos errores transitorios (duplicando la espera).
+    60_000,
   );
 });
 
