@@ -23,8 +23,10 @@
     "@angular/platform-browser-dynamic": "^18.2.0",
     "@angular/router": "^18.2.0",
     "@softarc/native-federation-node": "^2.0.10",
+    "@supabase/supabase-js": "^2.45.4",
     "@toolboxjl/ui-kit": "workspace:*",
     "es-module-shims": "^1.5.12",
+    "livekit-client": "^2.9.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.10"

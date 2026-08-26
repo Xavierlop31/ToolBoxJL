@@ -1,0 +1,75 @@
+@if (isAuthenticated()) {
+  <div class="voice-widget">
+    @if (!panelOpen()) {
+      <button
+        type="button"
+        class="voice-widget__fab"
+        data-testid="voice-widget-button"
+        (click)="openWidget()"
+        aria-label="Hablar con el conserje de voz"
+      >
+        <span aria-hidden="true">🎙️</span>
+        @if (cartItemCount() > 0) {
+          <span class="voice-widget__cart-badge" data-testid="voice-widget-cart-badge">{{
+            cartItemCount()
+          }}</span>
+        }
+      </button>
+    } @else {
+      <section
+        class="voice-widget__panel"
+        data-testid="voice-widget-panel"
+        aria-label="Conserje de voz"
+      >
+        <header class="voice-widget__header">
+          <span>Conserje de voz</span>
+          <button
+            type="button"
+            class="voice-widget__close"
+            data-testid="voice-widget-close"
+            (click)="closeWidget()"
+            aria-label="Cerrar conserje de voz"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div class="voice-widget__body">
+          @if (displayState() === 'error') {
+            <p class="voice-widget__error" data-testid="voice-widget-error" role="alert">
+              {{ displayErrorMessage() }}
+            </p>
+            <button
+              type="button"
+              class="voice-widget__retry"
+              data-testid="voice-widget-retry"
+              (click)="retry()"
+            >
+              Reintentar
+            </button>
+          } @else {
+            <p
+              class="voice-widget__status"
+              data-testid="voice-widget-state"
+              [attr.data-state]="displayState()"
+            >
+              <span
+                class="voice-widget__indicator"
+                [class.voice-widget__indicator--pulse]="
+                  displayState() === 'listening' || displayState() === 'speaking'
+                "
+              ></span>
+              {{ statusLabel() }}
+            </p>
+          }
+
+          @if (cartItemCount() > 0) {
+            <p class="voice-widget__cart-hint" data-testid="voice-widget-cart-hint">
+              Carrito: {{ cartItemCount() }} artículo(s)
+            </p>
+          }
+        </div>
+      </section>
+    }
+  </div>
+}
