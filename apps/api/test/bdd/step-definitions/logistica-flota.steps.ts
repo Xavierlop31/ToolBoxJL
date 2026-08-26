@@ -42,9 +42,10 @@ Then(
     // caso de uso real de asignación (POST /logistics/assign-routes) con
     // este vehiculo_id y sin paradas — si el vehículo NO existiera,
     // AsignarRutasUseCase lanzaría VehiculoNoEncontradoError acá mismo.
-    this.ultimasRutas = await this.asignarRutas.ejecutar([
-      { vehiculo_id: vehiculo!.id, fecha: "2026-09-01", paradas: [] },
-    ]);
+    this.ultimasRutas = await this.asignarRutas.ejecutar(
+      [{ vehiculo_id: vehiculo!.id, fecha: "2026-09-01", paradas: [] }],
+      this.rolActual,
+    );
     assert.equal(this.ultimasRutas.length, 1);
     assert.equal(this.ultimasRutas[0].vehiculo_id, vehiculo!.id);
     assert.equal(this.ultimasRutas[0].generada_por, "manual");
@@ -110,13 +111,16 @@ Given("que soy un Gerente autenticado", async function (this: ToolboxWorld) {
   assert.ok(pendientes.length >= 2, "se esperaban al menos 2 envíos pendientes de asignación");
   const primeroPendiente = pendientes[0];
 
-  await this.asignarRutas.ejecutar([
-    {
-      vehiculo_id: vehiculo.id,
-      fecha: "2026-09-02",
-      paradas: [primeroPendiente.id],
-    },
-  ]);
+  await this.asignarRutas.ejecutar(
+    [
+      {
+        vehiculo_id: vehiculo.id,
+        fecha: "2026-09-02",
+        paradas: [primeroPendiente.id],
+      },
+    ],
+    this.rolActual,
+  );
 });
 
 When("abro el panel de seguimiento de envíos", async function (this: ToolboxWorld) {

@@ -5,6 +5,7 @@ import { OrdersModule } from "../../orders/interface/orders.module";
 import { AsignarRutasUseCase } from "../application/asignar-rutas.use-case";
 import { ListarEnviosUseCase } from "../application/listar-envios.use-case";
 import { ListarPedidosPendientesUseCase } from "../application/listar-pedidos-pendientes.use-case";
+import { VerMiRutaUseCase } from "../application/ver-mi-ruta.use-case";
 import { ROUTE_REPOSITORY, SHIPMENT_REPOSITORY } from "../infrastructure/logistics.tokens";
 import { PrismaRouteRepository } from "../infrastructure/prisma/prisma-route.repository";
 import { PrismaShipmentRepository } from "../infrastructure/prisma/prisma-shipment.repository";
@@ -42,6 +43,7 @@ import { LogisticsController } from "./logistics.controller";
     ListarPedidosPendientesUseCase,
     AsignarRutasUseCase,
     ListarEnviosUseCase,
+    VerMiRutaUseCase,
   ],
   exports: [
     SHIPMENT_REPOSITORY,
@@ -49,6 +51,7 @@ import { LogisticsController } from "./logistics.controller";
     ListarPedidosPendientesUseCase,
     AsignarRutasUseCase,
     ListarEnviosUseCase,
+    VerMiRutaUseCase,
   ],
 })
 export class LogisticsModule {}

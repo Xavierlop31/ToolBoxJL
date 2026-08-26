@@ -40,4 +40,11 @@ export class PrismaVehicleRepository implements VehicleRepository {
     const encontrado = await this.prisma.vehicle.findUnique({ where: { id } });
     return encontrado ? aDominio(encontrado) : null;
   }
+
+  async buscarPorRepartidorId(repartidorId: string): Promise<Vehicle | null> {
+    const encontrado = await this.prisma.vehicle.findFirst({
+      where: { repartidorId },
+    });
+    return encontrado ? aDominio(encontrado) : null;
+  }
 }
