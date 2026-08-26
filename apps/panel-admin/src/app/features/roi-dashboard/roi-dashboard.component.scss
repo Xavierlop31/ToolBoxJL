@@ -28,7 +28,7 @@ h1 {
   }
 }
 
-.periodo-form {
+.modelo-form {
   display: flex;
   align-items: flex-end;
   gap: var(--tbjl-space-4, 1rem);
@@ -39,6 +39,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: var(--tbjl-space-1, 0.25rem);
+  min-width: 20rem;
 
   label {
     font-size: var(--tbjl-font-size-sm, 0.875rem);
@@ -75,36 +76,33 @@ button[type='submit'] {
   font-size: var(--tbjl-font-size-sm, 0.875rem);
 }
 
-.revenue-breakdown {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--tbjl-space-4, 1rem);
+.roi-list {
+  list-style: none;
   margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tbjl-space-3, 0.75rem);
 }
 
-.revenue-item {
+.roi-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   background: var(--tbjl-color-card, #fff);
   border: 1px solid var(--tbjl-color-border, #d7d9dd);
   border-radius: var(--tbjl-radius-lg, 0.75rem);
-  padding: var(--tbjl-space-6, 1.5rem);
+  padding: var(--tbjl-space-4, 1rem) var(--tbjl-space-6, 1.5rem);
 
-  dt {
+  .roi-modelo {
+    font-family: monospace;
     font-size: var(--tbjl-font-size-sm, 0.875rem);
-    color: var(--tbjl-color-neutral-500, #6b7280);
+    color: var(--tbjl-color-neutral-700, #374151);
   }
 
-  dd {
-    margin: var(--tbjl-space-1, 0.25rem) 0 0;
+  .roi-pct {
     font-size: var(--tbjl-font-size-xl, 1.25rem);
     font-weight: var(--tbjl-font-weight-semibold, 600);
-    color: var(--tbjl-color-neutral-900, #111827);
-  }
-}
-
-.revenue-total {
-  border-color: var(--tbjl-color-primary-500, #f2600c);
-
-  dd {
-    color: var(--tbjl-color-primary-500);
+    color: var(--tbjl-color-primary-500, #f2600c);
   }
 }

@@ -50,3 +50,99 @@ Then(
     await expect(page.getByTestId('revenue-total')).toContainText(/8[.,]650[.,]000/);
   },
 );
+
+/**
+ * Steps de HU-7.2 (Issue #20, Sprint 10) — features/07_kpis_analitica.feature.
+ * Interceptamos `GET /analytics/roi` (openapi.yaml líneas 876-900);
+ * `roi_pct` ya viene calculado por el backend según la fórmula del
+ * escenario — esta UI solo lo consulta y muestra.
+ */
+const roiModeloId = '11111111-1111-1111-1111-111111111111';
+const mockRoi = [{ modelo_id: roiModeloId, roi_pct: 42.5 }];
+
+When('consulto el ROI de un modelo específico', async ({ page }) => {
+  await page.route('**/api/v1/analytics/roi*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockRoi),
+    });
+  });
+
+  await page.goto('/roi');
+  await page.fill('#modeloId', roiModeloId);
+  await page.click('button[type="submit"]');
+  await expect(page.getByTestId('roi-list')).toBeVisible();
+});
+
+Then(
+  'el sistema calcula \\(Ingresos Acumulados − Costo de Compra\\) \\/ Costo de Compra × 100 para ese modelo',
+  async ({ page }) => {
+    await expect(page.getByTestId('roi-row')).toContainText(roiModeloId);
+    await expect(page.getByTestId('roi-row')).toContainText(/42[.,]5%/);
+  },
+);
+
+/**
+ * Steps de HU-7.3 (Issue #21, Sprint 10) — features/07_kpis_analitica.feature.
+ * Interceptamos `GET /analytics/utilization` y `GET
+ * /analytics/delivery-productivity` (openapi.yaml líneas 902-950).
+ */
+const mockUtilization = {
+  utilizacion_global_pct: 68.3,
+  por_modelo: [{ modelo_id: roiModeloId, utilizacion_pct: 72.1 }],
+};
+
+const mockProductivity = [
+  {
+    repartidor_id: '22222222-2222-2222-2222-222222222222',
+    entregas_exitosas: 18,
+    ruta_asignada: 20,
+    tiempo_promedio_min: 12.4,
+  },
+];
+
+When(
+  'consulto la tasa de utilización de inventario y la productividad de repartidores del mes',
+  async ({ page }) => {
+    await page.route('**/api/v1/analytics/utilization', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockUtilization),
+      });
+    });
+    await page.route('**/api/v1/analytics/delivery-productivity', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockProductivity),
+      });
+    });
+
+    await page.goto('/utilizacion-productividad');
+    await expect(page.getByTestId('utilization-section')).toBeVisible();
+  },
+);
+
+Then(
+  'veo la Utilización como Días Alquilada entre Días Disponibles del mes',
+  async ({ page }) => {
+    await expect(page.getByTestId('utilization-global')).toContainText(/68[.,]3%/);
+    await expect(page.getByTestId('utilization-row')).toContainText(/72[.,]1%/);
+  },
+);
+
+Then(
+  'veo la Productividad como Entregas Exitosas entre Ruta Asignada, junto con el tiempo promedio por punto',
+  async ({ page }) => {
+    const row = page.getByTestId('productivity-row');
+    await expect(row).toContainText('18');
+    await expect(row).toContainText('20');
+    await expect(row).toContainText(/90%/); // 18/20 = 90%
+    await expect(row).toContainText(/12[.,]4 min/);
+  },
+);

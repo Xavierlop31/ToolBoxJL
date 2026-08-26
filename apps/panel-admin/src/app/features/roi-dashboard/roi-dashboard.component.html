@@ -1,0 +1,45 @@
+<main class="roi-dashboard">
+  <h1>Dashboard de ROI por herramienta</h1>
+
+  <nav class="analytics-nav" aria-label="Dashboards de analítica">
+    <a routerLink="../ingresos">Ingresos</a>
+    <a routerLink="../roi" aria-current="page">ROI por herramienta</a>
+    <a routerLink="../utilizacion-productividad">Utilización y productividad</a>
+  </nav>
+
+  <form class="modelo-form" (ngSubmit)="consultar()" novalidate>
+    <div class="field">
+      <label for="modeloId">Modelo (opcional)</label>
+      <input
+        id="modeloId"
+        type="text"
+        placeholder="UUID del modelo — vacío para ver todos"
+        [formControl]="modeloIdControl"
+      />
+    </div>
+    <button type="submit" [disabled]="loading()">
+      {{ loading() ? 'Consultando…' : 'Consultar' }}
+    </button>
+  </form>
+
+  @if (loading()) {
+    <output>Cargando ROI…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <ul class="roi-list" data-testid="roi-list">
+      @for (item of roi(); track item.modelo_id) {
+        <li class="roi-item" data-testid="roi-row">
+          <span class="roi-modelo">{{ item.modelo_id }}</span>
+          <span class="roi-pct">{{ formatPct(item.roi_pct) }}</span>
+        </li>
+      } @empty {
+        <li>No hay datos de ROI para mostrar.</li>
+      }
+    </ul>
+  }
+</main>

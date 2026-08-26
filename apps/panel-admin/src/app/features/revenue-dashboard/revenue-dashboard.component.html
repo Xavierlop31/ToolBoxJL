@@ -1,6 +1,12 @@
 <main class="revenue-dashboard">
   <h1>Dashboard de ingresos</h1>
 
+  <nav class="analytics-nav" aria-label="Dashboards de analítica">
+    <a routerLink="../ingresos" aria-current="page">Ingresos</a>
+    <a routerLink="../roi">ROI por herramienta</a>
+    <a routerLink="../utilizacion-productividad">Utilización y productividad</a>
+  </nav>
+
   <form class="periodo-form" (ngSubmit)="consultar()" novalidate>
     <div class="field">
       <label for="periodo">Periodo</label>
