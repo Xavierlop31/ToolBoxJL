@@ -546,6 +546,48 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /logistics/my-route:
+    get:
+      operationId: getMyRoute
+      summary: Ruta del día del Repartidor autenticado (HU-8.2)
+      description: >
+        Resuelve el vehículo asignado al Repartidor autenticado
+        (`Vehicle.repartidor_id`) y devuelve la Route de hoy para ese
+        vehículo, con las paradas expandidas y en el mismo orden en que
+        aparecen en `Route.paradas` (secuencia optimizada por el Agente 1 o,
+        si `generada_por: manual`, por quien haya publicado la ruta).
+      tags: [Logística]
+      x-roles: [repartidor]
+      responses:
+        "200":
+          description: Ruta de hoy del Repartidor, con sus paradas expandidas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  route: { $ref: "#/components/schemas/Route" }
+                  paradas:
+                    type: array
+                    description: Mismo orden que Route.paradas, con el detalle de cada parada.
+                    items:
+                      type: object
+                      properties:
+                        shipment_id: { type: string, format: uuid }
+                        order_id: { type: string, format: uuid }
+                        tipo: { type: string, enum: [entrega, recogida] }
+                        estado_envio:
+                          type: string
+                          enum: [pendiente_asignacion, en_ruta_entrega, entregado, en_ruta_recogida, retornado]
+                        direccion: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: El Repartidor no tiene vehículo asignado, o no hay ninguna Route publicada para hoy.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /logistics/shipments:
     get:
       operationId: getShipments
