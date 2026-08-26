@@ -47,11 +47,14 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 /**
  * Qué variable alimenta qué campo, por app. Se deriva de lo que cada
  * `environment.ts` declara hoy — no todas las apps usan Supabase en el
- * cliente (portal-cliente y pwa-logistica hablan solo con la API).
+ * cliente (pwa-logistica habla solo con la API). portal-cliente suma
+ * `supabase: true` en Sprint 9 (HU-10.1/10.2): `core/auth/auth.service.ts`
+ * de ese remote necesita saber reactivamente si hay un Cliente autenticado
+ * para decidir si mostrar el widget flotante de voz.
  */
 const APPS = {
   shell: { supabase: true },
-  "portal-cliente": { apiUrl: true },
+  "portal-cliente": { apiUrl: true, supabase: true },
   "panel-admin": { apiUrl: true, supabase: true },
   "pwa-logistica": { apiUrl: true },
 };
