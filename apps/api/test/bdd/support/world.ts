@@ -39,6 +39,10 @@ import { InMemoryOrderRepository } from "../../../src/modules/orders/infrastruct
 import { CotizarOrdenUseCase } from "../../../src/modules/orders/application/cotizar-orden.use-case";
 import { CrearOrdenUseCase } from "../../../src/modules/orders/application/crear-orden.use-case";
 import { ObtenerOrdenUseCase } from "../../../src/modules/orders/application/obtener-orden.use-case";
+import { ExtenderAlquilerUseCase } from "../../../src/modules/orders/application/extender-alquiler.use-case";
+import type { ProcesarMensajeEntranteResultado } from "../../../src/modules/whatsapp-webhook/application/procesar-mensaje-entrante.use-case";
+import type { InMemoryWhatsAppMediaGateway } from "../../../src/modules/whatsapp-webhook/infrastructure/whatsapp/in-memory-whatsapp-media.gateway";
+import type { InMemorySpeechToTextGateway } from "../../../src/modules/whatsapp-webhook/infrastructure/deepgram/in-memory-speech-to-text.gateway";
 import type { QuoteResult } from "../../../src/modules/pricing/domain/pricing-calculator.service";
 
 import { PAYMENT_REPOSITORY, WOMPI_GATEWAY } from "../../../src/modules/payments/infrastructure/payments.tokens";
@@ -118,6 +122,7 @@ export class ToolboxWorld extends CucumberWorld {
   cotizarOrden!: CotizarOrdenUseCase;
   crearOrden!: CrearOrdenUseCase;
   obtenerOrden!: ObtenerOrdenUseCase;
+  extenderAlquiler!: ExtenderAlquilerUseCase;
 
   pagarOrden!: PagarOrdenUseCase;
   confirmarPagoContraEntrega!: ConfirmarPagoContraEntregaUseCase;
@@ -186,6 +191,20 @@ export class ToolboxWorld extends CucumberWorld {
   periodoEscenario?: string;
   ultimosIngresos?: Awaited<ReturnType<ConsultarIngresosUseCase["ejecutar"]>>;
 
+  /**
+   * Conveniencia para los steps de HU-9.2 (Agente 2 — extensión de alquiler
+   * por voz, `agente-whatsapp.steps.ts`): registro de las llamadas HTTP que
+   * hizo el `fetchImpl` mockeado de `procesarMensajeEntrante` (para
+   * verificar que de verdad llamó GET /inventory/check-availability y
+   * POST /rentals/extend, no solo que devolvió un resultado) y el
+   * resultado/error final del procesamiento.
+   */
+  fetchCallsAgente2: { url: string; method: string }[] = [];
+  resultadoAgente2?: ProcesarMensajeEntranteResultado;
+  errorAgente2?: Error;
+  whatsappMediaGatewayAgente2?: InMemoryWhatsAppMediaGateway;
+  speechToTextGatewayAgente2?: InMemorySpeechToTextGateway;
+
   async iniciar(): Promise<void> {
     this.moduleRef = await Test.createTestingModule({
       providers: [
@@ -218,6 +237,7 @@ export class ToolboxWorld extends CucumberWorld {
         CotizarOrdenUseCase,
         CrearOrdenUseCase,
         ObtenerOrdenUseCase,
+        ExtenderAlquilerUseCase,
         PagarOrdenUseCase,
         ConfirmarPagoContraEntregaUseCase,
         RegistrarVehiculoUseCase,
@@ -247,6 +267,7 @@ export class ToolboxWorld extends CucumberWorld {
     this.cotizarOrden = this.moduleRef.get(CotizarOrdenUseCase);
     this.crearOrden = this.moduleRef.get(CrearOrdenUseCase);
     this.obtenerOrden = this.moduleRef.get(ObtenerOrdenUseCase);
+    this.extenderAlquiler = this.moduleRef.get(ExtenderAlquilerUseCase);
 
     this.pagarOrden = this.moduleRef.get(PagarOrdenUseCase);
     this.confirmarPagoContraEntrega = this.moduleRef.get(

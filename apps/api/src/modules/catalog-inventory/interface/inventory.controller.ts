@@ -43,13 +43,12 @@ import { CrearUnidadDto } from "./dto/crear-unidad.dto";
  * openapi.yaml (`x-roles`).
  *
  * Decisión documentada sobre `check-availability`: openapi.yaml declara
- * `x-roles: [cliente, agente-2, agente-3]`. Los roles `agente-2`/`agente-3`
- * no son valores de `Rol` (los 5 roles humanos de negocio) — son JWT de
- * servicio con scope restringido que AgentsModule emitirá recién en Sprint
- * 7+ (docs/DESIGN.md §7, PROMPT_IMPLEMENTACION.md A.6). Como ese mecanismo
- * de auth de agentes todavía no existe, este endpoint por ahora solo acepta
- * el rol humano `cliente`; cuando AgentsModule exista, se suma el soporte de
- * JWT de servicio sin romper este contrato para clientes humanos.
+ * `x-roles: [cliente, agente-2, agente-3]`. `agente-2` ya tiene JWT de
+ * servicio real desde Sprint 8 (usuario de Supabase Auth con
+ * `app_metadata.rol = "agente-2"`, mismo mecanismo que `agente-1` — ver
+ * `ROLES` en `@toolboxjl/shared-types`), así que se suma acá. `agente-3`
+ * (Sprint 9) todavía no existe como JWT de servicio — no se agrega hasta
+ * ese sprint, mismo criterio que se aplicó acá para `agente-2` hasta ahora.
  */
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Controller()
@@ -121,7 +120,7 @@ export class InventoryController {
     }
   }
 
-  @Roles("cliente")
+  @Roles("cliente", "agente-2")
   @Get("inventory/check-availability")
   async checkAvailability(
     @Query() query: CheckAvailabilityQueryDto,
