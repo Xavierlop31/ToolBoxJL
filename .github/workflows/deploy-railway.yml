@@ -77,6 +77,42 @@ jobs:
       #
       # Sin `working-directory`: se sube la raíz del monorepo (ver nota de
       # cabecera).
+      # Diagnóstico previo al deploy. `railway status` lista el proyecto, el
+      # environment y los servicios que el RAILWAY_TOKEN puede ver. Existe
+      # porque `railway up` falla con "Failed to upload code with status code
+      # 404 Not Found" cuando el valor de --service no corresponde a ningún
+      # servicio DENTRO del proyecto+environment al que el project token está
+      # scoped — y ese error no dice cuál de las dos cosas está mal.
+      #
+      # Los IDs de servicio de Railway son identificadores, no credenciales
+      # (no sirven de nada sin un token), por eso se imprimen: es el dato que
+      # hace falta para corregir el secret. GitHub enmascara igual el valor de
+      # los secrets en los logs.
+      #
+      # `|| true`: es diagnóstico, no debe tumbar el job por sí mismo — el
+      # `railway up` de abajo es el que decide.
+      - name: Diagnóstico — qué ve el token
+        if: steps.check.outputs.skip == 'false'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID__DIAG: ${{ secrets.RAILWAY_SERVICE_ID_API }}
+        run: |
+          echo "--- railway status ---"
+          railway status || true
+          echo "--- servicios visibles para este token ---"
+          railway status --json 2>/dev/null | node -e '
+            let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+              let p;try{p=JSON.parse(s)}catch{console.log("(status --json no devolvio JSON)");process.exit(0)}
+              const svc=(p.services?.edges??[]).map(e=>e.node).filter(Boolean);
+              if(!svc.length){console.log("(el token no ve ningun servicio)");process.exit(0)}
+              for(const x of svc)console.log(`  name=${x.name}  id=${x.id}`);
+              const buscado=process.env.RAILWAY_SERVICE_ID__DIAG;
+              const ok=svc.some(x=>x.id===buscado||x.name===buscado);
+              console.log(ok
+                ? "OK: el valor configurado coincide con un servicio visible."
+                : "::error::El valor configurado NO coincide con ningun servicio visible. Es la causa del 404 en la subida: el secret tiene un ID de otro proyecto/environment, o quedo obsoleto. Podes poner el NOMBRE del servicio (p. ej. api) en vez del ID — --service acepta ambos y el nombre no se invalida al recrear el proyecto.");
+            })' || true
+
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
         env:
@@ -109,6 +145,42 @@ jobs:
 
       # Ídem nota de arriba (githubactions:S7636): secret vía `env`, nunca
       # interpolado directo en `run:`.
+      # Diagnóstico previo al deploy. `railway status` lista el proyecto, el
+      # environment y los servicios que el RAILWAY_TOKEN puede ver. Existe
+      # porque `railway up` falla con "Failed to upload code with status code
+      # 404 Not Found" cuando el valor de --service no corresponde a ningún
+      # servicio DENTRO del proyecto+environment al que el project token está
+      # scoped — y ese error no dice cuál de las dos cosas está mal.
+      #
+      # Los IDs de servicio de Railway son identificadores, no credenciales
+      # (no sirven de nada sin un token), por eso se imprimen: es el dato que
+      # hace falta para corregir el secret. GitHub enmascara igual el valor de
+      # los secrets en los logs.
+      #
+      # `|| true`: es diagnóstico, no debe tumbar el job por sí mismo — el
+      # `railway up` de abajo es el que decide.
+      - name: Diagnóstico — qué ve el token
+        if: steps.check.outputs.skip == 'false'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID__DIAG: ${{ secrets.RAILWAY_SERVICE_ID_WORKERS }}
+        run: |
+          echo "--- railway status ---"
+          railway status || true
+          echo "--- servicios visibles para este token ---"
+          railway status --json 2>/dev/null | node -e '
+            let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+              let p;try{p=JSON.parse(s)}catch{console.log("(status --json no devolvio JSON)");process.exit(0)}
+              const svc=(p.services?.edges??[]).map(e=>e.node).filter(Boolean);
+              if(!svc.length){console.log("(el token no ve ningun servicio)");process.exit(0)}
+              for(const x of svc)console.log(`  name=${x.name}  id=${x.id}`);
+              const buscado=process.env.RAILWAY_SERVICE_ID__DIAG;
+              const ok=svc.some(x=>x.id===buscado||x.name===buscado);
+              console.log(ok
+                ? "OK: el valor configurado coincide con un servicio visible."
+                : "::error::El valor configurado NO coincide con ningun servicio visible. Es la causa del 404 en la subida: el secret tiene un ID de otro proyecto/environment, o quedo obsoleto. Podes poner el NOMBRE del servicio (p. ej. api) en vez del ID — --service acepta ambos y el nombre no se invalida al recrear el proyecto.");
+            })' || true
+
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
         env:
