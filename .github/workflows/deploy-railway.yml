@@ -35,6 +35,18 @@ on:
       - "packages/**"
       - "railway.*.json"
       - "pnpm-lock.yaml"
+      # Sin esto, un cambio al propio workflow no dispara nada: se mergea a
+      # main y no pasa nada, porque ningun otro path cambio. Fue el caso del
+      # PR #67 (el paso de diagnostico entro a main y nunca llego a correr).
+      - ".github/workflows/deploy-railway.yml"
+
+  # Disparador manual. GitHub SOLO muestra el boton "Run workflow" si el
+  # workflow con `workflow_dispatch` existe en la RAMA POR DEFECTO (main) —
+  # tenerlo en una rama de feature no alcanza. Permite validar el deploy sin
+  # depender de que cambie algun path de arriba.
+  #
+  # *** Despliega la rama desde la que se dispara, al servicio REAL. ***
+  workflow_dispatch: {}
 
 concurrency:
   group: deploy-railway-${{ github.ref }}
