@@ -125,32 +125,6 @@ jobs:
                 : "::error::El valor configurado NO coincide con ningun servicio visible. Es la causa del 404 en la subida: el secret tiene un ID de otro proyecto/environment, o quedo obsoleto. Podes poner el NOMBRE del servicio (p. ej. api) en vez del ID — --service acepta ambos y el nombre no se invalida al recrear el proyecto.");
             })' || true
 
-      # `railway up` fallaba con "Failed to upload code with status code 404
-      # Not Found" incluso con el service ID correcto y el project token
-      # scoped al proyecto+environment correctos. La CLI llega a "Indexing..."
-      # y "Uploading...", o sea que autentica — lo que no resuelve es el
-      # CONTEXTO (proyecto + environment) al que pertenece la subida, y
-      # construye una URL de upload que no existe.
-      #
-      # `railway link` fija ese contexto de forma explicita y no interactiva,
-      # en vez de depender de que la CLI lo infiera del token. Escribe un
-      # directorio `.railway` (ya esta en .gitignore).
-      - name: Fijar contexto de proyecto/environment
-        if: steps.check.outputs.skip == 'false'
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
-          RAILWAY_SERVICE_ID_API: ${{ secrets.RAILWAY_SERVICE_ID_API }}
-        run: |
-          if [ -z "$RAILWAY_PROJECT_ID" ] || [ -z "$RAILWAY_ENVIRONMENT_ID" ]; then
-            echo "::error::Faltan RAILWAY_PROJECT_ID y/o RAILWAY_ENVIRONMENT_ID. Se sacan de la URL del servicio en el dashboard: railway.com/project/<PROJECT_ID>/service/<SERVICE_ID>?environmentId=<ENVIRONMENT_ID>"
-            exit 1
-          fi
-          railway link             --project "$RAILWAY_PROJECT_ID"             --environment "$RAILWAY_ENVIRONMENT_ID"             --service "$RAILWAY_SERVICE_ID_API"
-          echo "--- contexto fijado ---"
-          railway status || true
-
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
         env:
@@ -218,32 +192,6 @@ jobs:
                 ? "OK: el valor configurado coincide con un servicio visible."
                 : "::error::El valor configurado NO coincide con ningun servicio visible. Es la causa del 404 en la subida: el secret tiene un ID de otro proyecto/environment, o quedo obsoleto. Podes poner el NOMBRE del servicio (p. ej. api) en vez del ID — --service acepta ambos y el nombre no se invalida al recrear el proyecto.");
             })' || true
-
-      # `railway up` fallaba con "Failed to upload code with status code 404
-      # Not Found" incluso con el service ID correcto y el project token
-      # scoped al proyecto+environment correctos. La CLI llega a "Indexing..."
-      # y "Uploading...", o sea que autentica — lo que no resuelve es el
-      # CONTEXTO (proyecto + environment) al que pertenece la subida, y
-      # construye una URL de upload que no existe.
-      #
-      # `railway link` fija ese contexto de forma explicita y no interactiva,
-      # en vez de depender de que la CLI lo infiera del token. Escribe un
-      # directorio `.railway` (ya esta en .gitignore).
-      - name: Fijar contexto de proyecto/environment
-        if: steps.check.outputs.skip == 'false'
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
-          RAILWAY_SERVICE_ID_WORKERS: ${{ secrets.RAILWAY_SERVICE_ID_WORKERS }}
-        run: |
-          if [ -z "$RAILWAY_PROJECT_ID" ] || [ -z "$RAILWAY_ENVIRONMENT_ID" ]; then
-            echo "::error::Faltan RAILWAY_PROJECT_ID y/o RAILWAY_ENVIRONMENT_ID. Se sacan de la URL del servicio en el dashboard: railway.com/project/<PROJECT_ID>/service/<SERVICE_ID>?environmentId=<ENVIRONMENT_ID>"
-            exit 1
-          fi
-          railway link             --project "$RAILWAY_PROJECT_ID"             --environment "$RAILWAY_ENVIRONMENT_ID"             --service "$RAILWAY_SERVICE_ID_WORKERS"
-          echo "--- contexto fijado ---"
-          railway status || true
 
       - name: Deploy a Railway
         if: steps.check.outputs.skip == 'false'
