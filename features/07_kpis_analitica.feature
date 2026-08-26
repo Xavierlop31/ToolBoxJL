@@ -12,13 +12,13 @@ Característica: Tableros de Control, KPIs y Analítica
     Cuando abro el dashboard de ingresos y selecciono un periodo
     Entonces veo los ingresos totales desglosados en Ventas Directas, Tarifas de Alquiler y Cobros por Mora para ese periodo
 
-  @Fase2 @PrioridadMedia
+  @HU-7.2 @Fase2 @PrioridadMedia
   Escenario: Gerente consulta el ROI por herramienta
     Dado que soy un Gerente autenticado
     Cuando consulto el ROI de un modelo específico
     Entonces el sistema calcula (Ingresos Acumulados − Costo de Compra) / Costo de Compra × 100 para ese modelo
 
-  @Fase2 @PrioridadMedia
+  @HU-7.3 @Fase2 @PrioridadMedia
   Escenario: Gerente consulta utilización de inventario y productividad de repartidores
     Dado que soy un Gerente autenticado
     Cuando consulto la tasa de utilización de inventario y la productividad de repartidores del mes
