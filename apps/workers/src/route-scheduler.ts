@@ -120,7 +120,7 @@ export function planificarRutas(
     pedidosPorZona.set(zonaId, lista);
   }
 
-  const zonasOrdenadas = [...pedidosPorZona.keys()].sort();
+  const zonasOrdenadas = [...pedidosPorZona.keys()].sort((a, b) => a.localeCompare(b));
 
   for (const zonaId of zonasOrdenadas) {
     const pedidosDeZona = [...pedidosPorZona.get(zonaId)!].sort(

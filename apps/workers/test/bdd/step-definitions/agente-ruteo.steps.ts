@@ -177,7 +177,10 @@ Then("evalúa densidad por zona y capacidad de cada vehículo", function (this: 
   // se agrupan en una sola ruta, evidenciando que sí se evaluó zona +
   // capacidad (no una asignación arbitraria).
   assert.equal(this.resultado!.rutasPublicadas.length, 1);
-  assert.deepEqual([...this.resultado!.rutasPublicadas[0].paradas].sort(), ["s1", "s2"]);
+  assert.deepEqual(
+    [...this.resultado!.rutasPublicadas[0].paradas].sort((a, b) => a.localeCompare(b)),
+    ["s1", "s2"],
+  );
 });
 
 Then(
