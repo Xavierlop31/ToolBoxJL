@@ -1,0 +1,86 @@
+name: Agente 2 (WhatsApp) — Anthropic/Deepgram/ElevenLabs Integration
+
+# Issues #24/#25 (HU-9.1/9.2) — valida las credenciales reales que usa el
+# Agente 2 (tool calling de Claude, transcripción Deepgram, síntesis
+# ElevenLabs) contra sus APIs reales, no los mocks/fakes que usan los tests
+# unitarios/BDD. Job separado del pipeline principal (ci.yml) a propósito,
+# mismo criterio que agente-1-ruteo-integration.yml/whatsapp-otp-integration.yml.
+#
+# Nota (mismo criterio que los otros workflows de integración del repo): un
+# `if` a nivel de job no puede leer el contexto `secrets`, así que el job
+# siempre corre pero su primer paso comprueba si ALGUNA de las tres
+# credenciales existe y, si ninguna existe, termina limpio (exit 0) en vez
+# de fallar en rojo — relevante para forks de PR externos. Si solo ALGUNAS
+# credenciales existen, el test las corre igual: cada bloque (Anthropic/
+# Deepgram/ElevenLabs) se auto-salta de forma independiente si a ESA
+# credencial puntual le falta el secret (ver
+# apps/api/test/integration/agente2-tool-calling.integration.spec.ts).
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "apps/api/src/modules/whatsapp-webhook/**"
+      - "apps/api/test/integration/agente2-tool-calling.integration.spec.ts"
+      - ".github/workflows/agente-2-whatsapp-integration.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "apps/api/src/modules/whatsapp-webhook/**"
+      - "apps/api/test/integration/agente2-tool-calling.integration.spec.ts"
+      - ".github/workflows/agente-2-whatsapp-integration.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: agente-2-whatsapp-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  agente-2-real-apis:
+    name: Validar Agente 2 contra Anthropic/Deepgram/ElevenLabs reales
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que al menos una credencial existe
+        id: check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$DEEPGRAM_API_KEY" ] && [ -z "$ELEVENLABS_API_KEY" ]; then
+            echo "Ninguna credencial del Agente 2 está configurada — omitiendo validación real."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        if: steps.check.outputs.skip == 'false'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.skip == 'false'
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        if: steps.check.outputs.skip == 'false'
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build de @toolboxjl/shared-types (dependencia del API)
+        if: steps.check.outputs.skip == 'false'
+        run: pnpm --filter @toolboxjl/shared-types build
+
+      # Secrets SIEMPRE vía `env:`, nunca interpolados en el cuerpo de
+      # `run:` (githubactions:S7636, mismo hardening que el resto del repo).
+      - name: Validar credenciales reales del Agente 2
+        if: steps.check.outputs.skip == 'false'
+        working-directory: apps/api
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        run: pnpm run test:integration:agente2

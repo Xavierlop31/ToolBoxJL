@@ -8,11 +8,13 @@
     "build": "prisma generate && tsc -p tsconfig.build.json",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "jest && cucumber-js --config cucumber.cjs",
-    "test:integration:whatsapp": "jest --config jest.integration.config.js",
+    "test:integration:whatsapp": "jest --config jest.integration.config.js --testPathPattern=whatsapp-otp-gateway",
+    "test:integration:agente2": "jest --config jest.integration.config.js --testPathPattern=agente2",
     "start": "node dist/main.js",
     "start:dev": "ts-node -T src/main.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
     "@nestjs/common": "^11.2.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.2.1",
