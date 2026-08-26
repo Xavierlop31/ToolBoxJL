@@ -12,11 +12,22 @@ name: Deploy Vercel
 # job queda condicionado a que exista la Variable correspondiente, para no
 # fallar en rojo antes de que crees el proyecto en Vercel.
 
+#
+# `workflow_dispatch` permite re-disparar el deploy a producción a mano,
+# sin necesitar un commit nuevo — necesario porque estos deploys van vía
+# CLI/API (esta Action, con VERCEL_TOKEN), no por la integración nativa de
+# Git de Vercel: el botón "Redeploy" del dashboard de Vercel queda
+# deshabilitado (candado) para deployments que no vinieron de esa
+# integración. Casos típicos: cambiaste una Environment Variable en Vercel
+# (Settings → Environment Variables) y necesitás que el próximo build la
+# recoja, sin esperar al siguiente push a main.
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch: {}
 
 concurrency:
   group: deploy-vercel-${{ github.ref }}
@@ -35,7 +46,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_SHELL }}
-          production: ${{ github.event_name == 'push' }}
+          production: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
 
   portal-cliente:
     name: Deploy portal-cliente
@@ -49,7 +60,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PORTAL }}
-          production: ${{ github.event_name == 'push' }}
+          production: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
 
   panel-admin:
     name: Deploy panel-admin
@@ -63,7 +74,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_ADMIN }}
-          production: ${{ github.event_name == 'push' }}
+          production: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
 
   pwa-logistica:
     name: Deploy pwa-logistica
@@ -77,4 +88,4 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PWA }}
-          production: ${{ github.event_name == 'push' }}
+          production: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
