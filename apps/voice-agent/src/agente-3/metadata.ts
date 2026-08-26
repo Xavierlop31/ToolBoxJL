@@ -7,28 +7,22 @@
  * como metadata del participante — el proceso del Agente 3 lo lee ahí y lo
  * reenvía tal cual").
  *
- * *** CONTRATO ASUMIDO — COORDINACIÓN PENDIENTE CON BACKEND (flag para el
- * Tech Lead) ***: al momento de escribir esto, `apps/api/src/modules/voice-agent/`
- * (rama `feature/backend-cart-voice-token`, en paralelo) todavía NO tiene
- * ningún archivo — no hay código real que inspeccionar para confirmar el
- * shape exacto de los metadata que `issueVoiceAgentLivekitToken` va a emitir.
- * `openapi.yaml` solo dice, en prosa, "metadata del participante" sin definir
- * un shape JSON. Definimos acá el contrato que este proceso espera, del lado
- * de LECTURA — si Backend emite un shape distinto, es un desacople real a
- * resolver en la revisión de PR (no un bug de este archivo):
+ * *** CONTRATO RECONCILIADO CON BACKEND (Tech Lead, revisión de PR) ***: la
+ * primera versión de este archivo asumía un shape JSON envolvente
+ * (`{"supabase_jwt": "<jwt>"}`) porque, al escribirse, `apps/api/src/modules/voice-agent/`
+ * (rama `feature/backend-cart-voice-token`, en paralelo) todavía no tenía
+ * código que inspeccionar. Backend ya está implementado y revisado:
+ * `EmitirTokenLivekitUseCase`/`LivekitAccessTokenIssuerService` ponen el JWT
+ * de Supabase CRUDO directamente como `AccessTokenOptions.metadata` (sin
+ * envolver en JSON) — es el mismo string que el cliente recibió como Bearer,
+ * reenviado tal cual. Este archivo se corrigió para leer ese shape real.
  *
- *   AccessTokenOptions.metadata = JSON.stringify({ supabase_jwt: "<jwt>" })
- *
- * Es decir: un string JSON (no el JWT crudo directamente como metadata) con
- * una única clave `supabase_jwt`, en el participante del CLIENTE (el que
- * abrió el widget de voz) — NO en la sala (`Room.metadata`) ni en el
- * participante del propio Agente 3. Se eligió JSON envolvente (en vez de
- * pasar el JWT crudo como metadata) por consistencia con el resto del
- * contrato de la API (snake_case) y para dejar lugar a agregar más campos de
- * metadata en el futuro sin romper el parseo. Se recorre TODOS los
- * `room.remoteParticipants` (no un identity fijo) porque, del lado del
- * Agente 3, el participante humano puede tener cualquier identity que
- * Backend le haya asignado — no asumimos un valor fijo.
+ * Se recorre TODOS los `room.remoteParticipants` (no un identity fijo)
+ * porque, del lado del Agente 3, el participante humano puede tener
+ * cualquier identity que Backend le haya asignado — no asumimos un valor
+ * fijo. Validación mínima de "parece un JWT" (3 segmentos separados por
+ * `.`, no vacíos) para no reenviar como Bearer cualquier metadata basura de
+ * un participante que no sea el cliente esperado.
  */
 
 export class MetadataJwtNoEncontradoError extends Error {
@@ -54,17 +48,16 @@ export function extraerJwtDeMetadata(metadataRaw: string | undefined | null): st
   if (!metadataRaw || !metadataRaw.trim()) {
     return null;
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(metadataRaw);
-  } catch {
+  const jwt = metadataRaw.trim();
+  // Validación mínima de forma (3 segmentos no vacíos separados por ".") —
+  // no decodifica ni verifica la firma acá (eso lo hace apps/api al recibir
+  // el Bearer reenviado); solo evita reenviar como Authorization cualquier
+  // metadata que claramente no sea un JWT.
+  const segmentos = jwt.split(".");
+  if (segmentos.length !== 3 || segmentos.some((segmento) => segmento.length === 0)) {
     return null;
   }
-  if (typeof parsed !== "object" || parsed === null) {
-    return null;
-  }
-  const jwt = (parsed as Record<string, unknown>).supabase_jwt;
-  return typeof jwt === "string" && jwt.trim() ? jwt.trim() : null;
+  return jwt;
 }
 
 /**
@@ -84,9 +77,10 @@ export function extraerJwtDeSala(participantes: readonly ParticipanteConMetadata
   }
   throw new MetadataJwtNoEncontradoError(
     `Ningún participante de la sala trae un JWT de Supabase válido en sus metadata ` +
-      `(se esperaba JSON con la forma {"supabase_jwt": "<jwt>"}). Participantes revisados: ` +
-      `${participantes.map((p) => p.identity).join(", ") || "<ninguno>"}. Esto probablemente significa ` +
-      "que el shape de metadata que emite POST /voice-agent/livekit-token no coincide con el que " +
-      "este proceso espera — ver el comentario de cabecera de metadata.ts.",
+      `(se esperaba el JWT crudo, con forma de JWT válida — 3 segmentos no vacíos). ` +
+      `Participantes revisados: ${participantes.map((p) => p.identity).join(", ") || "<ninguno>"}. ` +
+      "Esto probablemente significa que el shape de metadata que emite " +
+      "POST /voice-agent/livekit-token no coincide con el que este proceso espera — ver el " +
+      "comentario de cabecera de metadata.ts.",
   );
 }
