@@ -55,6 +55,12 @@ describe("AppModule (smoke — arranque real, sin mocks de DI)", () => {
     WHATSAPP_TOKEN: "smoke-token",
     WHATSAPP_PHONE_NUMBER_ID: "0000000000",
     WHATSAPP_BUSINESS_ACCOUNT_ID: "0000000000",
+    // VoiceAgentModule (Sprint 9) — LivekitAccessTokenIssuerService también
+    // valida sus credenciales al construirse (mismo criterio que
+    // WompiGatewayService arriba).
+    LIVEKIT_API_KEY: "smoke-livekit-key",
+    LIVEKIT_API_SECRET: "smoke-livekit-secret",
+    LIVEKIT_URL: "wss://smoke-test.livekit.cloud",
   } as const;
 
   let envOriginal: NodeJS.ProcessEnv;
