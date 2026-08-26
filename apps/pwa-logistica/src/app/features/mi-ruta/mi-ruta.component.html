@@ -1,0 +1,45 @@
+<main class="mi-ruta">
+  <h1>Mi ruta de hoy</h1>
+
+  @if (loading()) {
+    <output>Cargando tu ruta del día…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (emptyState()) {
+    <p class="empty-state" data-testid="mi-ruta-empty" role="status">
+      Todavía no tenés una ruta asignada para hoy.
+    </p>
+  }
+
+  @if (offlineFallback()) {
+    <output class="form-info" data-testid="mi-ruta-offline-banner">
+      Sin conexión: mostrando la última ruta conocida. Puede no reflejar
+      cambios recientes.
+    </output>
+  }
+
+  @if (data(); as ruta) {
+    <p class="route-meta" data-testid="mi-ruta-fecha">
+      Ruta del {{ ruta.route.fecha }} — {{ ruta.paradas.length }} parada(s)
+    </p>
+
+    <ol class="paradas-list" data-testid="mi-ruta-paradas">
+      @for (parada of ruta.paradas; track parada.shipment_id; let i = $index) {
+        <li class="parada-card" [attr.data-testid]="'mi-ruta-parada-' + i">
+          <span class="parada-secuencia" aria-hidden="true">{{ i + 1 }}</span>
+          <div class="parada-info">
+            <span class="parada-tipo" [attr.data-tipo]="parada.tipo">
+              {{ tipoLabel[parada.tipo] }}
+            </span>
+            <p class="parada-direccion">{{ parada.direccion }}</p>
+            <p class="parada-estado">{{ estadoLabel[parada.estado_envio] }}</p>
+          </div>
+        </li>
+      }
+    </ol>
+  }
+</main>

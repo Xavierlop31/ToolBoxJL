@@ -8,7 +8,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
-import { ROLES, type UsuarioAutenticado } from "@toolboxjl/shared-types";
+import { ROLES_HUMANOS, type UsuarioAutenticado } from "@toolboxjl/shared-types";
 import { Roles } from "../../auth/interface/decorators/roles.decorator";
 import { UsuarioActual } from "../../auth/interface/decorators/usuario-actual.decorator";
 import { RolesGuard } from "../../auth/interface/guards/roles.guard";
@@ -23,10 +23,13 @@ import { VerificarOtpDto } from "./dto/verificar-otp.dto";
 
 /**
  * `/auth/otp/{request,verify}` — Issue #18 (HU-6.2). `x-roles` en
- * openapi.yaml lista los 5 roles de negocio (cualquier usuario autenticado
- * puede pasar por esta verificación) — se declara explícito con
- * `@Roles(...ROLES)` en vez de omitir el decorador, para que quede trazable
- * 1:1 con el contrato aunque el efecto sea el mismo que no anotarlo.
+ * openapi.yaml lista los 5 roles humanos de negocio (cualquier usuario
+ * autenticado puede pasar por esta verificación) — se declara explícito con
+ * `@Roles(...ROLES_HUMANOS)` en vez de omitir el decorador, para que quede
+ * trazable 1:1 con el contrato aunque el efecto sea el mismo que no
+ * anotarlo. Deliberadamente `ROLES_HUMANOS`, no `ROLES` (Sprint 7 —
+ * `ROLES` ya incluye `"agente-1"`, un rol de servicio que openapi.yaml NO
+ * declara para este recurso; ver `packages/shared-types/src/rol.ts`).
  */
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Controller()
@@ -36,7 +39,7 @@ export class AuthOtpController {
     private readonly verificarOtp: VerificarOtpUseCase,
   ) {}
 
-  @Roles(...ROLES)
+  @Roles(...ROLES_HUMANOS)
   @Post("auth/otp/request")
   @HttpCode(201)
   async request(
@@ -56,7 +59,7 @@ export class AuthOtpController {
     }
   }
 
-  @Roles(...ROLES)
+  @Roles(...ROLES_HUMANOS)
   @Post("auth/otp/verify")
   @HttpCode(200)
   async verify(

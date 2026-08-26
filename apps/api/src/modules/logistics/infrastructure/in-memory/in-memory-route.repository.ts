@@ -22,4 +22,13 @@ export class InMemoryRouteRepository implements RouteRepository {
     this.rutas.set(ruta.id, ruta);
     return ruta;
   }
+
+  async buscarPorVehiculoYFecha(vehiculoId: string, fecha: string): Promise<Route | null> {
+    for (const ruta of this.rutas.values()) {
+      if (ruta.vehiculo_id === vehiculoId && ruta.fecha === fecha) {
+        return ruta;
+      }
+    }
+    return null;
+  }
 }

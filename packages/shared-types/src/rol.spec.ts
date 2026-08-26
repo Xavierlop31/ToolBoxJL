@@ -1,14 +1,18 @@
-import { ROLES, asegurarRol, esRolValido } from "./rol";
+import { ROLES, ROLES_HUMANOS, asegurarRol, esRolValido } from "./rol";
 
 describe("Rol", () => {
-  it("expone exactamente los 5 roles de docs/DESIGN.md §4.1", () => {
-    expect(ROLES).toEqual([
+  it("ROLES_HUMANOS expone exactamente los 5 roles humanos de docs/DESIGN.md §4.1", () => {
+    expect(ROLES_HUMANOS).toEqual([
       "admin",
       "gerente",
       "almacenista",
       "repartidor",
       "cliente",
     ]);
+  });
+
+  it("ROLES extiende ROLES_HUMANOS con el rol de servicio agente-1 (Sprint 7)", () => {
+    expect(ROLES).toEqual([...ROLES_HUMANOS, "agente-1"]);
   });
 
   describe("esRolValido", () => {

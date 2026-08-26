@@ -40,7 +40,7 @@ jobs:
   portal-cliente:
     name: Deploy portal-cliente
     runs-on: ubuntu-latest
-    if: ${{ vars.VERCEL_PROJECT_ID_PORTAL_CLIENTE != '' }}
+    if: ${{ vars.VERCEL_PROJECT_ID_PORTAL != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/deploy-vercel-app
@@ -48,13 +48,13 @@ jobs:
           app-path: apps/portal-cliente
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PORTAL_CLIENTE }}
+          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PORTAL }}
           production: ${{ github.event_name == 'push' }}
 
   panel-admin:
     name: Deploy panel-admin
     runs-on: ubuntu-latest
-    if: ${{ vars.VERCEL_PROJECT_ID_PANEL_ADMIN != '' }}
+    if: ${{ vars.VERCEL_PROJECT_ID_ADMIN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/deploy-vercel-app
@@ -62,13 +62,13 @@ jobs:
           app-path: apps/panel-admin
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PANEL_ADMIN }}
+          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_ADMIN }}
           production: ${{ github.event_name == 'push' }}
 
   pwa-logistica:
     name: Deploy pwa-logistica
     runs-on: ubuntu-latest
-    if: ${{ vars.VERCEL_PROJECT_ID_PWA_LOGISTICA != '' }}
+    if: ${{ vars.VERCEL_PROJECT_ID_PWA != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/deploy-vercel-app
@@ -76,5 +76,5 @@ jobs:
           app-path: apps/pwa-logistica
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PWA_LOGISTICA }}
+          vercel-project-id: ${{ vars.VERCEL_PROJECT_ID_PWA }}
           production: ${{ github.event_name == 'push' }}

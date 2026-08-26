@@ -1,0 +1,82 @@
+.mi-ruta {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--tbjl-spacing-6, 1.5rem);
+}
+
+.route-meta {
+  font-size: var(--tbjl-font-size-lg, 1.125rem);
+  margin-bottom: var(--tbjl-spacing-4, 1rem);
+}
+
+.empty-state {
+  font-size: var(--tbjl-font-size-lg, 1.125rem);
+  padding: var(--tbjl-spacing-6, 1.5rem);
+  text-align: center;
+}
+
+.paradas-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tbjl-spacing-4, 1rem);
+}
+
+// Tarjetas grandes, pensadas para usarse con una mano desde el celular en
+// campo (mismo criterio que inspection-checklist): texto legible, buen
+// contraste, target táctil amplio — no es una lista densa de escritorio.
+.parada-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tbjl-spacing-4, 1rem);
+  padding: var(--tbjl-spacing-4, 1rem);
+  min-height: 44px;
+  border: 1px solid var(--tbjl-color-border, #ccc);
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+}
+
+.parada-secuencia {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--tbjl-radius-full, 9999px);
+  background: var(--tbjl-color-primary-500, #f2600c);
+  color: var(--tbjl-color-neutral-0, #fff);
+  font-size: var(--tbjl-font-size-lg, 1.125rem);
+  font-weight: var(--tbjl-font-weight-bold, 700);
+}
+
+.parada-info {
+  flex: 1 1 auto;
+}
+
+.parada-tipo {
+  display: inline-block;
+  font-size: var(--tbjl-font-size-sm, 0.875rem);
+  font-weight: var(--tbjl-font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.parada-direccion {
+  font-size: var(--tbjl-font-size-lg, 1.125rem);
+  margin: var(--tbjl-spacing-2, 0.5rem) 0 0;
+}
+
+.parada-estado {
+  font-size: var(--tbjl-font-size-sm, 0.875rem);
+  color: var(--tbjl-color-neutral-500, #6b7280);
+  margin: var(--tbjl-spacing-2, 0.5rem) 0 0;
+}
+
+// <output> is inline by default; keep the same block layout/spacing the
+// previous <p role="status"> elements had from the browser UA stylesheet.
+output {
+  display: block;
+  margin: 1em 0;
+}
