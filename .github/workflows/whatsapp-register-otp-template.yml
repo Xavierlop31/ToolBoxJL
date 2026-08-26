@@ -1,5 +1,25 @@
 name: WhatsApp — registrar template OTP (Authentication)
 
+# ############################################################################
+# *** NO EJECUTAR TODAVÍA — NO PUEDE TENER ÉXITO EN ESTE MOMENTO ***
+#
+# La WABA de ToolBox JL reporta `business_verification_status: not_verified`
+# (verificado contra la Graph API el 2026-08-25; `status: ACTIVE` y
+# `account_review_status: APPROVED`, o sea que la verificación del negocio es
+# la ÚNICA condición bloqueante). Meta exige verificación del negocio para
+# crear templates de categoría AUTHENTICATION, y ToolBox JL es un proyecto
+# académico sin entidad legal, así que esa verificación no se puede completar.
+#
+# Este job va a devolver HTTP 4xx con "This WhatsApp Business Account doesn't
+# have permission to create a message template" — lo mismo que devuelve la UI
+# de WhatsApp Manager. Se conserva porque queda listo para el día que exista
+# un portafolio verificado; no se borra ni se ejecuta.
+#
+# Ver docs/DESIGN.md §7.1 para el análisis completo, las alternativas
+# evaluadas (incluida la categoría UTILITY, rechazada por el clasificador de
+# Meta antes del envío) y la estrategia de mitigación.
+# ############################################################################
+#
 # Issue #18 (HU-6.2) — gap de producción documentado en
 # apps/api/src/modules/auth-otp/infrastructure/whatsapp/whatsapp-otp-gateway.service.ts:
 # el mensaje `text` que manda WhatsAppOtpGatewayService solo funciona

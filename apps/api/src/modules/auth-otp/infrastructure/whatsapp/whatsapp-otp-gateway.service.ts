@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { WhatsAppOtpGateway } from "../../domain/whatsapp-otp-gateway";
-import { loadWhatsAppCredentials } from "../config/whatsapp.config";
+import { loadWhatsAppCredentials, loadWhatsAppOtpTemplateConfig } from "../config/whatsapp.config";
 
 /**
  * Implementación real contra WhatsApp Cloud API
@@ -28,17 +28,34 @@ import { loadWhatsAppCredentials } from "../config/whatsapp.config";
  *   `enviarOtp` end-to-end contra ese número; si no está definida, ese test
  *   puntual queda en skip con un mensaje explícito — no en verde falso.
  *
- * Mensaje de tipo `text` (no `template`): más simple de implementar y
+ * Mensaje de tipo `text` por defecto: más simple de implementar y
  * suficiente si el usuario le escribió a este número de WhatsApp Business
  * en las últimas 24h (ventana de conversación abierta gratuita de Meta). Si
  * el dispositivo nuevo se detecta FUERA de esa ventana (típico en un primer
  * login/registro, que es justamente el caso de uso de HU-6.2), Meta
  * rechaza el `text` con el error 131047 ("Re-engagement message") y hace
  * falta un mensaje de tipo `template` de categoría "Authentication"
- * pre-aprobado por Meta Business Manager — no se implementó acá porque no
- * hay ningún template aprobado configurado en este entorno; queda
- * documentado como gap de producción para que el Tech Lead lo confirme con
- * el Arquitecto (ver PR #18) antes de un despliegue real.
+ * pre-aprobado por Meta Business Manager.
+ *
+ * *** Ese template NUNCA se puede aprobar en la WABA de este proyecto ***
+ * (docs/DESIGN.md §7.1): ToolBox JL es un proyecto académico sin entidad
+ * legal constituida, y Meta exige verificación de negocio (Cámara de
+ * Comercio / dominio corporativo) para templates "Authentication", que acá
+ * no se puede completar — no es un gap temporal, es una restricción
+ * permanente y aceptada. Por eso `loadWhatsAppOtpTemplateConfig()` hoy
+ * siempre devuelve `null` en la práctica y esta clase manda `type: "text"`
+ * — es el comportamiento esperado, no un fallback provisional.
+ *
+ * La rama `type: "template"` de abajo queda implementada y lista para el
+ * día que exista un portafolio de negocio verificado (se activaría con
+ * solo cargar `WHATSAPP_OTP_TEMPLATE_NAME`/`WHATSAPP_OTP_TEMPLATE_LANG`,
+ * sin tocar código), pero **nunca fue ni puede ser ejercitada contra la API
+ * real en este entorno** — mismo criterio de "mapeo sin validar" que
+ * `WompiGatewayService` (Sprint 3): el shape del payload sigue la
+ * documentación pública de Meta para templates de categoría Authentication
+ * con botón `OTP`/`COPY_CODE` (ver
+ * `.github/workflows/whatsapp-register-otp-template.yml`, que somete
+ * exactamente ese mismo template), pero no está probado end-to-end.
  */
 @Injectable()
 export class WhatsAppOtpGatewayService implements WhatsAppOtpGateway {
@@ -54,6 +71,36 @@ export class WhatsAppOtpGatewayService implements WhatsAppOtpGateway {
   }
 
   async enviarOtp(telefono: string, codigo: string): Promise<void> {
+    const templateConfig = loadWhatsAppOtpTemplateConfig();
+
+    const body = templateConfig
+      ? {
+          messaging_product: "whatsapp",
+          to: telefono,
+          type: "template",
+          template: {
+            name: templateConfig.name,
+            language: { code: templateConfig.lang },
+            components: [
+              { type: "body", parameters: [{ type: "text", text: codigo }] },
+              {
+                type: "button",
+                sub_type: "url",
+                index: "0",
+                parameters: [{ type: "text", text: codigo }],
+              },
+            ],
+          },
+        }
+      : {
+          messaging_product: "whatsapp",
+          to: telefono,
+          type: "text",
+          text: {
+            body: `Tu código de verificación de ToolBox JL es ${codigo}. No lo compartas con nadie.`,
+          },
+        };
+
     const response = await fetch(
       `${WhatsAppOtpGatewayService.BASE_URL}/${this.phoneNumberId}/messages`,
       {
@@ -62,14 +109,7 @@ export class WhatsAppOtpGatewayService implements WhatsAppOtpGateway {
           Authorization: `Bearer ${this.token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: telefono,
-          type: "text",
-          text: {
-            body: `Tu código de verificación de ToolBox JL es ${codigo}. No lo compartas con nadie.`,
-          },
-        }),
+        body: JSON.stringify(body),
       },
     );
 

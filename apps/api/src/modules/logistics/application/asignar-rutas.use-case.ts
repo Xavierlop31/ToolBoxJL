@@ -1,5 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { EstadoEnvio, Route, RouteInput } from "@toolboxjl/shared-types";
+import type {
+  EstadoEnvio,
+  GeneradaPor,
+  Rol,
+  Route,
+  RouteInput,
+} from "@toolboxjl/shared-types";
 import { VEHICLE_REPOSITORY } from "../../fleet/infrastructure/fleet.tokens";
 import type { VehicleRepository } from "../../fleet/domain/vehicle.repository";
 import { VehiculoNoEncontradoError } from "../../fleet/domain/errors/vehiculo-no-encontrado.error";
@@ -18,8 +24,13 @@ import { ShipmentNoEncontradoError } from "../domain/errors/shipment-no-encontra
  *    transiciona `estado_envio`: `pendiente_asignacion` → `en_ruta_entrega`
  *    si el Shipment es `tipo: "entrega"`, o `en_ruta_recogida` si es
  *    `tipo: "recogida"`.
- * `generada_por` siempre `"manual"` en este sprint — el Agente 1 (Sprint 7)
- * todavía no existe.
+ *
+ * `generada_por` (Sprint 7 — decisión del Tech Lead): se deriva SIEMPRE del
+ * rol del `UsuarioAutenticado` que llama al endpoint, nunca de un campo del
+ * body — un cliente HTTP no puede mentir sobre quién publicó la ruta. Rol
+ * `"agente-1"` (JWT de servicio del batch nocturno) → `"agente_1"`;
+ * cualquier otro rol permitido por el controller (hoy, `"admin"`) →
+ * `"manual"`.
  */
 @Injectable()
 export class AsignarRutasUseCase {
@@ -32,7 +43,9 @@ export class AsignarRutasUseCase {
     private readonly rutas: RouteRepository,
   ) {}
 
-  async ejecutar(inputs: RouteInput[]): Promise<Route[]> {
+  async ejecutar(inputs: RouteInput[], rolSolicitante: Rol): Promise<Route[]> {
+    const generadaPor: GeneradaPor =
+      rolSolicitante === "agente-1" ? "agente_1" : "manual";
     const rutasCreadas: Route[] = [];
 
     for (const input of inputs) {
@@ -56,7 +69,7 @@ export class AsignarRutasUseCase {
         vehiculoId: input.vehiculo_id,
         fecha: input.fecha,
         paradas: input.paradas,
-        generadaPor: "manual",
+        generadaPor,
       });
 
       for (const shipment of shipmentsDeLaRuta) {

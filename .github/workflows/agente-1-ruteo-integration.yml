@@ -1,0 +1,81 @@
+name: Agente 1 (Ruteo) — Anthropic Integration
+
+# Issue #22 (HU-8.1) — valida el tool-calling de RouteSchedulerAgent contra
+# la API REAL de Anthropic (no el mock de AnthropicMessagesClient que usan
+# los tests unitarios/BDD). Job separado del pipeline principal (ci.yml) a
+# propósito, mismo criterio que whatsapp-otp-integration.yml: necesita un
+# secret real (ANTHROPIC_API_KEY) que no tiene sentido exponer al job de
+# lint/test/build genérico, cuyo fallo no debe bloquear PRs que no tocan
+# este módulo, y cuyo consumo de saldo (CLAUDE.md §8 — USD 7,5 totales) hay
+# que mantener acotado a corridas explícitas, no a cada push.
+#
+# Nota (mismo criterio que deploy-railway.yml/whatsapp-otp-integration.yml):
+# un `if` a nivel de job no puede leer el contexto `secrets`, así que el job
+# siempre corre pero su primer paso comprueba si la credencial existe y, si
+# no, termina limpio (exit 0) en vez de fallar en rojo — relevante para
+# forks de PR externos, que no reciben secrets del repo base.
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "apps/workers/src/agente-1/**"
+      - "apps/workers/test/integration/**"
+      - ".github/workflows/agente-1-ruteo-integration.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "apps/workers/src/agente-1/**"
+      - "apps/workers/test/integration/**"
+      - ".github/workflows/agente-1-ruteo-integration.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: agente-1-ruteo-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  agente-1-real-api:
+    name: Validar RouteSchedulerAgent contra la API real de Anthropic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que ANTHROPIC_API_KEY existe
+        id: check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY no está configurada — omitiendo validación real."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        if: steps.check.outputs.skip == 'false'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.skip == 'false'
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        if: steps.check.outputs.skip == 'false'
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Secrets SIEMPRE vía `env:`, nunca interpolados en el cuerpo de
+      # `run:` (githubactions:S7636 — hardening de Sonar, mismo criterio ya
+      # aplicado en whatsapp-otp-integration.yml/deploy-railway.yml).
+      # ANTHROPIC_MODEL es opcional: sin ella, el test usa el default de
+      # `agente-1/config.ts` (Claude Haiku — el modelo económico elegido
+      # para este sprint).
+      - name: Validar tool-calling real contra la API de Anthropic
+        if: steps.check.outputs.skip == 'false'
+        working-directory: apps/workers
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+        run: pnpm run test:integration:agente1

@@ -504,21 +504,57 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /logistics/pending-orders:
     get:
-      operationId: getPendingOrders
-      summary: Pedidos confirmados sin ruta asignada
-      description: Consumido por el Agente 1 (batch nocturno) vía tool calling (TRD §4.1).
+      operationId: getVehicles
+      summary: Listar vehículos de la flota (Sprint 7, HU-8.1)
+      description: >
+        Consumido por el Agente 1 (batch nocturno) vía tool calling para
+        conocer capacidad (kg/m³) y zonas de cada vehículo antes de armar
+        las rutas (TRD §4.1). También usado por Admin para el panel de
+        flota.
       tags: [Logística]
       x-roles: [agente-1, admin]
       responses:
         "200":
-          description: Lista de pedidos pendientes de asignación de ruta.
+          description: Lista de vehículos de la flota.
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/Shipment" }
+                items: { $ref: "#/components/schemas/Vehicle" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /logistics/pending-orders:
+    get:
+      operationId: getPendingOrders
+      summary: Pedidos confirmados sin ruta asignada
+      description: >
+        Consumido por el Agente 1 (batch nocturno) vía tool calling (TRD
+        §4.1). Devuelve el Shipment expandido con la `zona_id` de la Order
+        asociada y el `peso_kg`/`volumen_m3` del ToolModel de cada ítem
+        (sumados si la orden tiene más de un ítem) — datos necesarios para
+        el clustering por zona y el bin-packing por capacidad. Estos campos
+        NO viven en el schema `Shipment` genérico (el que usa
+        `GET /logistics/shipments` para el panel de seguimiento): son
+        específicos de este endpoint, calculados en el momento.
+      tags: [Logística]
+      x-roles: [agente-1, admin]
+      responses:
+        "200":
+          description: Lista de pedidos pendientes de asignación de ruta, con datos de zona/capacidad.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: "#/components/schemas/Shipment"
+                    - type: object
+                      properties:
+                        zona_id: { type: string, format: uuid }
+                        peso_kg: { type: number, description: "Suma de los ítems de la orden." }
+                        volumen_m3: { type: number, description: "Suma de los ítems de la orden." }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /logistics/assign-routes:
