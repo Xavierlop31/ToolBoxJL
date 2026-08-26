@@ -35,4 +35,11 @@ export class PrismaRouteRepository implements RouteRepository {
     });
     return aDominio(creado);
   }
+
+  async buscarPorVehiculoYFecha(vehiculoId: string, fecha: string): Promise<Route | null> {
+    const encontrada = await this.prisma.route.findFirst({
+      where: { vehiculoId, fecha: new Date(fecha) },
+    });
+    return encontrada ? aDominio(encontrada) : null;
+  }
 }

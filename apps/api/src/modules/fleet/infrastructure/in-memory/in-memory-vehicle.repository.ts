@@ -29,4 +29,13 @@ export class InMemoryVehicleRepository implements VehicleRepository {
   async buscarPorId(id: string): Promise<Vehicle | null> {
     return this.vehiculos.get(id) ?? null;
   }
+
+  async buscarPorRepartidorId(repartidorId: string): Promise<Vehicle | null> {
+    for (const vehiculo of this.vehiculos.values()) {
+      if (vehiculo.repartidor_id === repartidorId) {
+        return vehiculo;
+      }
+    }
+    return null;
+  }
 }
