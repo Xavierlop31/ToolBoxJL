@@ -94,10 +94,12 @@ describe("AppModule (smoke — arranque real, sin mocks de DI)", () => {
     },
     // Timeout explícito (default de Jest: 5000ms) — este test compila el
     // grafo de DI REAL completo (cada vez más grande: CartModule y
-    // VoiceAgentModule se sumaron en Sprint 9), y bajo CI con Turborepo
-    // corriendo 10 tareas en paralelo puede superar el default. No es un
-    // test lento por diseño, es real compilación de módulos — 20s da
+    // VoiceAgentModule se sumaron en Sprint 9, AnalyticsModule creció en
+    // Sprint 10), y bajo CI con Turborepo corriendo 27 tareas en paralelo
+    // puede superar el margen anterior (20s excedido de verdad en el push
+    // de main del 2026-08-27, no una regresión de este archivo). No es un
+    // test lento por diseño, es real compilación de módulos — 45s da
     // margen sin ocultar una regresión genuina de performance.
-    20_000,
+    45_000,
   );
 });
