@@ -14,31 +14,30 @@
  * verdad, con costo despreciable:
  * - Anthropic: tool calling real con las mismas tools que usa el Agente 3.
  * - Deepgram: `GET /v1/projects` (no transcribe audio real, sin costo).
- * - ElevenLabs: `GET /v1/user` (no sintetiza audio real, sin costo).
+ * - ElevenLabs: síntesis TTS real de un texto de 1 palabra (ver nota abajo).
  * - LiveKit: `RoomServiceClient.listRooms()` (no abre ninguna sala, solo
  *   confirma que LIVEKIT_URL/API_KEY/API_SECRET autentican contra el
  *   proyecto real).
  *
- * *** Nota conocida sobre ELEVENLABS_API_KEY (reportada por el Arquitecto,
- * no es un bug de este archivo) ***: el 401 que este bloque puede devolver
- * NO significa necesariamente que la key esté mal escrita o vencida — el
- * Arquitecto confirmó que la key vigente (hasta 21-sep) sigue fallando con
- * 401 en el workflow de integración del Agente 2 desde Sprint 8. La
- * hipótesis actual es que la key tiene un scope/permiso granular en
- * ElevenLabs (Claves de API → permisos por key) que no incluye el/los
- * endpoint(s) que se están llamando — NO que la key sea inválida. Si este
- * bloque también falla con 401, es la MISMA causa raíz ya escalada al
- * Arquitecto, no un bloqueo nuevo de este sprint.
+ * *** ElevenLabs — causa raíz real del 401 histórico (ya resuelta) ***: NO
+ * era la key en sí — era `GET /v1/user`, que exige el permiso `user_read`
+ * que esta key nunca tuvo (scope deliberadamente angosto, solo
+ * `text_to_speech`) y que la app tampoco necesita. Confirmado probando
+ * directo contra la API: `/v1/user` y `/v1/voices` dan 401
+ * "missing_permissions", `/v1/text-to-speech/{voice_id}` da 200. Se
+ * reemplaza el check por una síntesis real mínima contra el mismo voice_id
+ * de producción, que es lo que de verdad importa validar acá.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { AGENTE_3_TOOLS, construirSystemPromptAgente3 } from "../../src/agente-3/tools";
-import { ANTHROPIC_MODEL_DEFAULT } from "../../src/agente-3/config";
+import { ANTHROPIC_MODEL_DEFAULT, loadElevenLabsConfig } from "../../src/agente-3/config";
 
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const anthropicModel = process.env.ANTHROPIC_MODEL?.trim() || ANTHROPIC_MODEL_DEFAULT;
 const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
 const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
+const elevenLabsVoiceId = elevenLabsApiKey ? loadElevenLabsConfig(process.env).voiceId : undefined;
 const liveKitUrl = process.env.LIVEKIT_URL;
 const liveKitApiKey = process.env.LIVEKIT_API_KEY;
 const liveKitApiSecret = process.env.LIVEKIT_API_SECRET;
@@ -107,15 +106,15 @@ describeSi(Boolean(deepgramApiKey))("Agente 3 — credenciales reales de Deepgra
 });
 
 describeSi(Boolean(elevenLabsApiKey))("Agente 3 — credenciales reales de ElevenLabs", () => {
-  it("ELEVENLABS_API_KEY autentica contra la API real (GET /v1/user)", async () => {
-    const response = await fetch("https://api.elevenlabs.io/v1/user", {
-      headers: { "xi-api-key": elevenLabsApiKey! },
+  it("ELEVENLABS_API_KEY sintetiza audio real contra el voice_id configurado (POST /v1/text-to-speech)", async () => {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceId}`, {
+      method: "POST",
+      headers: { "xi-api-key": elevenLabsApiKey!, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "Hola", model_id: "eleven_multilingual_v2" }),
     });
-    // Ver el comentario de cabecera de este archivo sobre el 401 conocido —
-    // se deja la aserción estricta (200) a propósito para que el workflow
-    // de CI siga marcando el gap en rojo hasta que se corrija el scope de
-    // la key, en vez de esconderlo con un assert laxo.
     expect(response.status).toBe(200);
+    const audio = await response.arrayBuffer();
+    expect(audio.byteLength).toBeGreaterThan(0);
   });
 });
 
