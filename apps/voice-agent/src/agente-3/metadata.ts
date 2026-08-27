@@ -45,7 +45,7 @@ export interface ParticipanteConMetadata {
  * debe seguir buscando en otro participante (ver `extraerJwtDeSala`).
  */
 export function extraerJwtDeMetadata(metadataRaw: string | undefined | null): string | null {
-  if (!metadataRaw || !metadataRaw.trim()) {
+  if (!metadataRaw?.trim()) {
     return null;
   }
   const jwt = metadataRaw.trim();
