@@ -77,7 +77,7 @@ When('consulto el ROI de un modelo específico', async ({ page }) => {
 });
 
 Then(
-  'el sistema calcula \\(Ingresos Acumulados − Costo de Compra\\) \\/ Costo de Compra × 100 para ese modelo',
+  String.raw`el sistema calcula \(Ingresos Acumulados − Costo de Compra\) \/ Costo de Compra × 100 para ese modelo`,
   async ({ page }) => {
     await expect(page.getByTestId('roi-row')).toContainText(roiModeloId);
     await expect(page.getByTestId('roi-row')).toContainText(/42[.,]5%/);

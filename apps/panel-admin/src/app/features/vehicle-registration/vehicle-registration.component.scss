@@ -10,3 +10,10 @@
 .form-error {
   color: #b00020;
 }
+
+// <output> es inline por defecto; mantiene el mismo layout de bloque que
+// tenía el <section role="status"> anterior (mismo criterio que
+// mi-ruta.component.scss).
+output {
+  display: block;
+}

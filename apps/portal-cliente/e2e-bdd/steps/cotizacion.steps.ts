@@ -55,7 +55,7 @@ When('solicito una cotización de alquiler', async ({ page }) => {
   await page.click('button[type="submit"]');
 });
 
-Then('el sistema calcula la tarifa por días, el recargo logístico por peso\\/zona y el depósito de garantía si aplica', async ({ page }) => {
+Then(String.raw`el sistema calcula la tarifa por días, el recargo logístico por peso\/zona y el depósito de garantía si aplica`, async ({ page }) => {
   const quoteResult = page.locator('[data-testid="quote-result"]');
   await expect(quoteResult).toBeVisible();
 });

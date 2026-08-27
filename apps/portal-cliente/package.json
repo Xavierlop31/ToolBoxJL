@@ -7,7 +7,7 @@
     "prebuild": "node ../../scripts/generate-frontend-config.mjs portal-cliente",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test --watch=false --browsers=ChromeHeadless && pnpm run test:bdd",
+    "test": "ng test --watch=false --browsers=ChromeHeadless --code-coverage && pnpm run test:bdd",
     "test:bdd": "playwright install chromium && bddgen --config=e2e-bdd/playwright.config.ts && playwright test --config=e2e-bdd/playwright.config.ts",
     "lint": "ng lint"
   },

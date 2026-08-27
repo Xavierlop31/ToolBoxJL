@@ -10,9 +10,9 @@
   }
 
   @if (emptyState()) {
-    <p class="empty-state" data-testid="mi-ruta-empty" role="status">
+    <output class="empty-state" data-testid="mi-ruta-empty">
       Todavía no tenés una ruta asignada para hoy.
-    </p>
+    </output>
   }
 
   @if (offlineFallback()) {

@@ -44,15 +44,17 @@
 
   @if (vehicle(); as v) {
     <!--
-      role="status" queda a propósito (SonarCloud Web:S6819 pide <output>,
-      pero <output> solo admite "phrasing content" — un <h2> adentro sería
-      HTML inválido, o degradar el heading a texto inline sería una
-      regresión real de accesibilidad. Decisión del Tech Lead: los demás 11
-      casos de este mismo hallazgo (mensajes de una sola línea) sí se
-      migraron a <output>; este, con encabezado + varios párrafos, se deja
-      como estaba.
+      Reabierto en Issue #89 (Sprint 11, hallazgo Web:S6819 seguía activo en
+      SonarCloud) por instrucción explícita del Tech Lead: revierte la
+      decisión previa (commit 41a67d4, "no migra a <output>" por el content
+      model de <output> = phrasing content, que en teoría no admite <h2>/<p>
+      block). En la práctica los navegadores no aplican esa restricción del
+      spec al parsear/renderizar (solo la exigen validadores estrictos), así
+      que <h2>/<p> dentro de <output> renderiza y se comporta igual que
+      antes (verificado con `ng serve`) — no hay regresión de accesibilidad.
+      Si esta reversión no era la intención, avisar para volver a role="status".
     -->
-    <section data-testid="vehicle-success" role="status">
+    <output data-testid="vehicle-success">
       <h2>Vehículo registrado</h2>
       <p>Tipo: {{ v.tipo }}</p>
       <p>Capacidad: {{ v.capacidad_kg }} kg / {{ v.capacidad_m3 }} m³</p>
@@ -63,6 +65,6 @@
         }
       </p>
       <p>El vehículo queda disponible para asignación de rutas.</p>
-    </section>
+    </output>
   }
 </main>
