@@ -75,7 +75,7 @@ describe('QrScannerService', () => {
 
   it('stop() detiene los controles activos del lector', async () => {
     const videoElement = document.createElement('video');
-    await service.start(videoElement, () => {});
+    await service.start(videoElement, jasmine.createSpy('onDecode'));
 
     service.stop();
 
@@ -88,7 +88,7 @@ describe('QrScannerService', () => {
 
   it('stop() es idempotente: llamarlo dos veces no vuelve a invocar controls.stop()', async () => {
     const videoElement = document.createElement('video');
-    await service.start(videoElement, () => {});
+    await service.start(videoElement, jasmine.createSpy('onDecode'));
 
     service.stop();
     stopSpy.calls.reset();
