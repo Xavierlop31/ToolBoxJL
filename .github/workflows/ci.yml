@@ -91,18 +91,13 @@ jobs:
       # commit de la tag v5 (mismo criterio de hardening que
       # pnpm/action-setup arriba, githubactions:S7637).
       #
-      # `continue-on-error` PROVISORIO: el primer push real a main con este
-      # paso falló (exit code 3) con "You are running CI analysis while
-      # Automatic Analysis is enabled" — SonarCloud exige desactivar
-      # Automatic Analysis a mano en Administration > Analysis Method antes
-      # de aceptar análisis CI-based; no hay API/MCP para ese toggle, lo hace
-      # solo un admin humano del proyecto en la UI. Hasta que eso se haga,
-      # este paso queda no-bloqueante para no tener CI en rojo por una
-      # config de SonarCloud pendiente, no por un problema del código. Sacar
-      # `continue-on-error` en cuanto se confirme el toggle desactivado.
+      # El Arquitecto desactivó "Automatic Analysis" en SonarCloud
+      # (Administration > Analysis Method, 2026-08-27) — el `continue-on-error`
+      # que tuvo este paso mientras tanto (commit c6e4f10) ya no hace falta:
+      # el scan corrió limpio contra main con Automatic Analysis apagado y
+      # subió coverage real por primera vez (46.5%, antes "sin datos").
       - name: SonarCloud scan
         uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
         if: github.event_name == 'push'
-        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
