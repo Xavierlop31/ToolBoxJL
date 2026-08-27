@@ -7,4 +7,7 @@ module.exports = {
   moduleFileExtensions: ["js", "json", "ts"],
   collectCoverageFrom: ["**/*.(t|j)s", "!**/*.spec.ts"],
   coverageDirectory: "../coverage",
+  // Ver el comentario equivalente en apps/api/jest.config.js.
+  collectCoverage: true,
+  coverageReporters: ["lcov", "text-summary"],
 };
