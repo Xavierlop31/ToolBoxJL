@@ -74,7 +74,11 @@ When("se ejecuta el batch nocturno del Agente 1", async function (this: Agente1W
       return { ok: true, status: 200, json: async () => PEDIDOS_FIXTURE } as Response;
     }
     if (url.endsWith("/logistics/assign-routes") && init?.method === "POST") {
-      const rutasInput = JSON.parse(String(init.body)) as {
+      // `init.body` siempre es un string JSON acá (el use case del Agente 1 lo
+      // produce con `JSON.stringify(...)`) — se afirma el tipo en vez de
+      // convertirlo implícitamente con `String()`, que en un `BodyInit` genérico
+      // podría dar `"[object Object]"` en vez del JSON esperado.
+      const rutasInput = JSON.parse(init.body as string) as {
         vehiculo_id: string;
         fecha: string;
         paradas: string[];

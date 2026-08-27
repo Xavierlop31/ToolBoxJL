@@ -3,9 +3,8 @@ import type { Cart, CartItem } from "@toolboxjl/shared-types";
 import { TOOL_MODEL_REPOSITORY } from "../../catalog-inventory/infrastructure/catalog-inventory.tokens";
 import type { ToolModelRepository } from "../../catalog-inventory/domain/tool-model.repository";
 import { calcularTotalCarrito, cargarModelosDelCarrito } from "../domain/cart-pricing.service";
-import type { CartLineItem } from "../domain/cart.repository";
+import type { CartLineItem, CartRepository } from "../domain/cart.repository";
 import { CART_REPOSITORY } from "../infrastructure/cart.tokens";
-import type { CartRepository } from "../domain/cart.repository";
 
 function aCartItemDto(item: CartLineItem): CartItem {
   return item.dias
