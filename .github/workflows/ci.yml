@@ -81,3 +81,17 @@ jobs:
       - name: Lint, test y build (rama main completa)
         run: pnpm turbo run lint test build
         if: github.event_name == 'push'
+
+      # CI-based analysis (2026-08-27) — reemplaza el "Automatic Analysis" de
+      # SonarCloud (que nunca corría tests, por eso Coverage daba "sin
+      # datos"). Solo en push: los lcov.info de este paso son los que generó
+      # el "turbo run test" de arriba (jest: collectCoverage:true en cada
+      # jest.config.js; Angular: --code-coverage en el script "test" de cada
+      # app) — no hace falta un paso aparte para generarlos. SHA fijo del
+      # commit de la tag v5 (mismo criterio de hardening que
+      # pnpm/action-setup arriba, githubactions:S7637).
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
+        if: github.event_name == 'push'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
