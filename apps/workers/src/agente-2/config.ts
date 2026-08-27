@@ -23,9 +23,13 @@ export function loadElevenLabsApiKey(env: NodeJS.ProcessEnv = process.env): stri
   return apiKey;
 }
 
-/** Mismo default documentado que `apps/api` (media-gateway.config.ts) — no confirmado con el Arquitecto. */
+/**
+ * Voice ID de ElevenLabs — "Diego, Bold and Vibrant" (español, acento
+ * colombiano, `tN4nkw7MBnGYAwQ71zQp`), confirmado por el Arquitecto.
+ * Configurable vía `ELEVENLABS_VOICE_ID` sin tocar código.
+ */
 export function loadElevenLabsVoiceId(env: NodeJS.ProcessEnv = process.env): string {
-  return env.ELEVENLABS_VOICE_ID?.trim() || "21m00Tcm4TlvDq8ikWAM";
+  return env.ELEVENLABS_VOICE_ID?.trim() || "tN4nkw7MBnGYAwQ71zQp";
 }
 
 export interface WhatsAppSendCredentials {

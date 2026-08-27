@@ -77,8 +77,8 @@ export interface ElevenLabsConfig {
   readonly voiceId: string;
 }
 
-/** Mismo voice_id de ejemplo (Rachel, voz multilenguaje) que ya usan Agente 2 y el resto del repo como default de `.env.example`. */
-export const ELEVENLABS_VOICE_ID_DEFAULT = "21m00Tcm4TlvDq8ikWAM";
+/** Mismo voice_id confirmado por el Arquitecto que usan Agente 2 y el resto del repo — "Diego, Bold and Vibrant" (español, acento colombiano). */
+export const ELEVENLABS_VOICE_ID_DEFAULT = "tN4nkw7MBnGYAwQ71zQp";
 
 export function loadElevenLabsConfig(env: NodeJS.ProcessEnv = process.env): ElevenLabsConfig {
   const apiKey = env.ELEVENLABS_API_KEY?.trim();

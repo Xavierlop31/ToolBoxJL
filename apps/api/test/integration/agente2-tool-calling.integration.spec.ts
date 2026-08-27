@@ -15,16 +15,30 @@
  * que el uso mínimo de esa API funciona, con costo despreciable:
  * - Anthropic: tool calling real con las mismas tools que usa el Agente 2.
  * - Deepgram: `GET /v1/projects` (no transcribe audio real, sin costo).
- * - ElevenLabs: `GET /v1/user` (no sintetiza audio real, sin costo).
+ * - ElevenLabs: síntesis TTS real de un texto de 1 palabra (ver nota abajo).
+ *
+ * *** ElevenLabs — por qué NO es `GET /v1/user` (histórico) ***: esa
+ * verificación devolvía 401 con la key real (`missing_permissions:
+ * user_read`) — la key de este proyecto tiene un scope deliberadamente
+ * angosto (solo `text_to_speech`, confirmado por el Arquitecto probando
+ * varios endpoints: `/v1/user` y `/v1/voices` dan 401 "missing_permissions",
+ * `/v1/text-to-speech/{voice_id}` da 200). Probar `/v1/user` no validaba
+ * nada relevante y encima exigía un permiso que la key nunca necesita en
+ * producción. Se reemplaza por una síntesis real mínima (texto de 1
+ * palabra, ~$0.0001 con plan Starter) contra el mismo voice_id que usa
+ * `ElevenLabsTextToSpeechService` en producción — esto sí prueba la
+ * capacidad real que usa el Agente 2, con costo despreciable.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { AGENTE_2_TOOLS, construirSystemPromptAgente2 } from "../../src/modules/whatsapp-webhook/infrastructure/agente-2/tools";
 import { ANTHROPIC_MODEL_DEFAULT } from "../../src/modules/whatsapp-webhook/infrastructure/agente-2/config";
+import { loadElevenLabsVoiceId } from "../../src/modules/whatsapp-webhook/infrastructure/config/media-gateway.config";
 
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const anthropicModel = process.env.ANTHROPIC_MODEL?.trim() || ANTHROPIC_MODEL_DEFAULT;
 const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
 const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
+const elevenLabsVoiceId = loadElevenLabsVoiceId(process.env);
 
 function describeSi(condicion: boolean) {
   return condicion ? describe : describe.skip;
@@ -84,10 +98,14 @@ describeSi(Boolean(deepgramApiKey))("Agente 2 — credenciales reales de Deepgra
 });
 
 describeSi(Boolean(elevenLabsApiKey))("Agente 2 — credenciales reales de ElevenLabs", () => {
-  it("ELEVENLABS_API_KEY autentica contra la API real (GET /v1/user)", async () => {
-    const response = await fetch("https://api.elevenlabs.io/v1/user", {
-      headers: { "xi-api-key": elevenLabsApiKey! },
+  it("ELEVENLABS_API_KEY sintetiza audio real contra el voice_id configurado (POST /v1/text-to-speech)", async () => {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceId}`, {
+      method: "POST",
+      headers: { "xi-api-key": elevenLabsApiKey!, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "Hola", model_id: "eleven_multilingual_v2" }),
     });
     expect(response.status).toBe(200);
+    const audio = await response.arrayBuffer();
+    expect(audio.byteLength).toBeGreaterThan(0);
   });
 });

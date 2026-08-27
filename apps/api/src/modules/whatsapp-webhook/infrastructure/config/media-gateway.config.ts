@@ -30,13 +30,14 @@ export function loadElevenLabsApiKey(env: NodeJS.ProcessEnv = process.env): stri
 
 /**
  * Voice ID de ElevenLabs a usar para la síntesis. Regla de negocio/producto
- * configurable, no un secreto — default: "Rachel" (voz pre-hecha en inglés
- * que ElevenLabs expone en todas las cuentas nuevas, `21m00Tcm4TlvDq8ikWAM`).
- * *** No confirmado con el Arquitecto que esta sea la voz deseada para el
- * español de Colombia *** — se deja como default razonable y documentado,
- * configurable vía `ELEVENLABS_VOICE_ID` sin tocar código; el modelo
- * `eleven_multilingual_v2` (hardcodeado en el service) sí soporta español.
+ * configurable, no un secreto — default: "Diego, Bold and Vibrant" (voz de
+ * librería en español con acento colombiano, `tN4nkw7MBnGYAwQ71zQp`),
+ * confirmado por el Arquitecto. Requiere plan pago de ElevenLabs (Starter+)
+ * para usar voces de librería vía API — el plan Free devuelve 402
+ * "paid_plan_required" (ver `ElevenLabsTextToSpeechService`). Configurable
+ * vía `ELEVENLABS_VOICE_ID` sin tocar código; el modelo
+ * `eleven_multilingual_v2` (hardcodeado en el service) soporta español.
  */
 export function loadElevenLabsVoiceId(env: NodeJS.ProcessEnv = process.env): string {
-  return env.ELEVENLABS_VOICE_ID?.trim() || "21m00Tcm4TlvDq8ikWAM";
+  return env.ELEVENLABS_VOICE_ID?.trim() || "tN4nkw7MBnGYAwQ71zQp";
 }
