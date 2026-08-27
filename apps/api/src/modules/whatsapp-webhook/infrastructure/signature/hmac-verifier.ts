@@ -18,7 +18,7 @@ export function verificarFirmaWhatsApp(
   headerSignature: string | undefined,
   appSecret: string,
 ): boolean {
-  if (!headerSignature || !headerSignature.startsWith("sha256=")) {
+  if (!headerSignature?.startsWith("sha256=")) {
     return false;
   }
   const firmaRecibidaHex = headerSignature.slice("sha256=".length);

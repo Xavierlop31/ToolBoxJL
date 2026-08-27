@@ -38,7 +38,7 @@
  *       node scripts/generate-frontend-config.mjs --all
  */
 
-import { writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -64,6 +64,18 @@ const APPS = {
   "panel-admin": { apiUrl: true, supabase: true },
   "pwa-logistica": { apiUrl: true },
 };
+
+/**
+ * Recorta las barras finales de una URL sin usar una regex con cuantificador
+ * (evita el patrón de backtracking super-lineal que marca S8786).
+ */
+function sinBarraFinal(valor) {
+  let fin = valor.length;
+  while (fin > 0 && valor[fin - 1] === "/") {
+    fin -= 1;
+  }
+  return valor.slice(0, fin);
+}
 
 /** Remotes que el shell monta vía Native Federation. */
 const REMOTES = {
@@ -116,10 +128,12 @@ function generarEnvironment(app) {
   const campos = ["  production: true,"];
   if (apiUrl) campos.push(`  apiUrl: ${comoLiteralTs(apiUrl)},`);
   if (supabaseUrl) {
-    campos.push("  supabase: {");
-    campos.push(`    url: ${comoLiteralTs(supabaseUrl)},`);
-    campos.push(`    anonKey: ${comoLiteralTs(supabaseKey)},`);
-    campos.push("  },");
+    campos.push(
+      "  supabase: {",
+      `    url: ${comoLiteralTs(supabaseUrl)},`,
+      `    anonKey: ${comoLiteralTs(supabaseKey)},`,
+      "  },",
+    );
   }
 
   const contenido = [
@@ -145,7 +159,7 @@ function generarManifiestoFederacion() {
     if (base) {
       // `base` se usa tal cual (ver nota de topología en la cabecera). Solo
       // se normaliza la barra final para no emitir `//remoteEntry.json`.
-      entradas[remote] = `${base.replace(/\/+$/, "")}/remoteEntry.json`;
+      entradas[remote] = `${sinBarraFinal(base)}/remoteEntry.json`;
     }
   }
 

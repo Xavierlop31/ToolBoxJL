@@ -43,26 +43,44 @@ export class InMemoryUtilizationRepository implements UtilizationRepository {
     const porModelo = new Map<string, { diasAlquilada: number; diasDisponibles: number }>();
 
     for (const unidad of this.unidades) {
-      const actual = porModelo.get(unidad.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
-      if (!NO_DISPONIBLE.has(unidad.estado)) {
-        const inicioEfectivo = unidad.fechaIngreso > mes.desde ? unidad.fechaIngreso : mes.desde;
-        if (inicioEfectivo < mes.hasta) {
-          actual.diasDisponibles += diasEnRango(inicioEfectivo, mes.hasta);
-        }
-      }
-      porModelo.set(unidad.modeloId, actual);
+      this.acumularDisponibilidadUnidad(unidad, mes, porModelo);
     }
 
     for (const alquiler of this.alquileres) {
-      const actual = porModelo.get(alquiler.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
-      const desde = alquiler.fechaInicio > mes.desde ? alquiler.fechaInicio : mes.desde;
-      const hasta = alquiler.fechaFin < mes.hasta ? alquiler.fechaFin : mes.hasta;
-      if (hasta > desde) {
-        actual.diasAlquilada += diasEnRango(desde, hasta);
-      }
-      porModelo.set(alquiler.modeloId, actual);
+      this.acumularAlquiler(alquiler, mes, porModelo);
     }
 
     return [...porModelo.entries()].map(([modeloId, v]) => ({ modeloId, ...v }));
+  }
+
+  /** Suma los "días disponibles" de una unidad al acumulador del modelo (mismo criterio que antes: siempre queda una entrada en el mapa, aunque la unidad no aporte nada). */
+  private acumularDisponibilidadUnidad(
+    unidad: UnidadSembradaParaUtilizacion,
+    mes: RangoPeriodo,
+    porModelo: Map<string, { diasAlquilada: number; diasDisponibles: number }>,
+  ): void {
+    const actual = porModelo.get(unidad.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
+    if (!NO_DISPONIBLE.has(unidad.estado)) {
+      const inicioEfectivo = unidad.fechaIngreso > mes.desde ? unidad.fechaIngreso : mes.desde;
+      if (inicioEfectivo < mes.hasta) {
+        actual.diasDisponibles += diasEnRango(inicioEfectivo, mes.hasta);
+      }
+    }
+    porModelo.set(unidad.modeloId, actual);
+  }
+
+  /** Suma los "días alquilada" de un alquiler sembrado al acumulador del modelo. */
+  private acumularAlquiler(
+    alquiler: AlquilerSembradoParaUtilizacion,
+    mes: RangoPeriodo,
+    porModelo: Map<string, { diasAlquilada: number; diasDisponibles: number }>,
+  ): void {
+    const actual = porModelo.get(alquiler.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
+    const desde = alquiler.fechaInicio > mes.desde ? alquiler.fechaInicio : mes.desde;
+    const hasta = alquiler.fechaFin < mes.hasta ? alquiler.fechaFin : mes.hasta;
+    if (hasta > desde) {
+      actual.diasAlquilada += diasEnRango(desde, hasta);
+    }
+    porModelo.set(alquiler.modeloId, actual);
   }
 }
