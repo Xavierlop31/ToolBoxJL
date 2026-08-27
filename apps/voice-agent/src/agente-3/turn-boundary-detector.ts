@@ -37,8 +37,8 @@ const SILENCIO_MS_DEFAULT = 700;
 function calcularRms(samples: Int16Array): number {
   if (samples.length === 0) return 0;
   let sumaCuadrados = 0;
-  for (let i = 0; i < samples.length; i++) {
-    const normalizado = samples[i] / 32768;
+  for (const sample of samples) {
+    const normalizado = sample / 32768;
     sumaCuadrados += normalizado * normalizado;
   }
   return Math.sqrt(sumaCuadrados / samples.length);

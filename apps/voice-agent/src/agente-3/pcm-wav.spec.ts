@@ -14,7 +14,7 @@ describe("construirWav", () => {
     expect(wav.readUInt16LE(34)).toBe(16); // bits por muestra
     expect(wav.toString("ascii", 36, 40)).toBe("data");
     expect(wav.readUInt32LE(40)).toBe(samples.length * 2);
-    expect(wav.length).toBe(44 + samples.length * 2);
+    expect(wav).toHaveLength(44 + samples.length * 2);
   });
 
   it("codifica las muestras PCM en little-endian después del header de 44 bytes", () => {
@@ -27,7 +27,7 @@ describe("construirWav", () => {
 
   it("produce un WAV vacío (solo header) si no hay muestras", () => {
     const wav = construirWav(new Int16Array(0), 16000, 1);
-    expect(wav.length).toBe(44);
+    expect(wav).toHaveLength(44);
     expect(wav.readUInt32LE(40)).toBe(0);
   });
 });

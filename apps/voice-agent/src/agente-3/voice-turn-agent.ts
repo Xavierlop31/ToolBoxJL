@@ -38,6 +38,168 @@ export interface Agente3TurnoResultado {
   ultimaDisponibilidad: DisponibilidadApi | null;
 }
 
+/** Bloques de texto/tool_use de UNA respuesta de Claude, ya separados por tipo — evita repetir los dos `.filter()` en cada punto donde se necesitan. */
+interface BloquesDeRespuesta {
+  textBlocks: Anthropic.TextBlock[];
+  toolUseBlocks: Anthropic.ToolUseBlock[];
+}
+
+/** Resultado de despachar UNA tool call: el `tool_result` para devolvérselo a Claude, más — si corresponde a esa tool puntual — el dato de observabilidad/negocio actualizado (`undefined` si esta tool no produce ese dato). */
+interface DespachoToolUse {
+  toolResult: Anthropic.ToolResultBlockParam;
+  ultimaBusqueda?: ToolModelApi[];
+  ultimaDisponibilidad?: DisponibilidadApi;
+  carritoActualizado?: CartApi;
+}
+
+function toolResultDeError(toolUseId: string, error: unknown): Anthropic.ToolResultBlockParam {
+  return {
+    type: "tool_result",
+    tool_use_id: toolUseId,
+    is_error: true,
+    content: error instanceof Error ? error.message : String(error),
+  };
+}
+
+/** Invoca a Claude con el estado actual de la conversación (system prompt + tools fijas del Agente 3). */
+function invocarClaude(deps: Agente3TurnoDeps, messages: Anthropic.MessageParam[]): Promise<Anthropic.Message> {
+  return deps.anthropic.create({
+    model: deps.model,
+    max_tokens: 1024,
+    system: construirSystemPromptAgente3(),
+    tools: AGENTE_3_TOOLS,
+    messages,
+  });
+}
+
+/** Separa el `content` de una respuesta de Claude en bloques de texto y bloques de tool_use — lo único que este loop necesita distinguir de cada respuesta. */
+function separarBloques(response: Anthropic.Message): BloquesDeRespuesta {
+  return {
+    textBlocks: response.content.filter((block): block is Anthropic.TextBlock => block.type === "text"),
+    toolUseBlocks: response.content.filter((block): block is Anthropic.ToolUseBlock => block.type === "tool_use"),
+  };
+}
+
+async function despacharSearchCatalog(
+  deps: Agente3TurnoDeps,
+  fetchImpl: typeof fetch,
+  toolUse: Anthropic.ToolUseBlock,
+): Promise<DespachoToolUse> {
+  const input = toolUse.input as { q?: string; categoria?: string; fecha_inicio?: string; fecha_fin?: string };
+  try {
+    const ultimaBusqueda = await buscarCatalogo(deps.apiBaseUrl, deps.jwt, input, fetchImpl);
+    return {
+      ultimaBusqueda,
+      toolResult: { type: "tool_result", tool_use_id: toolUse.id, content: JSON.stringify(ultimaBusqueda) },
+    };
+  } catch (error) {
+    return { toolResult: toolResultDeError(toolUse.id, error) };
+  }
+}
+
+async function despacharCheckAvailability(
+  deps: Agente3TurnoDeps,
+  fetchImpl: typeof fetch,
+  toolUse: Anthropic.ToolUseBlock,
+): Promise<DespachoToolUse> {
+  const input = toolUse.input as { modelo_id: string; fecha_inicio: string; fecha_fin: string };
+  try {
+    const ultimaDisponibilidad = await consultarDisponibilidad(
+      deps.apiBaseUrl,
+      deps.jwt,
+      input.modelo_id,
+      input.fecha_inicio,
+      input.fecha_fin,
+      fetchImpl,
+    );
+    return {
+      ultimaDisponibilidad,
+      toolResult: { type: "tool_result", tool_use_id: toolUse.id, content: JSON.stringify(ultimaDisponibilidad) },
+    };
+  } catch (error) {
+    return { toolResult: toolResultDeError(toolUse.id, error) };
+  }
+}
+
+async function despacharAddToCart(
+  deps: Agente3TurnoDeps,
+  fetchImpl: typeof fetch,
+  toolUse: Anthropic.ToolUseBlock,
+): Promise<DespachoToolUse> {
+  const input = toolUse.input as { modelo_id: string; cantidad: number; dias?: number };
+  try {
+    const carritoActualizado = await agregarAlCarrito(
+      deps.apiBaseUrl,
+      deps.jwt,
+      { modelo_id: input.modelo_id, cantidad: input.cantidad, dias: input.dias },
+      fetchImpl,
+    );
+    return {
+      carritoActualizado,
+      toolResult: { type: "tool_result", tool_use_id: toolUse.id, content: JSON.stringify(carritoActualizado) },
+    };
+  } catch (error) {
+    return { toolResult: toolResultDeError(toolUse.id, error) };
+  }
+}
+
+/** Despacha UNA tool call a su handler según `toolUse.name` — las tres tools declaradas en `AGENTE_3_TOOLS`, más una respuesta explícita para cualquier otra (no debería pasar, pero evita dejar a Claude esperando un `tool_result` que nunca llega). */
+function despacharToolUse(
+  deps: Agente3TurnoDeps,
+  fetchImpl: typeof fetch,
+  toolUse: Anthropic.ToolUseBlock,
+): Promise<DespachoToolUse> {
+  switch (toolUse.name) {
+    case "search_catalog":
+      return despacharSearchCatalog(deps, fetchImpl, toolUse);
+    case "check_availability":
+      return despacharCheckAvailability(deps, fetchImpl, toolUse);
+    case "add_to_cart":
+      return despacharAddToCart(deps, fetchImpl, toolUse);
+    default:
+      return Promise.resolve({
+        toolResult: {
+          type: "tool_result",
+          tool_use_id: toolUse.id,
+          is_error: true,
+          content: `Tool desconocida: "${toolUse.name}".`,
+        },
+      });
+  }
+}
+
+/** Estado de negocio/observabilidad acumulado tras despachar TODAS las tool calls de una iteración, más los `tool_result` a devolverle a Claude. */
+interface ResultadoToolCalls {
+  toolResults: Anthropic.ToolResultBlockParam[];
+  ultimaBusqueda: ToolModelApi[] | null;
+  ultimaDisponibilidad: DisponibilidadApi | null;
+  carritoActualizado: CartApi | null;
+}
+
+/** Despacha, en orden, todas las tool calls de una misma respuesta de Claude. Si dos tool calls de la misma iteración tocan el mismo dato (ej. dos `search_catalog`), gana la última — mismo comportamiento que el loop original, que sobrescribía la variable en cada vuelta. */
+async function ejecutarToolCalls(
+  deps: Agente3TurnoDeps,
+  fetchImpl: typeof fetch,
+  toolUseBlocks: Anthropic.ToolUseBlock[],
+): Promise<ResultadoToolCalls> {
+  const resultado: ResultadoToolCalls = {
+    toolResults: [],
+    ultimaBusqueda: null,
+    ultimaDisponibilidad: null,
+    carritoActualizado: null,
+  };
+
+  for (const toolUse of toolUseBlocks) {
+    const despacho = await despacharToolUse(deps, fetchImpl, toolUse);
+    resultado.toolResults.push(despacho.toolResult);
+    if (despacho.ultimaBusqueda !== undefined) resultado.ultimaBusqueda = despacho.ultimaBusqueda;
+    if (despacho.ultimaDisponibilidad !== undefined) resultado.ultimaDisponibilidad = despacho.ultimaDisponibilidad;
+    if (despacho.carritoActualizado !== undefined) resultado.carritoActualizado = despacho.carritoActualizado;
+  }
+
+  return resultado;
+}
+
 /**
  * Corre el loop de tool calling del Agente 3 para UN turno de conversación
  * (una transcripción de usuario → una respuesta hablada). A diferencia de
@@ -52,6 +214,11 @@ export interface Agente3TurnoResultado {
  * Manual loop (no el Tool Runner beta del SDK), mismo criterio documentado
  * en Agente 1/2: hace falta poder inyectar un mock de
  * `AnthropicMessagesClient` en tests/BDD sin pagar la API real.
+ *
+ * Descompuesto por fase (invocación a Claude → separación de bloques →
+ * despacho de tool calls) en funciones privadas más chicas — mismo criterio
+ * de reducción de complejidad cognitiva usado en
+ * `apps/workers/src/agente-1/route-scheduler-agent.ts`.
  */
 export async function ejecutarTurnoAgente3(
   deps: Agente3TurnoDeps,
@@ -69,114 +236,26 @@ export async function ejecutarTurnoAgente3(
   let ultimaDisponibilidad: DisponibilidadApi | null = null;
 
   for (let iteracion = 0; iteracion < maxIteraciones; iteracion++) {
-    const response = await deps.anthropic.create({
-      model: deps.model,
-      max_tokens: 1024,
-      system: construirSystemPromptAgente3(),
-      tools: AGENTE_3_TOOLS,
-      messages,
-    });
+    const response = await invocarClaude(deps, messages);
+    const { textBlocks, toolUseBlocks } = separarBloques(response);
 
-    const textBlocks = response.content.filter(
-      (block): block is Anthropic.TextBlock => block.type === "text",
-    );
     if (textBlocks.length > 0) {
       respuestaTexto = textBlocks.map((block) => block.text).join("\n");
     }
 
     messages = [...messages, { role: "assistant", content: response.content }];
 
-    const toolUseBlocks = response.content.filter(
-      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
-    );
     if (toolUseBlocks.length === 0) {
       // Claude terminó el turno (end_turn) sin más tool calls — cierre normal.
       break;
     }
 
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
+    const resultadoToolCalls = await ejecutarToolCalls(deps, fetchImpl, toolUseBlocks);
+    if (resultadoToolCalls.ultimaBusqueda !== null) ultimaBusqueda = resultadoToolCalls.ultimaBusqueda;
+    if (resultadoToolCalls.ultimaDisponibilidad !== null) ultimaDisponibilidad = resultadoToolCalls.ultimaDisponibilidad;
+    if (resultadoToolCalls.carritoActualizado !== null) carritoActualizado = resultadoToolCalls.carritoActualizado;
 
-    for (const toolUse of toolUseBlocks) {
-      if (toolUse.name === "search_catalog") {
-        const input = toolUse.input as { q?: string; categoria?: string; fecha_inicio?: string; fecha_fin?: string };
-        try {
-          ultimaBusqueda = await buscarCatalogo(deps.apiBaseUrl, deps.jwt, input, fetchImpl);
-          toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: JSON.stringify(ultimaBusqueda) });
-        } catch (error) {
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            is_error: true,
-            content: error instanceof Error ? error.message : String(error),
-          });
-        }
-        continue;
-      }
-
-      if (toolUse.name === "check_availability") {
-        const input = toolUse.input as { modelo_id: string; fecha_inicio: string; fecha_fin: string };
-        try {
-          ultimaDisponibilidad = await consultarDisponibilidad(
-            deps.apiBaseUrl,
-            deps.jwt,
-            input.modelo_id,
-            input.fecha_inicio,
-            input.fecha_fin,
-            fetchImpl,
-          );
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            content: JSON.stringify(ultimaDisponibilidad),
-          });
-        } catch (error) {
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            is_error: true,
-            content: error instanceof Error ? error.message : String(error),
-          });
-        }
-        continue;
-      }
-
-      if (toolUse.name === "add_to_cart") {
-        const input = toolUse.input as { modelo_id: string; cantidad: number; dias?: number };
-        try {
-          carritoActualizado = await agregarAlCarrito(
-            deps.apiBaseUrl,
-            deps.jwt,
-            { modelo_id: input.modelo_id, cantidad: input.cantidad, dias: input.dias },
-            fetchImpl,
-          );
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            content: JSON.stringify(carritoActualizado),
-          });
-        } catch (error) {
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            is_error: true,
-            content: error instanceof Error ? error.message : String(error),
-          });
-        }
-        continue;
-      }
-
-      // Tool desconocida — no debería pasar (solo declaramos tres), pero se
-      // responde explícito en vez de ignorarla silenciosamente, para que
-      // Claude no se quede esperando un tool_result que nunca llega.
-      toolResults.push({
-        type: "tool_result",
-        tool_use_id: toolUse.id,
-        is_error: true,
-        content: `Tool desconocida: "${toolUse.name}".`,
-      });
-    }
-
-    messages = [...messages, { role: "user", content: toolResults }];
+    messages = [...messages, { role: "user", content: resultadoToolCalls.toolResults }];
   }
 
   return {
