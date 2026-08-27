@@ -7,7 +7,8 @@
 export interface OrdenParaRecordatorio {
   id: string;
   clienteId: string;
-  tipo: "alquiler" | "venta" | string;
+  /** En la práctica es `"alquiler" | "venta"`, pero se acepta cualquier `string` tal como llega de la orden en DB. */
+  tipo: string;
   estado: string;
   fechaFin: Date | null;
 }

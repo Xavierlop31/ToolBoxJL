@@ -112,7 +112,7 @@ Then("la veo ordenada por parada", function (this: ToolboxWorld) {
 });
 
 Then(
-  "la ruta respeta el límite de peso\\/volumen de mi vehículo",
+  String.raw`la ruta respeta el límite de peso\/volumen de mi vehículo`,
   function (this: ToolboxWorld) {
     // Aserción de consistencia de los datos de prueba (no de una regla que
     // corra en este endpoint): el peso/volumen total de los ítems de la

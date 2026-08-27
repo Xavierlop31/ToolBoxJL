@@ -25,14 +25,7 @@ export class PrismaUtilizationRepository implements UtilizationRepository {
       select: { modeloId: true, estado: true, fechaIngreso: true },
     });
     for (const unidad of unidades) {
-      const actual = porModelo.get(unidad.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
-      if (!NO_DISPONIBLE.has(unidad.estado)) {
-        const inicioEfectivo = unidad.fechaIngreso > mes.desde ? unidad.fechaIngreso : mes.desde;
-        if (inicioEfectivo < mes.hasta) {
-          actual.diasDisponibles += diasEnRango(inicioEfectivo, mes.hasta);
-        }
-      }
-      porModelo.set(unidad.modeloId, actual);
+      this.acumularDisponibilidadUnidad(unidad, mes, porModelo);
     }
 
     const ordenes = await this.prisma.order.findMany({
@@ -49,22 +42,51 @@ export class PrismaUtilizationRepository implements UtilizationRepository {
       },
     });
     for (const orden of ordenes) {
-      if (!orden.fechaInicio || !orden.fechaFin) {
-        continue;
-      }
-      const desde = orden.fechaInicio > mes.desde ? orden.fechaInicio : mes.desde;
-      const hasta = orden.fechaFin < mes.hasta ? orden.fechaFin : mes.hasta;
-      if (hasta <= desde) {
-        continue;
-      }
-      const dias = diasEnRango(desde, hasta);
-      for (const item of orden.items) {
-        const actual = porModelo.get(item.unidad.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
-        actual.diasAlquilada += dias;
-        porModelo.set(item.unidad.modeloId, actual);
-      }
+      this.acumularAlquilerOrden(orden, mes, porModelo);
     }
 
     return [...porModelo.entries()].map(([modeloId, v]) => ({ modeloId, ...v }));
+  }
+
+  /** Suma los "días disponibles" de una unidad al acumulador del modelo (siempre deja una entrada en el mapa, igual que antes, aunque la unidad no aporte nada). */
+  private acumularDisponibilidadUnidad(
+    unidad: { modeloId: string; estado: PrismaEstadoUnidad; fechaIngreso: Date },
+    mes: RangoPeriodo,
+    porModelo: Map<string, { diasAlquilada: number; diasDisponibles: number }>,
+  ): void {
+    const actual = porModelo.get(unidad.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
+    if (!NO_DISPONIBLE.has(unidad.estado)) {
+      const inicioEfectivo = new Date(Math.max(unidad.fechaIngreso.getTime(), mes.desde.getTime()));
+      if (inicioEfectivo < mes.hasta) {
+        actual.diasDisponibles += diasEnRango(inicioEfectivo, mes.hasta);
+      }
+    }
+    porModelo.set(unidad.modeloId, actual);
+  }
+
+  /** Suma los "días alquilada" de una orden al acumulador de cada modelo de sus ítems. */
+  private acumularAlquilerOrden(
+    orden: {
+      fechaInicio: Date | null;
+      fechaFin: Date | null;
+      items: { unidad: { modeloId: string } }[];
+    },
+    mes: RangoPeriodo,
+    porModelo: Map<string, { diasAlquilada: number; diasDisponibles: number }>,
+  ): void {
+    if (!orden.fechaInicio || !orden.fechaFin) {
+      return;
+    }
+    const desde = new Date(Math.max(orden.fechaInicio.getTime(), mes.desde.getTime()));
+    const hasta = new Date(Math.min(orden.fechaFin.getTime(), mes.hasta.getTime()));
+    if (hasta <= desde) {
+      return;
+    }
+    const dias = diasEnRango(desde, hasta);
+    for (const item of orden.items) {
+      const actual = porModelo.get(item.unidad.modeloId) ?? { diasAlquilada: 0, diasDisponibles: 0 };
+      actual.diasAlquilada += dias;
+      porModelo.set(item.unidad.modeloId, actual);
+    }
   }
 }

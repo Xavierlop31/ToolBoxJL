@@ -122,7 +122,7 @@ When("consulto el ROI de un modelo específico", async function (this: ToolboxWo
 });
 
 Then(
-  "el sistema calcula \\(Ingresos Acumulados − Costo de Compra\\) \\/ Costo de Compra × 100 para ese modelo",
+  String.raw`el sistema calcula \(Ingresos Acumulados − Costo de Compra\) \/ Costo de Compra × 100 para ese modelo`,
   function (this: ToolboxWorld) {
     assert.ok(this.ultimoRoi, "se esperaba una respuesta de ConsultarRoiUseCase");
     assert.equal(this.ultimoRoi!.length, 1);

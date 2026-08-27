@@ -92,7 +92,11 @@ When("pido por voz que me extiendan el alquiler", async function (this: ToolboxW
       return { ok: true, status: 200, json: async () => disponibilidad } as Response;
     }
     if (url.includes("/rentals/extend") && init?.method === "POST") {
-      const body = JSON.parse(String(init.body)) as {
+      // `init.body` siempre es un string JSON acá (lo produce `rental-api-client.ts`
+      // con `JSON.stringify(input)`) — se afirma el tipo en vez de convertirlo
+      // implícitamente con `String()`, que en un `BodyInit` genérico podría dar
+      // `"[object Object]"` en vez del JSON esperado.
+      const body = JSON.parse(init.body as string) as {
         order_id: string;
         nueva_fecha_fin: string;
         modo_cobro?: "link_pago" | "acumular_a_factura_final";

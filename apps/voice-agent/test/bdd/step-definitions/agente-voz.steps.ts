@@ -201,7 +201,14 @@ When("confirmo verbalmente que la quiero", async function (this: Agente3World) {
     this.fetchCalls.push({ url, method });
     const path = new URL(url).pathname;
     if (path === "/cart/add-item" && method === "POST") {
-      const body = JSON.parse(String(init?.body)) as { modelo_id: string; cantidad: number; dias?: number };
+      // `init?.body` es `BodyInit | undefined`: convertirlo con `String()` a
+      // secas arriesga un "[object Object]" si algún día deja de ser un
+      // string ya serializado (ej. si cart-api-client.ts dejara de mandar
+      // `JSON.stringify(item)`) — se serializa explícitamente con
+      // `JSON.stringify` en ese caso, en vez de confiar en la coerción
+      // implícita a string.
+      const bodyRaw = typeof init?.body === "string" ? init.body : JSON.stringify(init?.body);
+      const body = JSON.parse(bodyRaw) as { modelo_id: string; cantidad: number; dias?: number };
       return { ok: true, status: 200, json: async () => ({ items: [body], total: 45000 }) } as Response;
     }
     throw new Error(`URL inesperada en el step de BDD: ${method} ${path}`);

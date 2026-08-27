@@ -100,7 +100,7 @@ Then(
     // dígito, para no depender de que un código random no coincida por
     // casualidad con el real).
     const codigoReal = this.whatsappOtpGateway.enviados[0].codigo;
-    const primerDigitoAlterado = codigoReal[0] === "0" ? "1" : "0";
+    const primerDigitoAlterado = codigoReal.startsWith("0") ? "1" : "0";
     const codigoIncorrecto = primerDigitoAlterado + codigoReal.slice(1);
 
     await assert.rejects(() =>
