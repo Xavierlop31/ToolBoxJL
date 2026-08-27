@@ -6,7 +6,7 @@
         class="voice-widget__fab"
         data-testid="voice-widget-button"
         (click)="openWidget()"
-        aria-label="Hablar con el conserje de voz"
+        [attr.aria-label]="fabAriaLabel()"
       >
         <span aria-hidden="true">🎙️</span>
         @if (cartItemCount() > 0) {

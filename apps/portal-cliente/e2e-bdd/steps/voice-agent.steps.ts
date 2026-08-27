@@ -39,9 +39,13 @@ function fakeJwt(payload: Record<string, unknown>): string {
   const base64Url = (obj: unknown) =>
     Buffer.from(JSON.stringify(obj))
       .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      // Cuantificador acotado ({0,2}, no `+`): el padding de base64 nunca
+      // supera 2 caracteres `=`. Evita el patrón de backtracking
+      // super-lineal sin acotar que marca sonar-typescript:S8786 (mismo
+      // criterio que `scripts/generate-frontend-config.mjs`).
+      .replace(/={0,2}$/, '');
 
   const header = base64Url({ alg: 'HS256', typ: 'JWT' });
   const body = base64Url(payload);

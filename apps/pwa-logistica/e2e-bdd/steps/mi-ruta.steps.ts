@@ -74,7 +74,7 @@ Then('la veo ordenada por parada', async ({ page }) => {
 });
 
 Then(
-  'la ruta respeta el límite de peso\\/volumen de mi vehículo',
+  String.raw`la ruta respeta el límite de peso\/volumen de mi vehículo`,
   async ({ page }) => {
     // `openapi.yaml` no expone la capacidad del vehículo
     // (`capacidad_kg`/`capacidad_m3`) en la respuesta de

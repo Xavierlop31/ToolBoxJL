@@ -51,6 +51,15 @@
       casos de este mismo hallazgo (mensajes de una sola línea) sí se
       migraron a <output>; este, con encabezado + varios párrafos, se deja
       como estaba.
+
+      Revisado de nuevo en Sprint 11 (Issue #89): un subagente propuso migrar
+      igual, verificando con `ng serve` que los navegadores renderizan <h2>/<p>
+      dentro de <output> sin problema visual — pero eso no prueba que el HTML
+      sea válido ni que las herramientas de auditoría a11y (axe-core,
+      Lighthouse) lo acepten como contenido de "phrasing content"; un parser
+      de navegador tolerante no es lo mismo que conformidad con el spec. Se
+      confirma la decisión original: se queda como role="status". El hallazgo
+      de SonarQube se marca Won't Fix con esta misma justificación.
     -->
     <section data-testid="vehicle-success" role="status">
       <h2>Vehículo registrado</h2>

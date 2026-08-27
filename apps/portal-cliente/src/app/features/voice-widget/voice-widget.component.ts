@@ -83,6 +83,20 @@ export class VoiceWidgetComponent implements OnDestroy {
   readonly statusLabel = computed(() => ESTADO_LABELS[this.displayState()]);
 
   /**
+   * Nombre accesible del botón flotante (fab). El badge de cantidad del
+   * carrito (`cartItemCount()`) es texto VISIBLE dentro del botón — WCAG
+   * 2.5.3 (Label in Name) y `Web:S7927` exigen que ese texto visible esté
+   * contenido en el nombre accesible, no solo el `aria-label` fijo que había
+   * antes. Se arma acá en vez de en el template para no repetir la
+   * interpolación condicional.
+   */
+  readonly fabAriaLabel = computed(() =>
+    this.cartItemCount() > 0
+      ? `Hablar con el conserje de voz, carrito: ${this.cartItemCount()} artículo(s)`
+      : 'Hablar con el conserje de voz',
+  );
+
+  /**
    * Abre el panel y arranca la sesión: pide el token de sala
    * (`POST /voice-agent/livekit-token`) y conecta con `livekit-client`.
    * Escenario Gherkin: "Cliente busca una herramienta por voz..." — "Dado
