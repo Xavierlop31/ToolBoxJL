@@ -88,6 +88,17 @@ export const AGENTE_3_TOOLS: Anthropic.Tool[] = [SEARCH_CATALOG_TOOL, CHECK_AVAI
  * categoría+atributo, valida disponibilidad de unidades para el rango de
  * fechas, recomienda un modelo y agrega al carrito tras confirmación
  * verbal".
+ *
+ * *** Paso 2 reforzado tras un hallazgo real (2026-08-27) ***: con la
+ * redacción original ("Llamá search_catalog con el texto/categoría que
+ * mencionó"), Claude a veces respondía SOLO con una pregunta aclaratoria de
+ * fecha (ej. ante "por 3 días desde este jueves") sin llamar search_catalog
+ * en ese turno — falló `test/integration/agente-3-voz.integration.spec.ts`
+ * con `stop_reason: "end_turn"` en ~1 de cada 4 corridas reales contra
+ * Anthropic. Verificado empíricamente (5 corridas reales) que la redacción
+ * explícita de abajo ("EN LA MISMA RESPUESTA", "nunca esperes a tener todos
+ * los datos") lleva la tasa de fallo a 0/5 — el modelo pide la fecha Y
+ * llama la tool en el mismo turno en vez de elegir entre una u otra.
  */
 export function construirSystemPromptAgente3(): string {
   return [
@@ -99,7 +110,10 @@ export function construirSystemPromptAgente3(): string {
     "",
     "Flujo obligatorio:",
     "1. Escuchá qué herramienta necesita el cliente y, si lo mencionó, por cuántos días/qué fechas.",
-    "2. Llamá search_catalog con el texto/categoría que mencionó para encontrar candidatos.",
+    "2. Llamá search_catalog EN LA MISMA RESPUESTA en la que identificás qué busca el cliente, " +
+      "incluso si no tenés fecha_inicio/fecha_fin exactas (son opcionales) — nunca esperes a tener " +
+      "todos los datos para hacer la primera búsqueda. Si te falta la fecha, pedísela en el MISMO " +
+      "turno en el que llamás la tool, no en un turno separado sin tool call.",
     "3. Si tenés fechas (o el cliente las dio), llamá check_availability sobre el/los candidato(s) " +
       "más relevante(s) ANTES de recomendar — nunca recomiendes un modelo sin verificar que hay " +
       "unidades disponibles en ese rango.",
