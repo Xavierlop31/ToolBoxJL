@@ -7,7 +7,12 @@
  * re-evaluar el módulo con mocks/env distintos por test).
  */
 describe("main.ts (bootstrap)", () => {
-  let mockApp: { setGlobalPrefix: jest.Mock; useGlobalPipes: jest.Mock; listen: jest.Mock };
+  let mockApp: {
+    setGlobalPrefix: jest.Mock;
+    enableCors: jest.Mock;
+    useGlobalPipes: jest.Mock;
+    listen: jest.Mock;
+  };
   let createMock: jest.Mock;
   const envOriginal = { ...process.env };
 
@@ -15,6 +20,7 @@ describe("main.ts (bootstrap)", () => {
     jest.resetModules();
     mockApp = {
       setGlobalPrefix: jest.fn(),
+      enableCors: jest.fn(),
       useGlobalPipes: jest.fn(),
       listen: jest.fn().mockResolvedValue(undefined),
     };
@@ -39,6 +45,7 @@ describe("main.ts (bootstrap)", () => {
 
       expect(createMock).toHaveBeenCalledWith(expect.anything(), { rawBody: true });
       expect(mockApp.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
+      expect(mockApp.enableCors).toHaveBeenCalledWith();
       expect(mockApp.useGlobalPipes).toHaveBeenCalledWith(
         expect.objectContaining({ constructor: expect.objectContaining({ name: "ValidationPipe" }) }),
       );

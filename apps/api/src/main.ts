@@ -19,6 +19,18 @@ async function bootstrap() {
   // con lo documentado en `servers`.
   app.setGlobalPrefix("api/v1");
 
+  // *** GAP DE PRODUCCIÓN DETECTADO 2026-08-28 ***: nunca se habilitó CORS. Cualquier
+  // llamada del navegador con body JSON (POST/PATCH/PUT) hace un preflight OPTIONS antes
+  // del request real; sin este middleware, Nest no tiene ninguna ruta para OPTIONS y
+  // responde 404 — el request real nunca se dispara, el navegador lo reporta como fallo
+  // de red genérico. Pasó desapercibido porque el login pasa directo por Supabase (no por
+  // esta API) y el primer POST real desde un frontend desplegado fue recién hoy
+  // (POST /auth/otp/request). Origin abierto (no allowlist de dominios): la auth real de
+  // esta API es el JWT Bearer de Supabase, no cookies — no hace falta `credentials: true`
+  // ni restringir por origin, y evita romper cada vez que aparece un nuevo preview de
+  // Vercel por PR (ya pasó varias veces hoy con otros hardcodeos de dominio).
+  app.enableCors();
+
   // Valida los DTOs de request (class-validator) contra el contrato de
   // openapi.yaml antes de llegar a los controllers/use cases — cualquier
   // campo no declarado en el DTO o que no cumpla sus validaciones responde
