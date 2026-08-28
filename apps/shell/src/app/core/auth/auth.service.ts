@@ -66,12 +66,16 @@ export class AuthService {
    * usuario (producción o un preview de Vercel), sin depender de que ese
    * campo del dashboard esté bien seteado.
    */
-  async signUp(email: string, password: string): Promise<AuthResult> {
+  async signUp(email: string, password: string, telefono: string): Promise<AuthResult> {
     const { error } = await this.supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        // HU-6.2: el OTP de WhatsApp se envía al telefono guardado en
+        // user_metadata — VerificarAccesoUseCase y WhatsAppReminderJob ya
+        // lo leen desde ahí, así que no requiere ningún cambio de backend.
+        data: { telefono },
       },
     });
     return { error };

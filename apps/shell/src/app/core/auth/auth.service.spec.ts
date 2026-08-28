@@ -105,13 +105,16 @@ describe('AuthService', () => {
   it('signUp delega en supabase.auth.signUp', async () => {
     const { service, client } = setup();
 
-    await service.signUp('nuevo@b.com', 'secret123');
+    await service.signUp('nuevo@b.com', 'secret123', '+573001234567');
 
     expect(client.auth.signUp).toHaveBeenCalledWith(
       jasmine.objectContaining({
         email: 'nuevo@b.com',
         password: 'secret123',
-        options: jasmine.objectContaining({ emailRedirectTo: jasmine.any(String) }),
+        options: jasmine.objectContaining({
+          emailRedirectTo: jasmine.any(String),
+          data: jasmine.objectContaining({ telefono: '+573001234567' }),
+        }),
       }),
     );
   });

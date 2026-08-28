@@ -34,6 +34,11 @@ export class LoginComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
+  // Standalone y no parte de `form`: en signIn no debe existir (ni
+  // validarse), así que meterlo en el FormGroup obligaría a togglear sus
+  // validators ahí también sin ganar nada — separado es más simple de leer.
+  readonly telefonoControl = this.formBuilder.nonNullable.control('');
+
   get isSignUp(): boolean {
     return this.mode() === 'signUp';
   }
@@ -42,11 +47,27 @@ export class LoginComponent {
     this.mode.set(this.isSignUp ? 'signIn' : 'signUp');
     this.errorMessage.set(null);
     this.infoMessage.set(null);
+
+    if (this.isSignUp) {
+      this.telefonoControl.addValidators([
+        Validators.required,
+        Validators.pattern(/^\+?[0-9]{8,15}$/),
+      ]);
+    } else {
+      this.telefonoControl.clearValidators();
+      this.telefonoControl.reset('');
+    }
+    this.telefonoControl.updateValueAndValidity();
   }
 
   async submit(): Promise<void> {
-    if (this.form.invalid || this.loading()) {
+    if (
+      this.form.invalid ||
+      (this.isSignUp && this.telefonoControl.invalid) ||
+      this.loading()
+    ) {
       this.form.markAllAsTouched();
+      this.telefonoControl.markAsTouched();
       return;
     }
 
@@ -56,7 +77,7 @@ export class LoginComponent {
 
     const { email, password } = this.form.getRawValue();
     const result = this.isSignUp
-      ? await this.auth.signUp(email, password)
+      ? await this.auth.signUp(email, password, this.telefonoControl.value)
       : await this.auth.signInWithPassword(email, password);
 
     this.loading.set(false);

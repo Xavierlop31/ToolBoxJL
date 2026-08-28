@@ -48,6 +48,29 @@
         }
       </div>
 
+      @if (isSignUp) {
+        <div class="field">
+          <label for="telefono">Teléfono (WhatsApp)</label>
+          <input
+            id="telefono"
+            type="tel"
+            [formControl]="telefonoControl"
+            autocomplete="tel"
+            placeholder="+573001234567"
+            [attr.aria-invalid]="telefonoControl.invalid && telefonoControl.touched"
+          />
+          @if (telefonoControl.invalid && telefonoControl.touched) {
+            <p class="field-error" role="alert">
+              @if (telefonoControl.errors?.['required']) {
+                El teléfono es obligatorio para recibir el código por WhatsApp.
+              } @else {
+                Ingresá un teléfono válido (formato internacional, ej: +573001234567).
+              }
+            </p>
+          }
+        </div>
+      }
+
       @if (errorMessage()) {
         <p class="form-error" role="alert">{{ errorMessage() }}</p>
       }
