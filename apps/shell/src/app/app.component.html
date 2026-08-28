@@ -1,1 +1,38 @@
+@if (auth.isAuthenticated()) {
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="brand-group">
+        <a routerLink="/home" class="brand-logo" title="Ir al Inicio">
+          <span class="material-symbols-outlined logo-icon">construction</span>
+          <span class="logo-text">ToolBox <strong>JL</strong></span>
+        </a>
+        <nav class="nav-links">
+          <a routerLink="/catalogo" routerLinkActive="active" class="nav-link">
+            <span class="material-symbols-outlined nav-icon">storefront</span>
+            Portal Clientes
+          </a>
+          @if (auth.isLogistica()) {
+            <a routerLink="/logistica" routerLinkActive="active" class="nav-link">
+              <span class="material-symbols-outlined nav-icon">local_shipping</span>
+              Logística & PWA
+            </a>
+          }
+          @if (auth.isAdminOrGerente()) {
+            <a routerLink="/admin" routerLinkActive="active" class="nav-link">
+              <span class="material-symbols-outlined nav-icon">dashboard</span>
+              Panel Gerencial
+            </a>
+          }
+        </nav>
+      </div>
+      <div class="user-group">
+        <span class="user-badge">{{ auth.userRoleDisplay() }}</span>
+        <button type="button" class="btn-logout" (click)="signOut()" title="Cerrar sesión">
+          <span class="material-symbols-outlined">logout</span>
+          <span>Salir</span>
+        </button>
+      </div>
+    </div>
+  </header>
+}
 <router-outlet></router-outlet>
