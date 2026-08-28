@@ -4,7 +4,7 @@ import { Router, UrlTree, provideRouter } from '@angular/router';
 import type { Session } from '@supabase/supabase-js';
 import { firstValueFrom, isObservable } from 'rxjs';
 
-import { authGuard, sessionGuard } from './auth.guard';
+import { adminGuard, authGuard, logisticaGuard, sessionGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { DeviceIdService } from './device-id.service';
 import { DeviceVerificationService } from './device-verification.service';
@@ -105,3 +105,84 @@ describe('sessionGuard', () => {
     expect(router.serializeUrl(result)).toBe('/login');
   });
 });
+
+describe('adminGuard', () => {
+  function runGuard(options: { isAuthenticated: boolean; isAdminOrGerente: boolean }) {
+    const authServiceStub = {
+      isAuthenticated: () => options.isAuthenticated,
+      isAdminOrGerente: () => options.isAdminOrGerente,
+      sessionLoaded: signal(true),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: authServiceStub },
+      ],
+    });
+
+    return resolveGuardResult(
+      TestBed.runInInjectionContext(() => adminGuard({} as never, { url: '/admin' } as never)),
+    );
+  }
+
+  it('permite acceso si el usuario es admin o gerente', async () => {
+    const result = await runGuard({ isAuthenticated: true, isAdminOrGerente: true });
+    expect(result).toBeTrue();
+  });
+
+  it('redirige a /home si el usuario no es admin ni gerente', async () => {
+    const result = (await runGuard({ isAuthenticated: true, isAdminOrGerente: false })) as UrlTree;
+    const router = TestBed.inject(Router);
+    expect(result instanceof UrlTree).toBeTrue();
+    expect(router.serializeUrl(result)).toBe('/home');
+  });
+
+  it('redirige a /login si no está autenticado', async () => {
+    const result = (await runGuard({ isAuthenticated: false, isAdminOrGerente: false })) as UrlTree;
+    const router = TestBed.inject(Router);
+    expect(result instanceof UrlTree).toBeTrue();
+    expect(router.serializeUrl(result)).toBe('/login');
+  });
+});
+
+describe('logisticaGuard', () => {
+  function runGuard(options: { isAuthenticated: boolean; isLogistica: boolean }) {
+    const authServiceStub = {
+      isAuthenticated: () => options.isAuthenticated,
+      isLogistica: () => options.isLogistica,
+      sessionLoaded: signal(true),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: authServiceStub },
+      ],
+    });
+
+    return resolveGuardResult(
+      TestBed.runInInjectionContext(() => logisticaGuard({} as never, { url: '/logistica' } as never)),
+    );
+  }
+
+  it('permite acceso a usuarios con permisos de logística', async () => {
+    const result = await runGuard({ isAuthenticated: true, isLogistica: true });
+    expect(result).toBeTrue();
+  });
+
+  it('redirige a /home a usuarios sin permisos de logística (ej. cliente)', async () => {
+    const result = (await runGuard({ isAuthenticated: true, isLogistica: false })) as UrlTree;
+    const router = TestBed.inject(Router);
+    expect(result instanceof UrlTree).toBeTrue();
+    expect(router.serializeUrl(result)).toBe('/home');
+  });
+
+  it('redirige a /login si no está autenticado', async () => {
+    const result = (await runGuard({ isAuthenticated: false, isLogistica: false })) as UrlTree;
+    const router = TestBed.inject(Router);
+    expect(result instanceof UrlTree).toBeTrue();
+    expect(router.serializeUrl(result)).toBe('/login');
+  });
+});
+

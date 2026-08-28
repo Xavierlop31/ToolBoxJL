@@ -74,3 +74,46 @@ export const sessionGuard: CanActivateFn = () => {
     map(() => (auth.isAuthenticated() ? true : router.createUrlTree(['/login']))),
   );
 };
+
+/**
+ * Guard de RBAC para el módulo de Administración (/admin).
+ * Permite acceso únicamente a usuarios con rol `admin` o `gerente`.
+ * Si el usuario autenticado tiene otro rol (ej. `cliente`), redirige a `/home`.
+ */
+export const adminGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  return toObservable(auth.sessionLoaded).pipe(
+    filter((loaded) => loaded),
+    take(1),
+    map(() => {
+      if (!auth.isAuthenticated()) {
+        return router.createUrlTree(['/login']);
+      }
+      return auth.isAdminOrGerente() ? true : router.createUrlTree(['/home']);
+    }),
+  );
+};
+
+/**
+ * Guard de RBAC para el módulo de Logística (/logistica).
+ * Permite acceso a `almacenista`, `repartidor`, `admin` y `gerente`.
+ * Si el usuario autenticado es `cliente`, redirige a `/home`.
+ */
+export const logisticaGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  return toObservable(auth.sessionLoaded).pipe(
+    filter((loaded) => loaded),
+    take(1),
+    map(() => {
+      if (!auth.isAuthenticated()) {
+        return router.createUrlTree(['/login']);
+      }
+      return auth.isLogistica() ? true : router.createUrlTree(['/home']);
+    }),
+  );
+};
+
