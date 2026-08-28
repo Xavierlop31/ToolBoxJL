@@ -57,8 +57,23 @@ export class AuthService {
    * escenario Gherkin del Sprint 0 (que asume una cuenta ya existente), pero
    * sí de la tarea de Frontend ("pantalla de login/registro").
    */
+  /**
+   * `emailRedirectTo` explícito (mismo criterio que `signInWithGoogle`): sin
+   * esto, el link del correo de confirmación cae al "Site URL" global del
+   * proyecto de Supabase — que apuntaba al default `http://localhost:3000`
+   * en producción hasta que se corrigió a mano en el dashboard. Pasarlo acá
+   * hace que el link siempre apunte al origin desde el que se registró el
+   * usuario (producción o un preview de Vercel), sin depender de que ese
+   * campo del dashboard esté bien seteado.
+   */
   async signUp(email: string, password: string): Promise<AuthResult> {
-    const { error } = await this.supabase.auth.signUp({ email, password });
+    const { error } = await this.supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      },
+    });
     return { error };
   }
 

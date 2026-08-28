@@ -107,10 +107,13 @@ describe('AuthService', () => {
 
     await service.signUp('nuevo@b.com', 'secret123');
 
-    expect(client.auth.signUp).toHaveBeenCalledWith({
-      email: 'nuevo@b.com',
-      password: 'secret123',
-    });
+    expect(client.auth.signUp).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        email: 'nuevo@b.com',
+        password: 'secret123',
+        options: jasmine.objectContaining({ emailRedirectTo: jasmine.any(String) }),
+      }),
+    );
   });
 
   it('signOut delega en supabase.auth.signOut', async () => {
