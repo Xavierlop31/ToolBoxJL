@@ -1,6 +1,104 @@
-/* You can add global styles to this file, and also import other style files */
 @import '@toolboxjl/ui-kit/tokens.css';
+
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
+  font-family: var(--tbjl-font-family);
+  background-color: var(--tbjl-color-background);
+  color: var(--tbjl-color-neutral-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: var(--tbjl-font-family-headings);
+  color: var(--tbjl-color-neutral-900);
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Clases utilitarias de Stitch - Industrial Racing */
+.bg-brand-blue {
+  background-color: var(--tbjl-color-primary-500);
+}
+
+.text-brand-blue {
+  color: var(--tbjl-color-primary-500);
+}
+
+.bg-brand-red {
+  background-color: var(--tbjl-color-secondary-500);
+}
+
+.text-brand-red {
+  color: var(--tbjl-color-secondary-500);
+}
+
+.bg-deep-navy {
+  background-color: var(--tbjl-color-primary-700);
+}
+
+.card-industrial {
+  background: var(--tbjl-color-card);
+  border: 1px solid var(--tbjl-color-border);
+  border-radius: var(--tbjl-radius-lg);
+  box-shadow: var(--tbjl-shadow-sm);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary {
+  background-color: var(--tbjl-color-secondary-500);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--tbjl-radius-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.btn-brand-blue {
+  background-color: var(--tbjl-color-primary-500);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--tbjl-radius-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.btn-secondary {
+  background-color: var(--tbjl-color-card);
+  color: var(--tbjl-color-neutral-900);
+  border: 1px solid var(--tbjl-color-neutral-500);
+  border-radius: var(--tbjl-radius-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  &:hover {
+    background-color: var(--tbjl-color-neutral-100);
+  }
+}
+

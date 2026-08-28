@@ -1,31 +1,130 @@
-<main class="catalog">
-  <h1>Catálogo de herramientas</h1>
+<main class="catalog-page">
+  <!-- Hero Section (Stitch Design) -->
+  <section class="hero-section card-industrial">
+    <div class="hero-content">
+      <span class="badge-industrial">Equipamiento Industrial</span>
+      <h1 class="hero-title">Potencia Sin Pausas</h1>
+      <p class="hero-description">
+        Alquiler y venta de herramientas de alto rendimiento. Trazabilidad QR por unidad física y entrega garantizada en obra.
+      </p>
 
-  <form [formGroup]="form" (ngSubmit)="search()" class="search-form" novalidate>
-    <label for="q">Buscar</label>
-    <input id="q" type="search" formControlName="q" placeholder="Marca, categoría o nombre…" />
-    <button type="submit">Buscar</button>
-  </form>
+      <!-- Search Bar -->
+      <form [formGroup]="form" (ngSubmit)="search()" class="search-box" novalidate>
+        <div class="search-input-wrapper">
+          <span class="material-symbols-outlined search-icon">search</span>
+          <input
+            id="q"
+            type="search"
+            formControlName="q"
+            placeholder="Buscar por marca, modelo o categoría (ej. DeWalt, Taladro)..."
+            aria-label="Buscar herramientas"
+          />
+        </div>
+        <button type="submit" class="btn-search">
+          <span>Buscar</span>
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </form>
+    </div>
+  </section>
 
+  <!-- Category Filter Pills -->
+  <section class="category-filters">
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'ALL'"
+      (click)="setCategory('ALL')"
+    >
+      Todas las Categorías
+    </button>
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'Perforación'"
+      (click)="setCategory('Perforación')"
+    >
+      Perforación
+    </button>
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'Corte y Desbaste'"
+      (click)="setCategory('Corte y Desbaste')"
+    >
+      Corte y Desbaste
+    </button>
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'Demolición'"
+      (click)="setCategory('Demolición')"
+    >
+      Demolición
+    </button>
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'Medición y Nivelación'"
+      (click)="setCategory('Medición y Nivelación')"
+    >
+      Medición & Nivelación
+    </button>
+  </section>
+
+  <!-- State Feedback -->
   @if (loading()) {
-    <output>Cargando catálogo…</output>
+    <div class="loading-state">
+      <span class="material-symbols-outlined spin-icon">progress_activity</span>
+      <output>Cargando catálogo de herramientas…</output>
+    </div>
   }
 
   @if (errorMessage()) {
-    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+    <div class="form-error-box" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <p class="form-error">{{ errorMessage() }}</p>
+    </div>
   }
 
   @if (!loading() && results().length === 0 && !errorMessage()) {
-    <p data-testid="catalog-empty">No encontramos modelos que coincidan con la búsqueda.</p>
+    <div class="empty-state card-industrial" data-testid="catalog-empty">
+      <span class="material-symbols-outlined empty-icon">search_off</span>
+      <h3>No encontramos herramientas</h3>
+      <p>No hay modelos que coincidan con tu búsqueda. Probá con otra categoría o término.</p>
+    </div>
   }
 
-  <ul class="results" data-testid="catalog-results">
+  <!-- Catalog Results Grid -->
+  <ul class="results-grid" data-testid="catalog-results">
     @for (model of results(); track model.id) {
-      <li>
-        <a [routerLink]="['/catalogo', model.id]">
-          <span class="model-name">{{ model.nombre }}</span>
-          <span class="model-brand">{{ model.marca }} · {{ model.categoria }}</span>
-          <span class="model-rate">{{ model.tarifa_dia | number }} COP / día</span>
+      <li class="tool-card card-industrial">
+        <a [routerLink]="['/catalogo', model.id]" class="tool-card-link">
+          <div class="tool-card-header">
+            <span class="category-chip">{{ model.categoria }}</span>
+            <span class="brand-chip">{{ model.marca }}</span>
+          </div>
+
+          <div class="tool-card-body">
+            <h2 class="model-name">{{ model.nombre }}</h2>
+            <div class="specs-preview">
+              <span class="material-symbols-outlined spec-icon">verified</span>
+              <span>Garantía & Trazabilidad QR</span>
+            </div>
+          </div>
+
+          <div class="tool-card-footer">
+            <div class="price-box">
+              <span class="price-label">Tarifa Alquiler</span>
+              <span class="model-rate">
+                <strong>\${{ model.tarifa_dia | number }}</strong> <small>COP / día</small>
+              </span>
+            </div>
+            <div class="btn-action">
+              <span>Cotizar</span>
+              <span class="material-symbols-outlined">arrow_forward</span>
+            </div>
+          </div>
         </a>
       </li>
     }

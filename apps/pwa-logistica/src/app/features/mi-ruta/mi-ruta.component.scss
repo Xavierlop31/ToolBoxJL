@@ -1,18 +1,57 @@
 .mi-ruta {
   max-width: 640px;
   margin: 0 auto;
-  padding: var(--tbjl-spacing-6, 1.5rem);
+  padding: 24px 16px;
+  font-family: var(--tbjl-font-family, sans-serif);
+
+  h1 {
+    font-size: 24px;
+    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+    font-weight: 700;
+    color: var(--tbjl-color-neutral-900, #161c21);
+    margin: 0 0 16px 0;
+  }
 }
 
 .route-meta {
-  font-size: var(--tbjl-font-size-lg, 1.125rem);
-  margin-bottom: var(--tbjl-spacing-4, 1rem);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tbjl-color-neutral-700, #454556);
+  margin-bottom: 20px;
+  background: var(--tbjl-color-primary-50, #e0e0ff);
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: var(--tbjl-color-primary-500, #141cdb);
 }
 
 .empty-state {
-  font-size: var(--tbjl-font-size-lg, 1.125rem);
-  padding: var(--tbjl-spacing-6, 1.5rem);
+  font-size: 15px;
+  padding: 32px 20px;
   text-align: center;
+  background: var(--tbjl-color-card, #ffffff);
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  color: var(--tbjl-color-neutral-700, #454556);
+}
+
+.form-info {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.form-error {
+  color: var(--tbjl-color-error, #ba1a1a);
+  background-color: #ffdad6;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
 }
 
 .paradas-list {
@@ -21,20 +60,19 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--tbjl-spacing-4, 1rem);
+  gap: 16px;
 }
 
-// Tarjetas grandes, pensadas para usarse con una mano desde el celular en
-// campo (mismo criterio que inspection-checklist): texto legible, buen
-// contraste, target táctil amplio — no es una lista densa de escritorio.
 .parada-card {
   display: flex;
   align-items: flex-start;
-  gap: var(--tbjl-spacing-4, 1rem);
-  padding: var(--tbjl-spacing-4, 1rem);
-  min-height: 44px;
-  border: 1px solid var(--tbjl-color-border, #ccc);
-  border-radius: var(--tbjl-radius-md, 0.5rem);
+  gap: 16px;
+  padding: 18px;
+  min-height: 56px;
+  background: var(--tbjl-color-card, #ffffff);
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
 }
 
 .parada-secuencia {
@@ -42,13 +80,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: var(--tbjl-radius-full, 9999px);
-  background: var(--tbjl-color-primary-500, #f2600c);
-  color: var(--tbjl-color-neutral-0, #fff);
-  font-size: var(--tbjl-font-size-lg, 1.125rem);
-  font-weight: var(--tbjl-font-weight-bold, 700);
+  background: var(--tbjl-color-primary-500, #141cdb);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .parada-info {
@@ -57,25 +95,39 @@
 
 .parada-tipo {
   display: inline-block;
-  font-size: var(--tbjl-font-size-sm, 0.875rem);
-  font-weight: var(--tbjl-font-weight-semibold, 600);
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--tbjl-color-neutral-100, #eef4fb);
+  color: var(--tbjl-color-neutral-900, #161c21);
+
+  &[data-tipo='entrega'] {
+    background: #e0e0ff;
+    color: #141cdb;
+  }
+
+  &[data-tipo='recoleccion'] {
+    background: #ffdad5;
+    color: #bc000c;
+  }
 }
 
 .parada-direccion {
-  font-size: var(--tbjl-font-size-lg, 1.125rem);
-  margin: var(--tbjl-spacing-2, 0.5rem) 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tbjl-color-neutral-900, #161c21);
+  margin: 8px 0 4px 0;
 }
 
 .parada-estado {
-  font-size: var(--tbjl-font-size-sm, 0.875rem);
-  color: var(--tbjl-color-neutral-500, #6b7280);
-  margin: var(--tbjl-spacing-2, 0.5rem) 0 0;
+  font-size: 13px;
+  color: var(--tbjl-color-neutral-700, #454556);
+  margin: 0;
 }
 
-// <output> is inline by default; keep the same block layout/spacing the
-// previous <p role="status"> elements had from the browser UA stylesheet.
 output {
   display: block;
   margin: 1em 0;
