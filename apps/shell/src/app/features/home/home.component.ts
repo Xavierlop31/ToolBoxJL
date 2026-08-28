@@ -17,43 +17,6 @@ import { AuthService } from '../../core/auth/auth.service';
   imports: [RouterLink],
   template: `
     <div class="shell-layout">
-      <!-- Top Navigation Bar (Stitch Brand Blue) -->
-      <header class="navbar">
-        <div class="navbar-container">
-          <div class="brand-group">
-            <div class="brand-logo">
-              <span class="material-symbols-outlined logo-icon">construction</span>
-              <span class="logo-text">ToolBox <strong>JL</strong></span>
-            </div>
-            <nav class="nav-links">
-              <a routerLink="/catalogo" routerLinkActive="active" class="nav-link">
-                <span class="material-symbols-outlined nav-icon">storefront</span>
-                Portal Clientes
-              </a>
-              @if (auth.isLogistica()) {
-                <a routerLink="/logistica" routerLinkActive="active" class="nav-link">
-                  <span class="material-symbols-outlined nav-icon">local_shipping</span>
-                  Logística & PWA
-                </a>
-              }
-              @if (auth.isAdminOrGerente()) {
-                <a routerLink="/admin" routerLinkActive="active" class="nav-link">
-                  <span class="material-symbols-outlined nav-icon">dashboard</span>
-                  Panel Gerencial
-                </a>
-              }
-            </nav>
-          </div>
-          <div class="user-group">
-            <span class="user-badge">{{ auth.userRoleDisplay() }}</span>
-            <button type="button" class="btn-logout" (click)="signOut()" title="Cerrar sesión">
-              <span class="material-symbols-outlined">logout</span>
-              <span>Salir</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <!-- Main Dashboard Grid -->
       <main class="home-main">
         <div class="hero-banner card-industrial">
@@ -116,101 +79,9 @@ import { AuthService } from '../../core/auth/auth.service';
   `,
   styles: `
     .shell-layout {
-      min-height: 100vh;
+      min-height: calc(100vh - 64px);
       background-color: var(--tbjl-color-background, #f5faff);
       font-family: var(--tbjl-font-family, sans-serif);
-    }
-    .navbar {
-      background-color: var(--tbjl-color-primary-500, #141cdb);
-      color: #ffffff;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-    .navbar-container {
-      max-width: 1440px;
-      margin: 0 auto;
-      width: 100%;
-      padding: 0 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .brand-group {
-      display: flex;
-      align-items: center;
-      gap: 32px;
-    }
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 20px;
-      font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
-      color: #ffffff;
-    }
-    .logo-icon {
-      font-size: 28px;
-    }
-    .nav-links {
-      display: flex;
-      gap: 8px;
-    }
-    .nav-link {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: rgba(255, 255, 255, 0.85);
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 600;
-      padding: 8px 14px;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-    }
-    .nav-link:hover {
-      background-color: rgba(255, 255, 255, 0.15);
-      color: #ffffff;
-    }
-    .nav-link.active {
-      background-color: rgba(255, 255, 255, 0.2);
-      color: #ffffff;
-    }
-    .nav-icon {
-      font-size: 18px;
-    }
-    .user-group {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .user-badge {
-      background: rgba(255, 255, 255, 0.15);
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .btn-logout {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: #ffffff;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s ease;
-    }
-    .btn-logout:hover {
-      background: rgba(255, 255, 255, 0.2);
     }
     .home-main {
       max-width: 1440px;
@@ -336,8 +207,4 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class HomeComponent {
   readonly auth = inject(AuthService);
-
-  signOut(): void {
-    void this.auth.signOut();
-  }
 }
