@@ -1,7 +1,7 @@
 import { loadRemoteModule } from '@angular-architects/native-federation';
 import { Routes } from '@angular/router';
 
-import { authGuard, sessionGuard } from './core/auth/auth.guard';
+import { adminGuard, authGuard, logisticaGuard, sessionGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -37,12 +37,10 @@ export const routes: Routes = [
   {
     // Remote pwa-logistica (Sprint 1, Issues #1-#4 — RF-1.2/RF-1.3).
     // `GET /inventory/units/{id}` y `PATCH .../status` requieren rol
-    // almacenista/repartidor (x-roles); acá solo gateamos sesión activa
-    // (`authGuard`) porque AuthService todavía no expone el rol del
-    // usuario (Sprint 0 solo resuelve sesión) — la verificación fina de rol
-    // queda pendiente, documentada, para un sprint posterior de hardening.
+    // almacenista/repartidor/admin/gerente (x-roles); protegido por `authGuard`
+    // y `logisticaGuard` (RBAC).
     path: 'logistica',
-    canActivate: [authGuard],
+    canActivate: [authGuard, logisticaGuard],
     loadChildren: () =>
       loadRemoteModule({
         remoteName: 'pwa-logistica',
@@ -52,13 +50,10 @@ export const routes: Routes = [
   {
     // Remote panel-admin (Sprint 4, Issues #11-#12 — RF-3.1/RF-3.3).
     // `POST /fleet/vehicles` requiere rol admin y `GET /logistics/shipments`
-    // requiere rol gerente/admin (x-roles); acá solo gateamos sesión activa
-    // (`authGuard`) porque AuthService todavía no expone el rol del
-    // usuario (Sprint 0 solo resuelve sesión) — la verificación fina de rol
-    // queda pendiente, documentada, para un sprint posterior de hardening
-    // (mismo criterio ya aplicado a `/logistica`).
+    // requiere rol gerente/admin (x-roles); protegido por `authGuard` y
+    // `adminGuard` (RBAC).
     path: 'admin',
-    canActivate: [authGuard],
+    canActivate: [authGuard, adminGuard],
     loadChildren: () =>
       loadRemoteModule({
         remoteName: 'panel-admin',
