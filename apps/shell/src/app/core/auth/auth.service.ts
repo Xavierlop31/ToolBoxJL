@@ -7,6 +7,39 @@ export interface AuthResult {
   error: AuthError | null;
 }
 
+export type Rol = 'cliente' | 'admin' | 'gerente' | 'almacenista' | 'repartidor';
+
+function extractRol(session: Session | null): Rol {
+  if (!session?.user) return 'cliente';
+
+  const rawRol =
+    session.user.app_metadata?.['rol'] ??
+    session.user.user_metadata?.['rol'] ??
+    session.user.app_metadata?.['role'] ??
+    session.user.user_metadata?.['role'];
+
+  if (typeof rawRol === 'string' && ['cliente', 'admin', 'gerente', 'almacenista', 'repartidor'].includes(rawRol)) {
+    return rawRol as Rol;
+  }
+
+  if (session.access_token) {
+    try {
+      const parts = session.access_token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        const jwtRol = payload.rol ?? payload.role ?? payload.app_metadata?.rol ?? payload.user_metadata?.rol;
+        if (typeof jwtRol === 'string' && ['cliente', 'admin', 'gerente', 'almacenista', 'repartidor'].includes(jwtRol)) {
+          return jwtRol as Rol;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return 'cliente';
+}
+
 /**
  * AuthModule del frontend (HU-6.1 — ver features/06_autenticacion_seguridad.feature,
  * primer escenario: login con correo/contraseña o con Google).
@@ -30,6 +63,21 @@ export class AuthService {
   /** `true` una vez que se resolvió la sesión inicial (evita parpadeos de guard). */
   readonly sessionLoaded = this.sessionLoadedSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.sessionSignal() !== null);
+  readonly userRole = computed<Rol>(() => extractRol(this.sessionSignal()));
+  readonly isCliente = computed(() => this.userRole() === 'cliente');
+  readonly isAdminOrGerente = computed(() => ['admin', 'gerente'].includes(this.userRole()));
+  readonly isLogistica = computed(() => ['almacenista', 'repartidor', 'admin', 'gerente'].includes(this.userRole()));
+  readonly userRoleDisplay = computed(() => {
+    switch (this.userRole()) {
+      case 'admin': return 'Administrador';
+      case 'gerente': return 'Gerente';
+      case 'almacenista': return 'Almacenista';
+      case 'repartidor': return 'Repartidor';
+      case 'cliente':
+      default:
+        return 'Cliente';
+    }
+  });
 
   constructor() {
     this.supabase.auth.getSession().then(({ data }) => {

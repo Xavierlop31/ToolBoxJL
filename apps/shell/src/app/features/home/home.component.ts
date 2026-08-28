@@ -30,18 +30,22 @@ import { AuthService } from '../../core/auth/auth.service';
                 <span class="material-symbols-outlined nav-icon">storefront</span>
                 Portal Clientes
               </a>
-              <a routerLink="/logistica" routerLinkActive="active" class="nav-link">
-                <span class="material-symbols-outlined nav-icon">local_shipping</span>
-                Logística & PWA
-              </a>
-              <a routerLink="/admin" routerLinkActive="active" class="nav-link">
-                <span class="material-symbols-outlined nav-icon">dashboard</span>
-                Panel Gerencial
-              </a>
+              @if (auth.isLogistica()) {
+                <a routerLink="/logistica" routerLinkActive="active" class="nav-link">
+                  <span class="material-symbols-outlined nav-icon">local_shipping</span>
+                  Logística & PWA
+                </a>
+              }
+              @if (auth.isAdminOrGerente()) {
+                <a routerLink="/admin" routerLinkActive="active" class="nav-link">
+                  <span class="material-symbols-outlined nav-icon">dashboard</span>
+                  Panel Gerencial
+                </a>
+              }
             </nav>
           </div>
           <div class="user-group">
-            <span class="user-badge">Plataforma Operativa</span>
+            <span class="user-badge">{{ auth.userRoleDisplay() }}</span>
             <button type="button" class="btn-logout" (click)="signOut()" title="Cerrar sesión">
               <span class="material-symbols-outlined">logout</span>
               <span>Salir</span>
@@ -76,32 +80,36 @@ import { AuthService } from '../../core/auth/auth.service';
           </div>
 
           <!-- Card PWA Logística -->
-          <div class="module-card card-industrial">
-            <div class="card-header">
-              <span class="material-symbols-outlined module-icon text-red">qr_code_scanner</span>
-              <span class="module-badge badge-red">Operativo</span>
+          @if (auth.isLogistica()) {
+            <div class="module-card card-industrial">
+              <div class="card-header">
+                <span class="material-symbols-outlined module-icon text-red">qr_code_scanner</span>
+                <span class="module-badge badge-red">Operativo</span>
+              </div>
+              <h3>PWA Logística</h3>
+              <p>Escaneo QR por unidad física, ruta de entregas del día y checklist de inspección con fotos.</p>
+              <a routerLink="/logistica" class="btn-module btn-red">
+                <span>Abrir PWA Logística</span>
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </a>
             </div>
-            <h3>PWA Logística</h3>
-            <p>Escaneo QR por unidad física, ruta de entregas del día y checklist de inspección con fotos.</p>
-            <a routerLink="/logistica" class="btn-module btn-red">
-              <span>Abrir PWA Logística</span>
-              <span class="material-symbols-outlined">arrow_forward</span>
-            </a>
-          </div>
+          }
 
           <!-- Card Panel Admin -->
-          <div class="module-card card-industrial">
-            <div class="card-header">
-              <span class="material-symbols-outlined module-icon">analytics</span>
-              <span class="module-badge badge-gray">Gerencial</span>
+          @if (auth.isAdminOrGerente()) {
+            <div class="module-card card-industrial">
+              <div class="card-header">
+                <span class="material-symbols-outlined module-icon">analytics</span>
+                <span class="module-badge badge-gray">Gerencial</span>
+              </div>
+              <h3>Panel Admin</h3>
+              <p>Dashboards de ingresos, ROI por herramienta, utilización de flota y mapa de pedidos en vivo.</p>
+              <a routerLink="/admin" class="btn-module btn-gray">
+                <span>Ver KPIs & Flota</span>
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </a>
             </div>
-            <h3>Panel Admin</h3>
-            <p>Dashboards de ingresos, ROI por herramienta, utilización de flota y mapa de pedidos en vivo.</p>
-            <a routerLink="/admin" class="btn-module btn-gray">
-              <span>Ver KPIs & Flota</span>
-              <span class="material-symbols-outlined">arrow_forward</span>
-            </a>
-          </div>
+          }
         </div>
       </main>
     </div>
@@ -327,7 +335,7 @@ import { AuthService } from '../../core/auth/auth.service';
   `,
 })
 export class HomeComponent {
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
 
   signOut(): void {
     void this.auth.signOut();
