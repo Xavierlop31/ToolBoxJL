@@ -25,8 +25,14 @@ import { Routes } from '@angular/router';
  * `inspeccion/:unidadId` no tiene todavía un punto de navegación propio
  * (lista de "envíos por inspeccionar") — no hay Issue de este sprint que lo
  * pida; se navega directo con el `unidadId` de la unidad devuelta.
+ *
+ * El redirect de `path: ''` vive ACÁ (no solo en `app.routes.ts` standalone)
+ * para que también aplique montado por el shell — sin esto, `/logistica`
+ * (el link literal que usa `home.component.ts`) no matcheaba ninguna ruta y
+ * quedaba en blanco sin error en consola (bug real, testing 2026-08-28).
  */
 export const remoteRoutes: Routes = [
+  { path: '', pathMatch: 'full', redirectTo: 'escanear' },
   {
     path: 'escanear',
     loadComponent: () =>
