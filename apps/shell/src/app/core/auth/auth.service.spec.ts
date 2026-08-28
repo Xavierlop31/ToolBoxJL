@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import type { AuthError, Session, SupabaseClient } from '@supabase/supabase-js';
 
 import { AuthService } from './auth.service';
@@ -46,10 +47,14 @@ describe('AuthService', () => {
   function setup() {
     const { client, emitAuthState } = createSupabaseClientMock();
     TestBed.configureTestingModule({
-      providers: [{ provide: SUPABASE_CLIENT, useValue: client }],
+      providers: [
+        provideRouter([]),
+        { provide: SUPABASE_CLIENT, useValue: client },
+      ],
     });
     const service = TestBed.inject(AuthService);
-    return { service, client, emitAuthState };
+    const router = TestBed.inject(Router);
+    return { service, client, emitAuthState, router };
   }
 
   it('arranca sin sesión y sin autenticar', () => {
@@ -119,12 +124,15 @@ describe('AuthService', () => {
     );
   });
 
-  it('signOut delega en supabase.auth.signOut', async () => {
-    const { service, client } = setup();
+  it('signOut delega en supabase.auth.signOut y navega a /login', async () => {
+    const { service, client, router } = setup();
+    const navigateSpy = spyOn(router, 'navigate');
 
     await service.signOut();
 
     expect(client.auth.signOut).toHaveBeenCalled();
+    expect(service.session()).toBeNull();
+    expect(navigateSpy).toHaveBeenCalledWith(['/login']);
   });
 
   describe('RBAC y extracción de roles', () => {
