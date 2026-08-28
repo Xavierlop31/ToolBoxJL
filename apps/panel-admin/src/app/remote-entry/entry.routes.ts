@@ -22,9 +22,14 @@ import { Routes } from '@angular/router';
  * queda pendiente de que AuthService exponga el rol del usuario (Sprint 0
  * solo resuelve sesión, no rol) — documentado como decisión de este
  * sprint, no como omisión silenciosa (mismo criterio ya aplicado a la
- * ruta `/logistica` de pwa-logistica).
+ * El redirect de `path: ''` vive ACÁ (no solo en `app.routes.ts` standalone)
+ * para que también aplique montado por el shell — sin esto, `/admin`
+ * (el link literal que usa `home.component.ts`) no matcheaba ninguna ruta y
+ * quedaba en blanco sin error en consola (mismo bug corregido en PR #114
+ * para pwa-logistica y portal-cliente).
  */
 export const remoteRoutes: Routes = [
+  { path: '', pathMatch: 'full', redirectTo: 'vehiculos/nuevo' },
   {
     path: 'vehiculos/nuevo',
     loadComponent: () =>
