@@ -35,18 +35,6 @@ export const routes: Routes = [
     title: 'ToolBox JL',
   },
   {
-    // Remote portal-cliente (Sprint 1, Issues #1-#4 — RF-1.1/RF-1.4).
-    // `/catalog/search` y `/catalog/models/{id}` son públicos en
-    // openapi.yaml (security: []), por eso esta ruta no lleva `authGuard`:
-    // cualquier visitante puede navegar el catálogo sin sesión.
-    path: 'catalogo',
-    loadChildren: () =>
-      loadRemoteModule({
-        remoteName: 'portal-cliente',
-        exposedModule: './Routes',
-      }).then((m) => m.remoteRoutes),
-  },
-  {
     // Remote pwa-logistica (Sprint 1, Issues #1-#4 — RF-1.2/RF-1.3).
     // `GET /inventory/units/{id}` y `PATCH .../status` requieren rol
     // almacenista/repartidor (x-roles); acá solo gateamos sesión activa
@@ -74,6 +62,34 @@ export const routes: Routes = [
     loadChildren: () =>
       loadRemoteModule({
         remoteName: 'panel-admin',
+        exposedModule: './Routes',
+      }).then((m) => m.remoteRoutes),
+  },
+  {
+    // Remote portal-cliente (Sprint 1, Issues #1-#4 — RF-1.1/RF-1.4).
+    // `/catalog/search` y `/catalog/models/{id}` son públicos en
+    // openapi.yaml (security: []), por eso esta ruta no lleva `authGuard`:
+    // cualquier visitante puede navegar el catálogo sin sesión.
+    //
+    // `path: ''`, NO `path: 'catalogo'`: `remoteRoutes` (entry.routes.ts de
+    // portal-cliente) ya envuelve sus páginas bajo un `path: ''` propio con
+    // `catalogo`/`catalogo/:id` como hijos — es la misma técnica que usa su
+    // `app.routes.ts` en modo standalone (`...remoteRoutes` en la raíz, ver
+    // el comentario de entry.routes.ts). Montarlo acá con `path: 'catalogo'`
+    // exigiría `/catalogo/catalogo` en vez de `/catalogo` — bug real
+    // detectado en testing 2026-08-28 (la página quedaba en blanco, sin
+    // error en consola, porque ninguna ruta matcheaba).
+    //
+    // Se ubica al final del array (antes del wildcard), no junto a
+    // `/logistica`/`/admin`: como `loadChildren` de un `path: ''` intenta
+    // resolverse para CUALQUIER URL que llegue hasta acá (matching por
+    // prefijo vacío), dejarlo último evita que una navegación a
+    // `/logistica` o `/admin` dispare de arriba una carga innecesaria del
+    // remote de portal-cliente antes de hacer backtracking.
+    path: '',
+    loadChildren: () =>
+      loadRemoteModule({
+        remoteName: 'portal-cliente',
         exposedModule: './Routes',
       }).then((m) => m.remoteRoutes),
   },
