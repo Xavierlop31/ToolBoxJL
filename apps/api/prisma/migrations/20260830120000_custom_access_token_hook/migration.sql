@@ -22,20 +22,32 @@
 -- function" (https://supabase.com/docs/guides/auth/auth-hooks/custom-access-token-hook):
 -- recibe y devuelve el `event` COMPLETO (no solo `claims`), como `jsonb`.
 --
--- SECURITY INVOKER (default, sin SECURITY DEFINER): corre con los
--- privilegios del rol que la invoca (`supabase_auth_admin`, el único rol
--- que Supabase usa para llamar hooks), al que se le da acceso explícito y
--- mínimo más abajo — sin necesidad del patrón SECURITY DEFINER +
--- search_path vacío que sí usa `handle_new_user` en
--- 20260823235900_supabase_users_bootstrap (ese SÍ corre como el dueño de la
--- función, con más privilegio del que tiene quien la invoca). Igual se fija
--- `search_path = ''` acá como defensa adicional: todas las referencias ya
--- están calificadas (`public.users`, `public.rol_usuario`), así que no hay
--- costo funcional y elimina cualquier ambigüedad de resolución de schema.
+-- *** SECURITY DEFINER, NO INVOKER — CAMBIO DE DIAGNÓSTICO EN VIVO
+-- 2026-08-28 ***: la primera versión de esta función usaba SECURITY INVOKER
+-- (default) con `GRANT SELECT ON public.users TO supabase_auth_admin`
+-- explícito, asumiendo que ese grant alcanzaba. En producción NO alcanzó:
+-- se verificó con `has_table_privilege('supabase_auth_admin', 'public.users',
+-- 'SELECT')` → `true`, sin RLS habilitada en `public.users`, y aun así el
+-- `SELECT ... WHERE id = (event->>'user_id')::uuid` devolvía cero filas
+-- cuando Supabase invocaba el hook de verdad (confirmado con un debug claim
+-- que hardcodeaba el UUID literal, salteando la extracción del `event` —
+-- mismo resultado). La causa exacta de por qué el grant de tabla no se
+-- traducía en visibilidad de filas para `supabase_auth_admin` en runtime
+-- del hook quedó sin identificar — puede ser una particularidad de cómo
+-- Supabase gestiona ese rol interno. SECURITY DEFINER lo resuelve de raíz:
+-- la función corre con los privilegios de quien la creó (dueño de
+-- `public.users`), no con los de `supabase_auth_admin`, mismo patrón que
+-- `is_staff()` y `handle_new_user()` en este mismo repo. Confirmado con un
+-- login real: `app_metadata.rol` llegó correcto recién con este cambio.
+-- `search_path = ''` es obligatorio con SECURITY DEFINER (no opcional, ver
+-- la nota de 20260823235900_supabase_users_bootstrap sobre secuestro de
+-- search_path) — todas las referencias ya están calificadas
+-- (`public.users`, `public.rol_usuario`).
 CREATE OR REPLACE FUNCTION "public"."custom_access_token_hook"(event jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
+SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
@@ -74,17 +86,21 @@ END;
 $$;
 
 -- supabase_auth_admin es el único rol que Supabase usa internamente para
--- invocar Auth Hooks — sin estos grants explícitos, el hook falla con
--- "permission denied" en CADA login (no en esta migración, que corre como
--- owner) y Supabase trata ese fallo como un fallo total de autenticación,
--- no solo del claim.
+-- invocar Auth Hooks — sin USAGE+EXECUTE explícitos, el hook falla con
+-- "permission denied" en CADA login y Supabase trata ese fallo como un
+-- fallo total de autenticación, no solo del claim. NO hace falta
+-- `GRANT SELECT ON public.users` acá: con SECURITY DEFINER la función ya no
+-- corre con los privilegios de `supabase_auth_admin`, así que ese grant
+-- (que la primera versión sí tenía) quedó innecesario.
 GRANT USAGE ON SCHEMA "public" TO "supabase_auth_admin";
 GRANT EXECUTE ON FUNCTION "public"."custom_access_token_hook"(jsonb) TO "supabase_auth_admin";
 REVOKE EXECUTE ON FUNCTION "public"."custom_access_token_hook"(jsonb) FROM "authenticated", "anon", "public";
-GRANT SELECT ON "public"."users" TO "supabase_auth_admin";
 
--- *** ESTA MIGRACIÓN SOLO CREA LA FUNCIÓN — NO ACTIVA EL HOOK ***. Activarlo
--- es una acción exclusiva del dashboard de Supabase (Authentication → Auth
--- Hooks → "Add hook" → Postgres function → elegir
--- `public.custom_access_token_hook` → Enable) — no hay API/SQL para hacerlo
--- desde acá. Confirmar con el Arquitecto una vez aplicada esta migración.
+-- Esta migración SOLO crea la función — activar el hook en sí es una acción
+-- exclusiva del dashboard de Supabase (Authentication → Auth Hooks →
+-- "Add hook" → Postgres function → elegir `public.custom_access_token_hook`
+-- → Enable), sin equivalente por SQL/API. Ya se hizo y se verificó
+-- end-to-end en producción el 2026-08-28 (login real, JWT decodificado con
+-- `app_metadata.rol` presente) — si una futura migración recrea el hook
+-- desde cero en otro entorno (staging, otro proyecto de Supabase), ese paso
+-- de dashboard sigue siendo manual.
