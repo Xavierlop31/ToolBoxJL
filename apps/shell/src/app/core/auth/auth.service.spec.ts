@@ -126,4 +126,88 @@ describe('AuthService', () => {
 
     expect(client.auth.signOut).toHaveBeenCalled();
   });
+
+  describe('RBAC y extracción de roles', () => {
+    const rolesTestCases = [
+      {
+        rol: 'admin',
+        display: 'Administrador',
+        isCliente: false,
+        isAdminOrGerente: true,
+        isLogistica: true,
+      },
+      {
+        rol: 'gerente',
+        display: 'Gerente',
+        isCliente: false,
+        isAdminOrGerente: true,
+        isLogistica: true,
+      },
+      {
+        rol: 'almacenista',
+        display: 'Almacenista',
+        isCliente: false,
+        isAdminOrGerente: false,
+        isLogistica: true,
+      },
+      {
+        rol: 'repartidor',
+        display: 'Repartidor',
+        isCliente: false,
+        isAdminOrGerente: false,
+        isLogistica: true,
+      },
+      {
+        rol: 'cliente',
+        display: 'Cliente',
+        isCliente: true,
+        isAdminOrGerente: false,
+        isLogistica: false,
+      },
+    ];
+
+    rolesTestCases.forEach(({ rol, display, isCliente, isAdminOrGerente, isLogistica }) => {
+      it(`extrae y computa correctamente los permisos para el rol: ${rol}`, () => {
+        const { service, emitAuthState } = setup();
+        const fakeSession = {
+          user: { id: `u-${rol}`, app_metadata: { rol } },
+        } as unknown as Session;
+
+        emitAuthState('SIGNED_IN', fakeSession);
+
+        expect(service.userRole()).toBe(rol as never);
+        expect(service.userRoleDisplay()).toBe(display);
+        expect(service.isCliente()).toBe(isCliente);
+        expect(service.isAdminOrGerente()).toBe(isAdminOrGerente);
+        expect(service.isLogistica()).toBe(isLogistica);
+      });
+    });
+
+    it('extrae rol desde user_metadata si no viene en app_metadata', () => {
+      const { service, emitAuthState } = setup();
+      const fakeSession = {
+        user: { id: 'u1', user_metadata: { rol: 'gerente' } },
+      } as unknown as Session;
+
+      emitAuthState('SIGNED_IN', fakeSession);
+
+      expect(service.userRole()).toBe('gerente');
+      expect(service.isAdminOrGerente()).toBeTrue();
+    });
+
+    it('asigna cliente por defecto ante un rol no reconocido o ausente', () => {
+      const { service, emitAuthState } = setup();
+      const fakeSession = {
+        user: { id: 'u1', user_metadata: {} },
+      } as unknown as Session;
+
+      emitAuthState('SIGNED_IN', fakeSession);
+
+      expect(service.userRole()).toBe('cliente');
+      expect(service.isCliente()).toBeTrue();
+      expect(service.isAdminOrGerente()).toBeFalse();
+      expect(service.isLogistica()).toBeFalse();
+    });
+  });
 });
+
