@@ -1,185 +1,199 @@
-// <output> is inline by default; keep the same block layout/spacing the
-// previous <p role="status"> elements had from the browser UA stylesheet.
 output {
   display: block;
   margin: 1em 0;
 }
 
 .model-detail {
-  max-width: 720px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: var(--tbjl-spacing-6, 1.5rem);
+  padding: 32px 24px;
+  font-family: var(--tbjl-font-family, sans-serif);
 
   h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-    color: var(--tbjl-color-text-primary, #1a1c1e);
+    font-size: 32px;
+    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--tbjl-color-neutral-900, #161c21);
   }
 
   .model-meta {
-    font-size: 1.1rem;
-    color: var(--tbjl-color-text-secondary, #5c5e62);
-    margin-bottom: 0.5rem;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--tbjl-color-neutral-700, #454556);
+    margin-bottom: 8px;
   }
 
   .model-rate {
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: var(--tbjl-color-primary, #0056b3);
-    margin-bottom: 2rem;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--tbjl-color-primary-500, #141cdb);
+    margin-bottom: 28px;
   }
 }
 
 .quote-section {
-  margin-top: var(--tbjl-spacing-6, 1.5rem);
-  padding: var(--tbjl-spacing-6, 1.5rem);
-  border: 1px solid var(--tbjl-color-surface-border, #d7d9dd);
-  border-radius: var(--tbjl-radius-md, 0.5rem);
-  background-color: var(--tbjl-color-surface, #ffffff);
+  margin-top: 24px;
+  padding: 32px;
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-lg, 0.5rem);
+  background-color: var(--tbjl-color-card, #ffffff);
+  box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
 
   h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid var(--tbjl-color-surface-border, #eef0f2);
-    padding-bottom: 0.5rem;
+    font-size: 22px;
+    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--tbjl-color-border, #dce3ea);
+    padding-bottom: 12px;
+    color: var(--tbjl-color-neutral-900, #161c21);
   }
 
   .field {
     display: flex;
     flex-direction: column;
-    margin-bottom: var(--tbjl-spacing-4, 1rem);
+    margin-bottom: 18px;
 
     label, .label {
       font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: var(--tbjl-color-text-primary, #1a1c1e);
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--tbjl-color-neutral-700, #454556);
     }
 
     input[type="text"], input[type="date"], select {
-      padding: 0.75rem;
-      border: 1px solid var(--tbjl-color-surface-border, #d7d9dd);
-      border-radius: var(--tbjl-radius-sm, 0.25rem);
-      font-size: 1rem;
+      padding: 12px 14px;
+      border: 1px solid var(--tbjl-color-border, #dce3ea);
+      border-radius: var(--tbjl-radius-md, 0.5rem);
+      font-size: 15px;
+      background: #ffffff;
+      color: var(--tbjl-color-neutral-900, #161c21);
 
       &:focus {
         outline: none;
-        border-color: var(--tbjl-color-primary, #0056b3);
+        border-color: var(--tbjl-color-primary-500, #141cdb);
       }
     }
   }
 
   .toggle-field {
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.25rem;
+    background-color: var(--tbjl-color-neutral-100, #eef4fb);
+    padding: 16px;
+    border-radius: var(--tbjl-radius-md, 0.5rem);
   }
 
   .radio-group {
     display: flex;
-    gap: 1.5rem;
+    gap: 24px;
 
     label {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      font-weight: normal;
+      gap: 8px;
+      font-weight: 600;
       cursor: pointer;
+      color: var(--tbjl-color-neutral-900, #161c21);
     }
   }
 
   .date-fields {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 16px;
   }
 
   .availability-check-wrapper {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background-color: #f1f3f5;
-    border-radius: 0.25rem;
+    margin-bottom: 24px;
+    padding: 16px;
+    background-color: var(--tbjl-color-neutral-100, #eef4fb);
+    border-radius: var(--tbjl-radius-md, 0.5rem);
 
     .availability-success {
-      color: #2b8a3e;
-      font-weight: 600;
-      margin-top: 0.5rem;
+      color: var(--tbjl-color-success, #1e9e5a);
+      font-weight: 700;
+      margin-top: 8px;
     }
   }
 
   .btn-primary, .btn-confirm {
     width: 100%;
-    padding: 0.85rem;
-    background-color: var(--tbjl-color-primary, #0056b3);
-    color: white;
+    padding: 14px;
+    background-color: var(--tbjl-color-secondary-500, #e70012);
+    color: #ffffff;
     border: none;
-    border-radius: var(--tbjl-radius-sm, 0.25rem);
-    font-size: 1.1rem;
-    font-weight: bold;
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s ease;
 
-    &:hover {
-      background-color: #004085;
+    &:hover:not(:disabled) {
+      background-color: var(--tbjl-color-secondary-600, #bc000c);
     }
 
     &:disabled {
-      background-color: #a0b2c6;
+      background-color: var(--tbjl-color-neutral-500, #757588);
       cursor: not-allowed;
+      opacity: 0.6;
     }
   }
 
   .btn-secondary {
-    padding: 0.5rem 1rem;
-    background-color: #6c757d;
-    color: white;
+    padding: 10px 18px;
+    background-color: var(--tbjl-color-primary-500, #141cdb);
+    color: #ffffff;
     border: none;
-    border-radius: var(--tbjl-radius-sm, 0.25rem);
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.2s ease;
 
-    &:hover {
-      background-color: #5a6268;
+    &:hover:not(:disabled) {
+      background-color: var(--tbjl-color-primary-600, #0003a8);
     }
   }
 
   .btn-confirm {
-    background-color: #28a745;
-    margin-top: 1.5rem;
+    background-color: var(--tbjl-color-success, #1e9e5a);
+    margin-top: 24px;
 
-    &:hover {
-      background-color: #218838;
+    &:hover:not(:disabled) {
+      background-color: #167a44;
     }
   }
 }
 
 .quote-result {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-left: 4px solid var(--tbjl-color-primary, #0056b3);
-  border-radius: 0.25rem;
+  margin-top: 28px;
+  padding: 24px;
+  background-color: var(--tbjl-color-neutral-100, #eef4fb);
+  border-left: 5px solid var(--tbjl-color-primary-500, #141cdb);
+  border-radius: var(--tbjl-radius-md, 0.5rem);
 
   h3 {
     margin-top: 0;
-    margin-bottom: 1rem;
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: 700;
   }
 
   .desglose-list {
     list-style: none;
     padding: 0;
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 20px 0;
 
     li {
       display: flex;
       justify-content: space-between;
-      padding: 0.5rem 0;
-      border-bottom: 1px dashed #dee2e6;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--tbjl-color-border, #dce3ea);
 
       .concepto {
-        color: #495057;
+        color: var(--tbjl-color-neutral-700, #454556);
       }
 
       .monto {
-        font-weight: 600;
+        font-weight: 700;
       }
     }
   }
@@ -188,65 +202,57 @@ output {
     p {
       display: flex;
       justify-content: space-between;
-      margin: 0.5rem 0;
-      font-size: 1rem;
+      margin: 8px 0;
+      font-size: 15px;
 
       span {
-        font-weight: 600;
+        font-weight: 700;
       }
     }
 
     .total-pay {
-      font-size: 1.25rem;
-      font-weight: bold;
-      border-top: 2px solid #dee2e6;
-      padding-top: 0.75rem;
-      margin-top: 0.75rem;
+      font-size: 20px;
+      font-weight: 900;
+      border-top: 2px solid var(--tbjl-color-border, #dce3ea);
+      padding-top: 12px;
+      margin-top: 12px;
 
       span {
-        color: var(--tbjl-color-primary, #0056b3);
+        color: var(--tbjl-color-primary-500, #141cdb);
       }
     }
   }
 }
 
 .order-success {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-  border-radius: 0.25rem;
+  margin-top: 28px;
+  padding: 24px;
+  background-color: #e6f7ef;
+  color: #0d5f32;
+  border: 1px solid #b7ebd0;
+  border-radius: var(--tbjl-radius-md, 0.5rem);
 
   h3 {
     margin-top: 0;
-    color: #155724;
+    color: #0d5f32;
   }
 
   .badge-pending {
-    background-color: #ffeeba;
-    color: #856404;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-weight: bold;
-  }
-
-  .payment-next-steps {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #c3e6cb;
-    font-size: 0.95rem;
+    background-color: #fef3c7;
+    color: #92400e;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 13px;
   }
 }
 
 .form-error {
-  // #721c24 sobre #f8d7da da ~8.2:1 de contraste (WCAG AA exige 4.5:1 para
-  // texto normal); el rojo anterior (#dc3545) solo llegaba a ~3.4:1.
-  color: #721c24;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  padding: 0.75rem;
-  border-radius: 0.25rem;
-  margin-top: 1rem;
+  color: var(--tbjl-color-error, #ba1a1a);
+  background-color: #ffdad6;
+  border: 1px solid #ffb4ab;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 16px;
   font-weight: 600;
 }

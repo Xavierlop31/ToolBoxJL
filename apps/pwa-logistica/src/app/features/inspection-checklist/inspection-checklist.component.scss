@@ -1,24 +1,77 @@
 .inspection-checklist {
   max-width: 640px;
   margin: 0 auto;
-  padding: var(--tbjl-spacing-6, 1.5rem);
+  padding: 24px 16px;
+  font-family: var(--tbjl-font-family, sans-serif);
+
+  h1 {
+    font-size: 24px;
+    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+    font-weight: 700;
+    color: var(--tbjl-color-neutral-900, #161c21);
+    margin: 0 0 20px 0;
+  }
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  margin-bottom: var(--tbjl-spacing-3, 0.75rem);
+  gap: 6px;
+  margin-bottom: 16px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tbjl-color-neutral-700, #454556);
+  }
+
+  input, select, textarea {
+    padding: 10px 14px;
+    border: 1px solid var(--tbjl-color-border, #dce3ea);
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    font-size: 14px;
+    background: #ffffff;
+    color: var(--tbjl-color-neutral-900, #161c21);
+
+    &:focus {
+      outline: none;
+      border-color: var(--tbjl-color-primary-500, #141cdb);
+    }
+  }
 }
 
 .hallazgo-row {
-  margin-bottom: var(--tbjl-spacing-4, 1rem);
-  padding: var(--tbjl-spacing-3, 0.75rem);
-  border: 1px solid var(--tbjl-color-border, #ccc);
-  border-radius: 4px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--tbjl-color-card, #ffffff);
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
 }
 
-// <output> is inline by default; keep the same block layout/spacing the
-// previous <p role="status"> elements had from the browser UA stylesheet.
+button[type='submit'] {
+  width: 100%;
+  padding: 14px;
+  background: var(--tbjl-color-primary-500, #141cdb);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 56px;
+  transition: background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--tbjl-color-primary-600, #0003a8);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 output {
   display: block;
   margin: 1em 0;

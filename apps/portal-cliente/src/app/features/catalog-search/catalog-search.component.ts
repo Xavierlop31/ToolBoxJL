@@ -26,6 +26,8 @@ export class CatalogSearchComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly results = signal<ToolModel[]>([]);
 
+  readonly selectedCategory = signal<string>('ALL');
+
   readonly form = this.formBuilder.nonNullable.group({
     q: [''],
   });
@@ -34,11 +36,22 @@ export class CatalogSearchComponent implements OnInit {
     this.search();
   }
 
+  setCategory(cat: string): void {
+    this.selectedCategory.set(cat);
+    if (cat === 'ALL') {
+      this.form.patchValue({ q: '' });
+    } else {
+      this.form.patchValue({ q: cat });
+    }
+    this.search();
+  }
+
   search(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.catalog.search({ q: this.form.getRawValue().q || undefined }).subscribe({
+    const query = this.form.getRawValue().q?.trim() || undefined;
+    this.catalog.search({ q: query }).subscribe({
       next: (models) => {
         this.results.set(models);
         this.loading.set(false);
