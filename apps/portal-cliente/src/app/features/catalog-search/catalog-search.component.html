@@ -70,6 +70,30 @@
     >
       Medición & Nivelación
     </button>
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'Generación y Energía'"
+      (click)="setCategory('Generación y Energía')"
+    >
+      Generación & Energía
+    </button>
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'Compresión y Pintura'"
+      (click)="setCategory('Compresión y Pintura')"
+    >
+      Compresión & Neumática
+    </button>
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="selectedCategory() === 'Limpieza y Lavado'"
+      (click)="setCategory('Limpieza y Lavado')"
+    >
+      Limpieza & Lavado
+    </button>
   </section>
 
   <!-- State Feedback -->
@@ -100,9 +124,17 @@
     @for (model of results(); track model.id) {
       <li class="tool-card card-industrial">
         <a [routerLink]="['/catalogo', model.id]" class="tool-card-link">
-          <div class="tool-card-header">
+          <!-- Tool Image Preview -->
+          <div class="tool-image-wrapper">
+            <img
+              [src]="getToolImage(model)"
+              [alt]="model.nombre"
+              class="tool-image"
+              loading="lazy"
+              (error)="onImageError($event)"
+            />
             <span class="category-chip">{{ model.categoria }}</span>
-            <span class="brand-chip">{{ model.marca }}</span>
+            <span class="brand-badge">{{ model.marca }}</span>
           </div>
 
           <div class="tool-card-body">
