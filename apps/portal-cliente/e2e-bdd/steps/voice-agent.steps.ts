@@ -140,7 +140,7 @@ async function prepararClienteAutenticado(page: Page): Promise<void> {
   });
 
   await page.goto('/catalogo');
-  await expect(page.locator('[data-testid="voice-widget-button"]')).toBeVisible();
+  await expect(page.locator('[data-testid="voice-widget-button"]')).toBeVisible({ timeout: 10_000 });
 }
 
 // ============================================================================

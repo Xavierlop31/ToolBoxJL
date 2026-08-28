@@ -1,10 +1,12 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ToolModel } from '../../core/models/catalog.models';
 import { Quote, Order, Payment, MetodoPago } from '../../core/models/order.models';
+import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
 
 /**
  * Ficha de modelo + consulta de disponibilidad + cotización y creación de órdenes (RF-2.1).
@@ -14,7 +16,7 @@ import { Quote, Order, Payment, MetodoPago } from '../../core/models/order.model
 @Component({
   selector: 'app-model-detail',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink, DecimalPipe],
   templateUrl: './model-detail.component.html',
   styleUrl: './model-detail.component.scss',
 })
@@ -61,6 +63,17 @@ export class ModelDetailComponent implements OnInit {
     direccionEntrega: ['', Validators.required],
     zonaId: ['', Validators.required],
   });
+
+  getToolImage(model: ToolModel): string {
+    return getToolImageUrl(model);
+  }
+
+  onImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    if (target && target.src !== FALLBACK_TOOL_IMAGE) {
+      target.src = FALLBACK_TOOL_IMAGE;
+    }
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

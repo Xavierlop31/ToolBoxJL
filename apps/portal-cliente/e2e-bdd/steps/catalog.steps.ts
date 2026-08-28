@@ -19,10 +19,10 @@ const mockModel = {
  * `page.route`, respetando exactamente los schemas de openapi.yaml.
  */
 Given('que soy un Cliente navegando el catálogo', async ({ page }) => {
-  await page.route('**/api/v1/catalog/search*', (route) =>
+  await page.route('**/catalog/search*', (route) =>
     route.fulfill({ json: [mockModel] }),
   );
-  await page.route(`**/api/v1/catalog/models/${mockModel.id}`, (route) =>
+  await page.route(`**/catalog/models/${mockModel.id}`, (route) =>
     route.fulfill({ json: mockModel }),
   );
 
@@ -33,7 +33,7 @@ Given('que soy un Cliente navegando el catálogo', async ({ page }) => {
 When(
   'consulto la disponibilidad de un modelo para un rango de fechas específico',
   async ({ page }) => {
-    await page.route('**/api/v1/inventory/check-availability*', (route) => {
+    await page.route('**/inventory/check-availability*', (route) => {
       const url = new URL(route.request().url());
       expect(url.searchParams.get('modelo_id')).toBe(mockModel.id);
       expect(url.searchParams.get('fecha_inicio')).toBe('2026-09-01');

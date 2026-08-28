@@ -26,6 +26,7 @@ export interface ToolModel {
   deposito_pct?: number | null;
   interes_mora_dia?: number | null;
   manual_pdf_url?: string | null;
+  imagen_url?: string | null;
   disponible_para_venta: boolean;
 }
 
