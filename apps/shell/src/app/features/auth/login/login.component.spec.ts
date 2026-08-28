@@ -91,6 +91,7 @@ describe('LoginComponent', () => {
     component.toggleMode();
     fixture.detectChanges();
     setFieldValues('nuevo@toolboxjl.com', 'secret123');
+    component.telefonoControl.setValue('+573001234567');
 
     submitForm();
     await fixture.whenStable();
@@ -98,9 +99,21 @@ describe('LoginComponent', () => {
     expect(authServiceSpy.signUp).toHaveBeenCalledWith(
       'nuevo@toolboxjl.com',
       'secret123',
+      '+573001234567',
     );
     expect(authServiceSpy.signInWithPassword).not.toHaveBeenCalled();
     expect(component.infoMessage()).toContain('Cuenta creada');
+  });
+
+  it('en modo "signUp" no llama a AuthService.signUp si el teléfono queda vacío', async () => {
+    component.toggleMode();
+    fixture.detectChanges();
+    setFieldValues('nuevo@toolboxjl.com', 'secret123');
+
+    submitForm();
+    await fixture.whenStable();
+
+    expect(authServiceSpy.signUp).not.toHaveBeenCalled();
   });
 
   it('el botón "Continuar con Google" llama a AuthService.signInWithGoogle', async () => {
