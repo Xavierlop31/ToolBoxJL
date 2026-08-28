@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import type { AuthError, Session } from '@supabase/supabase-js';
 
 import { SUPABASE_CLIENT } from './supabase-client';
@@ -54,6 +55,7 @@ function extractRol(session: Session | null): Rol {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly supabase = inject(SUPABASE_CLIENT);
+  private readonly router = inject(Router);
 
   private readonly sessionSignal = signal<Session | null>(null);
   private readonly sessionLoadedSignal = signal(false);
@@ -85,9 +87,12 @@ export class AuthService {
       this.sessionLoadedSignal.set(true);
     });
 
-    this.supabase.auth.onAuthStateChange((_event, session) => {
+    this.supabase.auth.onAuthStateChange((event, session) => {
       this.sessionSignal.set(session);
       this.sessionLoadedSignal.set(true);
+      if (event === 'SIGNED_OUT') {
+        void this.router.navigate(['/login']);
+      }
     });
   }
 
@@ -141,6 +146,11 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
-    await this.supabase.auth.signOut();
+    try {
+      await this.supabase.auth.signOut();
+    } finally {
+      this.sessionSignal.set(null);
+      await this.router.navigate(['/login']);
+    }
   }
 }
