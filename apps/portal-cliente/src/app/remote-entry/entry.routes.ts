@@ -26,12 +26,29 @@ export const remoteRoutes: Routes = [
     component: PortalShellComponent,
     children: [
       {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('../features/catalog-search/catalog-search.component').then(
+            (m) => m.CatalogSearchComponent,
+          ),
+        title: 'Catálogo — ToolBox JL',
+      },
+      {
         path: 'catalogo',
         loadComponent: () =>
           import('../features/catalog-search/catalog-search.component').then(
             (m) => m.CatalogSearchComponent,
           ),
         title: 'Catálogo — ToolBox JL',
+      },
+      {
+        path: ':id',
+        loadComponent: () =>
+          import('../features/model-detail/model-detail.component').then(
+            (m) => m.ModelDetailComponent,
+          ),
+        title: 'Ficha de modelo — ToolBox JL',
       },
       {
         path: 'catalogo/:id',

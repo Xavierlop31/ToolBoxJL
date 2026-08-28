@@ -1,174 +1,254 @@
 <main class="model-detail">
+  <div class="breadcrumb-nav">
+    <a routerLink="/catalogo" class="btn-back">
+      <span class="material-symbols-outlined">arrow_back</span>
+      <span>Volver al Catálogo</span>
+    </a>
+  </div>
+
   @if (loading()) {
-    <output>Cargando ficha del modelo…</output>
+    <div class="loading-state">
+      <span class="material-symbols-outlined spin-icon">progress_activity</span>
+      <output>Cargando ficha del modelo…</output>
+    </div>
   }
 
   @if (errorMessage()) {
-    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+    <div class="form-error-box" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <p class="form-error">{{ errorMessage() }}</p>
+    </div>
   }
 
   @if (model(); as model) {
-    <h1>{{ model.nombre }}</h1>
-    <p class="model-meta">{{ model.marca }} · {{ model.categoria }}</p>
-    <p class="model-rate">Tarifa diaria: {{ model.tarifa_dia }} COP</p>
-
-    <section class="quote-section" aria-labelledby="quote-title">
-      <h2 id="quote-title">Cotizar Alquiler o Compra</h2>
-
-      <form [formGroup]="form" (ngSubmit)="getQuote()" novalidate>
-        
-        @if (model.disponible_para_venta) {
-          <div class="field toggle-field">
-            <span class="label">Modalidad</span>
-            <div class="radio-group">
-              <label>
-                <input type="radio" value="alquiler" formControlName="tipo" />
-                Alquiler
-              </label>
-              <label>
-                <input type="radio" value="venta" formControlName="tipo" />
-                Compra (Venta)
-              </label>
-            </div>
-          </div>
-        }
-
-        @if (form.get('tipo')?.value === 'alquiler') {
-          <div class="date-fields">
-            <div class="field">
-              <label for="fechaInicio">Fecha inicio</label>
-              <input id="fechaInicio" type="date" formControlName="fechaInicio" />
-            </div>
-            <div class="field">
-              <label for="fechaFin">Fecha fin</label>
-              <input id="fechaFin" type="date" formControlName="fechaFin" />
-            </div>
-          </div>
-
-          <div class="availability-check-wrapper">
-            <button type="button" class="btn-secondary" (click)="checkAvailability()" [disabled]="availabilityLoading()">
-              {{ availabilityLoading() ? 'Consultando disponibilidad…' : 'Consultar disponibilidad' }}
-            </button>
-            @if (availabilityError()) {
-              <p class="form-error" role="alert">{{ availabilityError() }}</p>
-            }
-            @if (unidadesDisponibles() !== null) {
-              <output data-testid="availability-result" class="availability-success">
-                {{ unidadesDisponibles() }} unidades disponibles para el rango seleccionado.
-              </output>
-            }
-          </div>
-        }
-
-        <div class="field">
-          <label for="direccionEntrega">Dirección de entrega</label>
-          <input id="direccionEntrega" type="text" formControlName="direccionEntrega" placeholder="Ej. Calle 100 # 15-20" />
+    <div class="detail-grid">
+      <!-- Left Column: Tool Visual & Specifications -->
+      <section class="tool-preview-card card-industrial">
+        <div class="main-image-wrapper">
+          <img
+            [src]="getToolImage(model)"
+            [alt]="model.nombre"
+            class="detail-tool-image"
+            (error)="onImageError($event)"
+          />
+          <span class="detail-category-chip">{{ model.categoria }}</span>
+          <span class="detail-brand-badge">{{ model.marca }}</span>
         </div>
 
-        <div class="field">
-          <label for="zonaId">Zona de entrega</label>
-          <select id="zonaId" formControlName="zonaId">
-            <option value="">Selecciona una zona</option>
-            @for (zona of zonas; track zona.id) {
-              <option [value]="zona.id">{{ zona.nombre }}</option>
-            }
-          </select>
-        </div>
+        <div class="product-info-block">
+          <h1 class="model-title">{{ model.nombre }}</h1>
+          <p class="model-meta">{{ model.marca }} · {{ model.categoria }}</p>
 
-        <button type="submit" class="btn-primary" [disabled]="quoteLoading()">
-          {{ quoteLoading() ? 'Calculando cotización…' : 'Calcular Cotización' }}
-        </button>
-      </form>
-
-      @if (quoteError()) {
-        <p class="form-error" role="alert">{{ quoteError() }}</p>
-      }
-
-      <!-- Desglose de Cotización -->
-      @if (quoteResult(); as quote) {
-        <div class="quote-result" data-testid="quote-result">
-          <h3>Desglose de Cotización</h3>
-          <ul class="desglose-list">
-            @for (item of quote.desglose; track item.concepto) {
-              <li>
-                <span class="concepto">{{ item.concepto }}</span>
-                <span class="monto">{{ item.monto }} COP</span>
-              </li>
+          <div class="rates-display">
+            <div class="rate-card">
+              <span class="rate-label">Tarifa Diaria</span>
+              <span class="rate-amount">\${{ model.tarifa_dia | number }} <small>COP / día</small></span>
+            </div>
+            @if (model.tarifa_semana) {
+              <div class="rate-card rate-weekly">
+                <span class="rate-label">Tarifa Semanal</span>
+                <span class="rate-amount">\${{ model.tarifa_semana | number }} <small>COP / sem</small></span>
+              </div>
             }
-          </ul>
-          <div class="quote-totals">
-            <p>Tarifa Base: <span>{{ quote.tarifa_base }} COP</span></p>
-            <p>Recargo Logístico: <span>{{ quote.recargo_logistico }} COP</span></p>
-            @if (quote.deposito_garantia > 0) {
-              <p>Depósito de Garantía: <span>{{ quote.deposito_garantia }} COP</span></p>
-            }
-            <p class="total-pay">Total a Pagar: <span data-testid="quote-total">{{ quote.total }} COP</span></p>
           </div>
 
-          <button type="button" class="btn-confirm" (click)="confirmOrder()" [disabled]="orderLoading()">
-            {{ orderLoading() ? 'Confirmando orden…' : 'Confirmar y Crear Orden' }}
-          </button>
+          <!-- Specs chips -->
+          <div class="specs-grid">
+            @if (model.potencia_w) {
+              <div class="spec-item">
+                <span class="material-symbols-outlined">bolt</span>
+                <div>
+                  <strong>Potencia</strong>
+                  <span>{{ model.potencia_w }} W</span>
+                </div>
+              </div>
+            }
+            @if (model.peso_kg) {
+              <div class="spec-item">
+                <span class="material-symbols-outlined">fitness_center</span>
+                <div>
+                  <strong>Peso</strong>
+                  <span>{{ model.peso_kg }} kg</span>
+                </div>
+              </div>
+            }
+            <div class="spec-item">
+              <span class="material-symbols-outlined">qr_code_2</span>
+              <div>
+                <strong>Trazabilidad</strong>
+                <span>Serializada por QR</span>
+              </div>
+            </div>
+            <div class="spec-item">
+              <span class="material-symbols-outlined">verified_user</span>
+              <div>
+                <strong>Garantía</strong>
+                <span>Revisión Técnica 100%</span>
+              </div>
+            </div>
+          </div>
         </div>
-      }
+      </section>
 
-      @if (orderError()) {
-        <p class="form-error" role="alert">{{ orderError() }}</p>
-      }
+      <!-- Right Column: Quotation & Checkout -->
+      <section class="quote-section card-industrial" aria-labelledby="quote-title">
+        <h2 id="quote-title">Cotizar Alquiler o Compra</h2>
 
-      <!-- Orden Creada Exitosamente -->
-      @if (orderResult(); as order) {
-        <div class="order-success" data-testid="order-success">
-          <h3>¡Orden Creada Exitosamente!</h3>
-          <p>Tu orden ha sido registrada con el ID: <strong>{{ order.id }}</strong></p>
-          <p>Estado actual: <span class="badge-pending">{{ order.estado }}</span></p>
-
-          @if (!paymentResult()) {
-            <div class="payment-section" data-testid="payment-section">
-              <h4>Selecciona tu método de pago</h4>
+        <form [formGroup]="form" (ngSubmit)="getQuote()" novalidate>
+          
+          @if (model.disponible_para_venta) {
+            <div class="field toggle-field">
+              <span class="label">Modalidad</span>
               <div class="radio-group">
                 <label>
-                  <input type="radio" name="metodoPago" value="pse" [checked]="selectedMetodoPago() === 'pse'" (change)="setMetodoPago('pse')" />
-                  PSE
+                  <input type="radio" value="alquiler" formControlName="tipo" />
+                  Alquiler
                 </label>
                 <label>
-                  <input type="radio" name="metodoPago" value="tarjeta" [checked]="selectedMetodoPago() === 'tarjeta'" (change)="setMetodoPago('tarjeta')" />
-                  Tarjeta
-                </label>
-                <label>
-                  <input type="radio" name="metodoPago" value="contra_entrega" [checked]="selectedMetodoPago() === 'contra_entrega'" (change)="setMetodoPago('contra_entrega')" />
-                  Contra entrega
+                  <input type="radio" value="venta" formControlName="tipo" />
+                  Compra (Venta)
                 </label>
               </div>
+            </div>
+          }
 
-              @if (selectedMetodoPago() === 'tarjeta' || selectedMetodoPago() === 'pse') {
-                <p class="payment-placeholder-note">
-                  En producción, acá se embebe el checkout seguro de Wompi (tokeniza la tarjeta/PSE directo con Wompi, sin pasar por nuestro servidor).
-                </p>
-              }
+          @if (form.get('tipo')?.value === 'alquiler') {
+            <div class="date-fields">
+              <div class="field">
+                <label for="fechaInicio">Fecha inicio</label>
+                <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+              </div>
+              <div class="field">
+                <label for="fechaFin">Fecha fin</label>
+                <input id="fechaFin" type="date" formControlName="fechaFin" />
+              </div>
+            </div>
 
-              <button type="button" class="btn-primary" data-testid="confirm-payment" (click)="confirmPayment()" [disabled]="paymentLoading()">
-                {{ paymentLoading() ? 'Procesando pago…' : 'Confirmar pago' }}
+            <div class="availability-check-wrapper">
+              <button type="button" class="btn-secondary" (click)="checkAvailability()" [disabled]="availabilityLoading()">
+                {{ availabilityLoading() ? 'Consultando disponibilidad…' : 'Consultar disponibilidad' }}
               </button>
-
-              @if (paymentError()) {
-                <p class="form-error" role="alert">{{ paymentError() }}</p>
+              @if (availabilityError()) {
+                <p class="form-error" role="alert">{{ availabilityError() }}</p>
+              }
+              @if (unidadesDisponibles() !== null) {
+                <output data-testid="availability-result" class="availability-success">
+                  {{ unidadesDisponibles() }} unidades disponibles para el rango seleccionado.
+                </output>
               }
             </div>
           }
 
-          @if (paymentResult(); as payment) {
-            <div class="payment-result" data-testid="payment-result">
-              @if (payment.metodo === 'tarjeta') {
-                <p class="payment-success">Pago procesado. El depósito de garantía queda retenido (hold) hasta la devolución.</p>
-              } @else if (payment.metodo === 'pse') {
-                <p class="payment-success">Pago procesado exitosamente.</p>
-              } @else {
-                <p class="payment-success">Pago reservado — se confirma cuando el Repartidor lo reciba.</p>
+          <div class="field">
+            <label for="direccionEntrega">Dirección de entrega</label>
+            <input id="direccionEntrega" type="text" formControlName="direccionEntrega" placeholder="Ej. Calle 100 # 15-20" />
+          </div>
+
+          <div class="field">
+            <label for="zonaId">Zona de entrega</label>
+            <select id="zonaId" formControlName="zonaId">
+              <option value="">Selecciona una zona</option>
+              @for (zona of zonas; track zona.id) {
+                <option [value]="zona.id">{{ zona.nombre }}</option>
               }
+            </select>
+          </div>
+
+          <button type="submit" class="btn-primary" [disabled]="quoteLoading()">
+            {{ quoteLoading() ? 'Calculando cotización…' : 'Calcular Cotización' }}
+          </button>
+        </form>
+
+        @if (quoteError()) {
+          <p class="form-error" role="alert">{{ quoteError() }}</p>
+        }
+
+        <!-- Desglose de Cotización -->
+        @if (quoteResult(); as quote) {
+          <div class="quote-result" data-testid="quote-result">
+            <h3>Desglose de Cotización</h3>
+            <ul class="desglose-list">
+              @for (item of quote.desglose; track item.concepto) {
+                <li>
+                  <span class="concepto">{{ item.concepto }}</span>
+                  <span class="monto">{{ item.monto }} COP</span>
+                </li>
+              }
+            </ul>
+            <div class="quote-totals">
+              <p>Tarifa Base: <span>{{ quote.tarifa_base }} COP</span></p>
+              <p>Recargo Logístico: <span>{{ quote.recargo_logistico }} COP</span></p>
+              @if (quote.deposito_garantia > 0) {
+                <p>Depósito de Garantía: <span>{{ quote.deposito_garantia }} COP</span></p>
+              }
+              <p class="total-pay">Total a Pagar: <span data-testid="quote-total">{{ quote.total }} COP</span></p>
             </div>
-          }
-        </div>
-      }
-    </section>
+
+            <button type="button" class="btn-confirm" (click)="confirmOrder()" [disabled]="orderLoading()">
+              {{ orderLoading() ? 'Confirmando orden…' : 'Confirmar y Crear Orden' }}
+            </button>
+          </div>
+        }
+
+        @if (orderError()) {
+          <p class="form-error" role="alert">{{ orderError() }}</p>
+        }
+
+        <!-- Orden Creada Exitosamente -->
+        @if (orderResult(); as order) {
+          <div class="order-success" data-testid="order-success">
+            <h3>¡Orden Creada Exitosamente!</h3>
+            <p>Tu orden ha sido registrada con el ID: <strong>{{ order.id }}</strong></p>
+            <p>Estado actual: <span class="badge-pending">{{ order.estado }}</span></p>
+
+            @if (!paymentResult()) {
+              <div class="payment-section" data-testid="payment-section">
+                <h4>Selecciona tu método de pago</h4>
+                <div class="radio-group">
+                  <label>
+                    <input type="radio" name="metodoPago" value="pse" [checked]="selectedMetodoPago() === 'pse'" (change)="setMetodoPago('pse')" />
+                    PSE
+                  </label>
+                  <label>
+                    <input type="radio" name="metodoPago" value="tarjeta" [checked]="selectedMetodoPago() === 'tarjeta'" (change)="setMetodoPago('tarjeta')" />
+                    Tarjeta
+                  </label>
+                  <label>
+                    <input type="radio" name="metodoPago" value="contra_entrega" [checked]="selectedMetodoPago() === 'contra_entrega'" (change)="setMetodoPago('contra_entrega')" />
+                    Contra entrega
+                  </label>
+                </div>
+
+                @if (selectedMetodoPago() === 'tarjeta' || selectedMetodoPago() === 'pse') {
+                  <p class="payment-placeholder-note">
+                    En producción, acá se embebe el checkout seguro de Wompi (tokeniza la tarjeta/PSE directo con Wompi, sin pasar por nuestro servidor).
+                  </p>
+                }
+
+                <button type="button" class="btn-primary" data-testid="confirm-payment" (click)="confirmPayment()" [disabled]="paymentLoading()">
+                  {{ paymentLoading() ? 'Procesando pago…' : 'Confirmar pago' }}
+                </button>
+
+                @if (paymentError()) {
+                  <p class="form-error" role="alert">{{ paymentError() }}</p>
+                }
+              </div>
+            }
+
+            @if (paymentResult(); as payment) {
+              <div class="payment-result" data-testid="payment-result">
+                @if (payment.metodo === 'tarjeta') {
+                  <p class="payment-success">Pago procesado. El depósito de garantía queda retenido (hold) hasta la devolución.</p>
+                } @else if (payment.metodo === 'pse') {
+                  <p class="payment-success">Pago procesado exitosamente.</p>
+                } @else {
+                  <p class="payment-success">Pago reservado — se confirma cuando el Repartidor lo reciba.</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
   }
 </main>

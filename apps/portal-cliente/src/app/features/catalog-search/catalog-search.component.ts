@@ -6,6 +6,8 @@ import { RouterLink } from '@angular/router';
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ToolModel } from '../../core/models/catalog.models';
 
+import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
+
 /**
  * Búsqueda pública de catálogo — RF-1.1 (visibilidad del catálogo),
  * features/01_catalogo_inventario.feature. Consume `GET /catalog/search`
@@ -36,6 +38,17 @@ export class CatalogSearchComponent implements OnInit {
     this.search();
   }
 
+  getToolImage(model: ToolModel): string {
+    return getToolImageUrl(model);
+  }
+
+  onImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    if (target && target.src !== FALLBACK_TOOL_IMAGE) {
+      target.src = FALLBACK_TOOL_IMAGE;
+    }
+  }
+
   setCategory(cat: string): void {
     this.selectedCategory.set(cat);
     if (cat === 'ALL') {
@@ -63,3 +76,4 @@ export class CatalogSearchComponent implements OnInit {
     });
   }
 }
+
