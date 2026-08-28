@@ -11,38 +11,44 @@
  */
 
 :root {
-  /* Color — marca */
-  --tbjl-color-primary-50: #fff4ed;
-  --tbjl-color-primary-100: #ffe3d1;
-  --tbjl-color-primary-300: #ffa968;
-  --tbjl-color-primary-500: #f2600c;
-  --tbjl-color-primary-600: #c94c08;
-  --tbjl-color-primary-700: #9c3b07;
+  /* Color — marca (Stitch Industrial Racing) */
+  --tbjl-color-primary-50: #e0e0ff;
+  --tbjl-color-primary-100: #bec2ff;
+  --tbjl-color-primary-300: #3943f2;
+  --tbjl-color-primary-500: #141cdb; /* Brand Blue */
+  --tbjl-color-primary-600: #0003a8; /* Deep Blue */
+  --tbjl-color-primary-700: #0b0e3d; /* Deep Navy */
 
-  /* Color — neutrales */
+  --tbjl-color-secondary-500: #e70012; /* Brand Red */
+  --tbjl-color-secondary-600: #bc000c;
+  --tbjl-color-secondary-700: #8e0e00;
+
+  /* Color — neutrales / superficie */
   --tbjl-color-neutral-0: #ffffff;
-  --tbjl-color-neutral-50: #f7f7f8;
-  --tbjl-color-neutral-100: #ededf0;
-  --tbjl-color-neutral-200: #d7d9dd;
-  --tbjl-color-neutral-300: #b4b8bf;
-  --tbjl-color-neutral-500: #6b7280;
-  --tbjl-color-neutral-700: #374151;
-  --tbjl-color-neutral-900: #111827;
+  --tbjl-color-neutral-50: #f5faff;
+  --tbjl-color-neutral-100: #eef4fb;
+  --tbjl-color-neutral-200: #e8eff5;
+  --tbjl-color-neutral-300: #dce3ea;
+  --tbjl-color-neutral-500: #757588;
+  --tbjl-color-neutral-700: #454556;
+  --tbjl-color-neutral-900: #161c21;
 
   /* Color — feedback */
-  --tbjl-color-success: #1b8a5a;
-  --tbjl-color-warning: #b7791f;
-  --tbjl-color-error: #c0362c;
-  --tbjl-color-info: #2563eb;
+  --tbjl-color-success: #1e9e5a;
+  --tbjl-color-warning: #e0a400;
+  --tbjl-color-error: #ba1a1a;
+  --tbjl-color-info: #141cdb;
 
   /* Color — superficie */
-  --tbjl-color-background: #f7f7f8;
+  --tbjl-color-background: #f5faff;
   --tbjl-color-card: #ffffff;
-  --tbjl-color-border: #d7d9dd;
+  --tbjl-color-border: #dce3ea;
 
   /* Tipografía */
   --tbjl-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
     Roboto, sans-serif;
+  --tbjl-font-family-headings: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
   --tbjl-font-size-xs: 0.75rem;
   --tbjl-font-size-sm: 0.875rem;
   --tbjl-font-size-base: 1rem;

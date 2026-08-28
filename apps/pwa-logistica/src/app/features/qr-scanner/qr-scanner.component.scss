@@ -1,12 +1,28 @@
 .scanner {
-  max-width: 480px;
+  max-width: 520px;
   margin: 0 auto;
-  padding: var(--tbjl-spacing-6, 1.5rem);
+  padding: 24px 16px;
   text-align: center;
+  font-family: var(--tbjl-font-family, sans-serif);
+
+  h1 {
+    font-size: 24px;
+    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+    font-weight: 700;
+    color: var(--tbjl-color-neutral-900, #161c21);
+    margin: 0 0 16px 0;
+  }
 }
 
 .scanner-video {
   width: 100%;
-  border-radius: var(--tbjl-radius-md, 0.5rem);
-  background: #000;
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  background: #0b0e3d;
+  border: 2px solid var(--tbjl-color-primary-500, #141cdb);
+  box-shadow: 0 4px 16px rgba(20, 28, 219, 0.2);
+}
+
+output {
+  display: block;
+  margin: 1em 0;
 }

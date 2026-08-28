@@ -1,61 +1,53 @@
 /**
  * Design tokens — ToolBox JL
  *
- * ASUNCIÓN (Sprint 0): la referencia formal es
- * `docs/04_Especificacion_UIUX_ToolBoxJL.docx`, que no es legible desde este
- * entorno de agente (archivo .docx binario). Estos valores son un punto de
- * partida provisorio inferido de `docs/DESIGN.md` (rubro: alquiler/venta de
- * herramientas eléctricas para construcción — tono industrial, alto
- * contraste, confiable) y de convenciones estándar de accesibilidad
- * (contraste AA). El Tech Lead debe reemplazarlos por los valores reales del
- * documento UI/UX al conectar el proyecto de Stitch (Plan de Implementación,
- * Sprint 10 según el roadmap de Frontend, o antes si el documento se vuelve
- * legible primero).
- *
- * No se ajustó nada de esto contra el .docx: es una base de trabajo, no la
- * fuente de verdad.
+ * Fuente de verdad: Google Stitch Project 6704671418307409330
+ * Estilo: "Industrial Racing" (Brand Blue #141CDB, Brand Red #E70012, Deep Navy #0B0E3D)
+ * Tipografía: Montserrat (Display/Headings) + Inter (Body/UI/Data)
  */
 
 export const colorTokens = {
   brand: {
-    // Naranja "seguridad industrial" — asociación visual con herramientas de
-    // construcción y EPP (equipo de protección personal).
-    primary50: '#FFF4ED',
-    primary100: '#FFE3D1',
-    primary300: '#FFA968',
-    primary500: '#F2600C', // color de marca principal
-    primary600: '#C94C08',
-    primary700: '#9C3B07',
+    // Azul Industrial & Rojo Acción — Sistema Industrial Racing de Stitch
+    primary50: '#E0E0FF',
+    primary100: '#BEC2FF',
+    primary300: '#3943F2',
+    primary500: '#141CDB', // Color primario de marca (Brand Blue)
+    primary600: '#0003A8', // Azul profundo
+    primary700: '#0B0E3D', // Deep Navy
+    // Color secundario (Brand Red)
+    secondary500: '#E70012',
+    secondary600: '#BC000C',
+    secondary700: '#8E0E00',
   },
   neutral: {
     0: '#FFFFFF',
-    50: '#F7F7F8',
-    100: '#EDEEF0',
-    200: '#D7D9DD',
-    300: '#B4B8BF',
-    500: '#6B7280',
-    700: '#374151',
-    900: '#111827', // texto principal
+    50: '#F5FAFF', // Superficie principal
+    100: '#EEF4FB', // Contenedor bajo
+    200: '#E8EFF5', // Contenedor medio
+    300: '#DCE3EA', // Contenedor alto / bordes
+    500: '#757588', // Outline
+    700: '#454556', // On-surface variant
+    900: '#161C21', // Texto principal (On-surface)
   },
   feedback: {
-    success: '#1B8A5A',
-    warning: '#B7791F',
-    error: '#C0362C',
-    info: '#2563EB',
+    success: '#1E9E5A',
+    warning: '#E0A400',
+    error: '#BA1A1A',
+    info: '#141CDB',
   },
   surface: {
-    background: '#F7F7F8',
+    background: '#F5FAFF',
     card: '#FFFFFF',
-    border: '#D7D9DD',
+    border: '#DCE3EA',
   },
 } as const;
 
 export const typographyTokens = {
-  // Familia tipográfica provisoria: sans-serif de alta legibilidad, con
-  // fallback estándar del sistema (evita depender de una fuente externa
-  // hasta que el UI/UX defina la tipografía de marca).
   fontFamily:
     "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  fontFamilyHeadings:
+    "'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   fontSize: {
     xs: '0.75rem',
     sm: '0.875rem',
