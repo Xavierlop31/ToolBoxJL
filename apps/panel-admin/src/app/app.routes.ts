@@ -11,6 +11,6 @@ import { remoteRoutes } from './remote-entry/entry.routes';
  */
 export const routes: Routes = [
   ...remoteRoutes,
-  { path: '**', redirectTo: 'vehiculos/nuevo' },
+  { path: '**', redirectTo: 'ingresos' },
 ];
 
