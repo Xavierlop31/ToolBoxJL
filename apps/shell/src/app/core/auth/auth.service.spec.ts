@@ -36,6 +36,9 @@ function createSupabaseClientMock() {
       updateUser: jasmine
         .createSpy('updateUser')
         .and.returnValue(Promise.resolve({ data: {}, error: null })),
+      refreshSession: jasmine
+        .createSpy('refreshSession')
+        .and.returnValue(Promise.resolve({ data: {}, error: null })),
     },
   } as unknown as SupabaseClient;
 
@@ -127,7 +130,7 @@ describe('AuthService', () => {
     );
   });
 
-  it('actualizarTelefono delega en supabase.auth.updateUser', async () => {
+  it('actualizarTelefono delega en supabase.auth.updateUser y refresca la sesión', async () => {
     const { service, client } = setup();
 
     const result = await service.actualizarTelefono('+573001234567');
@@ -135,13 +138,27 @@ describe('AuthService', () => {
     expect(client.auth.updateUser).toHaveBeenCalledWith({
       data: { telefono: '+573001234567' },
     });
+    expect(client.auth.refreshSession).toHaveBeenCalled();
     expect(result.error).toBeNull();
   });
 
-  it('actualizarTelefono propaga el error de Supabase Auth', async () => {
+  it('actualizarTelefono propaga el error de Supabase Auth sin refrescar la sesión', async () => {
     const { service, client } = setup();
     const authError = { message: 'No se pudo actualizar' } as AuthError;
     (client.auth.updateUser as jasmine.Spy).and.returnValue(
+      Promise.resolve({ data: {}, error: authError }),
+    );
+
+    const result = await service.actualizarTelefono('+573001234567');
+
+    expect(result.error).toBe(authError);
+    expect(client.auth.refreshSession).not.toHaveBeenCalled();
+  });
+
+  it('actualizarTelefono propaga el error si falla el refresco de sesión', async () => {
+    const { service, client } = setup();
+    const authError = { message: 'No se pudo refrescar la sesión' } as AuthError;
+    (client.auth.refreshSession as jasmine.Spy).and.returnValue(
       Promise.resolve({ data: {}, error: authError }),
     );
 

@@ -139,16 +139,31 @@ export class AuthService {
    * por Google — a diferencia de `signUp()`, el flujo de OAuth no pasa por
    * ningún formulario propio que lo pida, así que `SolicitarOtpUseCase`
    * siempre falla con `TelefonoNoDisponibleError` para esas cuentas hasta
-   * que se carga acá). `updateUser` reemite la sesión con un access_token
-   * nuevo que ya incluye `user_metadata.telefono` — no hace falta
-   * cerrar/abrir sesión para que el siguiente `POST /auth/otp/request` lo
-   * vea.
+   * que se carga acá).
+   *
+   * `updateUser()` actualiza `session.user` en el cliente pero NO emite un
+   * `access_token` nuevo (confirmado en el código de
+   * `@supabase/auth-js@2.112.4`: `_updateUser` hace
+   * `session.user = data.user` y reusa el JWT firmado que ya tenía la
+   * sesión) — VerificarAccesoUseCase lee `telefono` del claim
+   * `user_metadata` DEL JWT (ver supabase-jwt.strategy.ts), no de la fila de
+   * `auth.users`, así que sin refrescar el token el siguiente
+   * `POST /auth/otp/request` seguía viajando con el JWT viejo (sin
+   * `telefono`) y el backend volvía a rechazarlo con
+   * `TelefonoNoDisponibleError` — la pantalla quedaba pidiendo el celular en
+   * loop. `refreshSession()` fuerza a GoTrue a emitir un JWT nuevo con el
+   * `user_metadata` ya actualizado.
    */
   async actualizarTelefono(telefono: string): Promise<AuthResult> {
-    const { error } = await this.supabase.auth.updateUser({
+    const { error: updateError } = await this.supabase.auth.updateUser({
       data: { telefono },
     });
-    return { error };
+    if (updateError) {
+      return { error: updateError };
+    }
+
+    const { error: refreshError } = await this.supabase.auth.refreshSession();
+    return { error: refreshError };
   }
 
   /** Escenario Gherkin: "... o con mi cuenta de Google". */
