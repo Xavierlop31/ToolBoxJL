@@ -134,6 +134,23 @@ export class AuthService {
     return { error };
   }
 
+  /**
+   * HU-6.2: completa el teléfono de una cuenta que llegó sin uno (ej. login
+   * por Google — a diferencia de `signUp()`, el flujo de OAuth no pasa por
+   * ningún formulario propio que lo pida, así que `SolicitarOtpUseCase`
+   * siempre falla con `TelefonoNoDisponibleError` para esas cuentas hasta
+   * que se carga acá). `updateUser` reemite la sesión con un access_token
+   * nuevo que ya incluye `user_metadata.telefono` — no hace falta
+   * cerrar/abrir sesión para que el siguiente `POST /auth/otp/request` lo
+   * vea.
+   */
+  async actualizarTelefono(telefono: string): Promise<AuthResult> {
+    const { error } = await this.supabase.auth.updateUser({
+      data: { telefono },
+    });
+    return { error };
+  }
+
   /** Escenario Gherkin: "... o con mi cuenta de Google". */
   async signInWithGoogle(): Promise<AuthResult> {
     const { error } = await this.supabase.auth.signInWithOAuth({
