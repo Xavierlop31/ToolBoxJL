@@ -6,7 +6,12 @@
     </p>
 
     @if (telefonoFaltante()) {
-      <form (ngSubmit)="guardarTelefono()" novalidate data-testid="telefono-faltante-form">
+      <form
+        [formGroup]="telefonoForm"
+        (ngSubmit)="guardarTelefono()"
+        novalidate
+        data-testid="telefono-faltante-form"
+      >
         <p class="form-error" role="alert" data-testid="telefono-faltante-error">
           Todavía no tenemos un teléfono para enviarte el código por WhatsApp
           (pasa con cuentas creadas por Google). Cargalo para continuar.
@@ -16,12 +21,14 @@
           <input
             id="telefono-otp"
             type="tel"
-            [formControl]="telefonoControl"
+            formControlName="telefono"
             autocomplete="tel"
             placeholder="+573001234567"
-            [attr.aria-invalid]="telefonoControl.invalid && telefonoControl.touched"
+            [attr.aria-invalid]="
+              telefonoForm.controls.telefono.invalid && telefonoForm.controls.telefono.touched
+            "
           />
-          @if (telefonoControl.invalid && telefonoControl.touched) {
+          @if (telefonoForm.controls.telefono.invalid && telefonoForm.controls.telefono.touched) {
             <p class="field-error" role="alert">
               Ingresá un teléfono válido (formato internacional, ej: +573001234567).
             </p>

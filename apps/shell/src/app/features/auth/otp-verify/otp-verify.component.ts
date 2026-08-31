@@ -50,13 +50,18 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
     codigo: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
   });
 
-  // Standalone, mismo criterio que login.component.ts: solo se necesita (y
-  // valida) cuando `telefonoFaltante()` es true, así que no tiene sentido
-  // meterlo en `form` junto a `codigo`.
-  readonly telefonoControl = this.formBuilder.nonNullable.control('', [
-    Validators.required,
-    Validators.pattern(/^\+?[0-9]{8,15}$/),
-  ]);
+  // FormGroup propio (no un FormControl standalone ni parte de `form`):
+  // solo se necesita (y valida) cuando `telefonoFaltante()` es true, así
+  // que no tiene sentido meterlo junto a `codigo` — pero SÍ necesita estar
+  // en un FormGroup para que el `<form [formGroup]>` de más abajo pueda
+  // bindearse y que `(ngSubmit)` efectivamente intercepte el submit (ver
+  // el comentario de `form` arriba: sin `[formGroup]` el navegador hace un
+  // submit HTML nativo — recarga de página — en vez de llamar a
+  // `guardarTelefono()`; un `[formControl]` standalone en el input, sin
+  // `[formGroup]` en el `<form>`, no alcanza).
+  readonly telefonoForm = this.formBuilder.nonNullable.group({
+    telefono: ['', [Validators.required, Validators.pattern(/^\+?[0-9]{8,15}$/)]],
+  });
 
   readonly requesting = signal(false);
   readonly verifying = signal(false);
@@ -137,15 +142,15 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
   }
 
   guardarTelefono(): void {
-    if (this.telefonoControl.invalid || this.guardandoTelefono()) {
-      this.telefonoControl.markAsTouched();
+    if (this.telefonoForm.invalid || this.guardandoTelefono()) {
+      this.telefonoForm.markAllAsTouched();
       return;
     }
 
     this.guardandoTelefono.set(true);
     this.errorMessage.set(null);
 
-    this.auth.actualizarTelefono(this.telefonoControl.value).then((result) => {
+    this.auth.actualizarTelefono(this.telefonoForm.controls.telefono.value).then((result) => {
       this.guardandoTelefono.set(false);
 
       if (result.error) {
