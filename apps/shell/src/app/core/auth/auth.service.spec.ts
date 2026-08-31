@@ -33,6 +33,9 @@ function createSupabaseClientMock() {
       signOut: jasmine
         .createSpy('signOut')
         .and.returnValue(Promise.resolve({ error: null })),
+      updateUser: jasmine
+        .createSpy('updateUser')
+        .and.returnValue(Promise.resolve({ data: {}, error: null })),
     },
   } as unknown as SupabaseClient;
 
@@ -122,6 +125,29 @@ describe('AuthService', () => {
         }),
       }),
     );
+  });
+
+  it('actualizarTelefono delega en supabase.auth.updateUser', async () => {
+    const { service, client } = setup();
+
+    const result = await service.actualizarTelefono('+573001234567');
+
+    expect(client.auth.updateUser).toHaveBeenCalledWith({
+      data: { telefono: '+573001234567' },
+    });
+    expect(result.error).toBeNull();
+  });
+
+  it('actualizarTelefono propaga el error de Supabase Auth', async () => {
+    const { service, client } = setup();
+    const authError = { message: 'No se pudo actualizar' } as AuthError;
+    (client.auth.updateUser as jasmine.Spy).and.returnValue(
+      Promise.resolve({ data: {}, error: authError }),
+    );
+
+    const result = await service.actualizarTelefono('+573001234567');
+
+    expect(result.error).toBe(authError);
   });
 
   it('signOut delega en supabase.auth.signOut y navega a /login', async () => {

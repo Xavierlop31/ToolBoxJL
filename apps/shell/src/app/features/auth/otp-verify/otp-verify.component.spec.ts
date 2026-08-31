@@ -13,6 +13,7 @@ describe('OtpVerifyComponent', () => {
   let component: OtpVerifyComponent;
   let otpServiceSpy: jasmine.SpyObj<OtpService>;
   let deviceVerificationSpy: jasmine.SpyObj<DeviceVerificationService>;
+  let authServiceSpy: jasmine.SpyObj<Pick<AuthService, 'session' | 'actualizarTelefono'>>;
   let router: Router;
 
   const fakeSession = { user: { id: 'user-1' } } as unknown as Session;
@@ -27,6 +28,10 @@ describe('OtpVerifyComponent', () => {
       ['isVerified', 'markVerified'],
     );
     deviceVerificationSpy.isVerified.and.returnValue(options.alreadyVerified ?? false);
+
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['session', 'actualizarTelefono']);
+    authServiceSpy.session.and.returnValue(options.session);
+    authServiceSpy.actualizarTelefono.and.resolveTo({ error: null });
 
     otpServiceSpy.requestOtp.and.returnValue(
       // Expira en 30 segundos desde "ahora" (jasmine.clock() controla el tiempo).
@@ -46,7 +51,7 @@ describe('OtpVerifyComponent', () => {
           { path: 'home', component: OtpVerifyComponent },
           { path: 'login', component: OtpVerifyComponent },
         ]),
-        { provide: AuthService, useValue: { session: () => options.session } },
+        { provide: AuthService, useValue: authServiceSpy },
         { provide: DeviceIdService, useValue: { deviceId: 'device-1' } },
         { provide: DeviceVerificationService, useValue: deviceVerificationSpy },
         { provide: OtpService, useValue: otpServiceSpy },
@@ -139,6 +144,63 @@ describe('OtpVerifyComponent', () => {
     component.solicitarOtp();
 
     expect(otpServiceSpy.requestOtp).toHaveBeenCalledTimes(2);
+  });
+
+  it('TelefonoNoDisponibleError (ej. login por Google): muestra el formulario de teléfono en vez del error crudo', async () => {
+    await setup({ session: fakeSession, alreadyVerified: false });
+    otpServiceSpy.requestOtp.and.returnValue(
+      (await import('rxjs')).throwError(() => ({
+        error: {
+          message:
+            'El usuario "user-1" no tiene un teléfono registrado disponible para enviar el OTP por WhatsApp.',
+        },
+      })),
+    );
+
+    fixture.detectChanges();
+
+    expect(component.telefonoFaltante()).toBeTrue();
+    expect(component.errorMessage()).toBeNull();
+  });
+
+  it('guardarTelefono: llama a actualizarTelefono y reintenta solicitarOtp al guardar', async () => {
+    await setup({ session: fakeSession, alreadyVerified: false });
+    otpServiceSpy.requestOtp.and.returnValue(
+      (await import('rxjs')).throwError(() => ({
+        error: { message: 'no tiene un teléfono registrado disponible' },
+      })),
+    );
+    fixture.detectChanges();
+    expect(component.telefonoFaltante()).toBeTrue();
+
+    otpServiceSpy.requestOtp.and.returnValue(
+      (await import('rxjs')).of({
+        otp_id: 'otp-2',
+        expira_en: new Date(Date.now() + 30_000).toISOString(),
+      }),
+    );
+    component.telefonoControl.setValue('+573001234567');
+
+    component.guardarTelefono();
+    await fixture.whenStable();
+
+    expect(authServiceSpy.actualizarTelefono).toHaveBeenCalledWith('+573001234567');
+    expect(component.telefonoFaltante()).toBeFalse();
+    expect(component.otpId()).toBe('otp-2');
+  });
+
+  it('guardarTelefono: no llama a actualizarTelefono si el teléfono queda inválido', async () => {
+    await setup({ session: fakeSession, alreadyVerified: false });
+    otpServiceSpy.requestOtp.and.returnValue(
+      (await import('rxjs')).throwError(() => ({
+        error: { message: 'no tiene un teléfono registrado disponible' },
+      })),
+    );
+    fixture.detectChanges();
+
+    component.guardarTelefono();
+
+    expect(authServiceSpy.actualizarTelefono).not.toHaveBeenCalled();
   });
 
   it('la cuenta regresiva llega a cero cuando expira el OTP', async () => {

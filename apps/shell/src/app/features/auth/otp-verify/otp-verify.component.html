@@ -5,57 +5,95 @@
       Te enviamos un código de 6 dígitos por WhatsApp. Ingresalo para continuar.
     </p>
 
-    <form [formGroup]="form" (ngSubmit)="verificar()" novalidate>
-      <div class="field">
-        <label for="codigo">Código de verificación</label>
-        <input
-          id="codigo"
-          type="text"
-          inputmode="numeric"
-          autocomplete="one-time-code"
-          maxlength="6"
-          formControlName="codigo"
-          [attr.aria-invalid]="form.controls.codigo.invalid && form.controls.codigo.touched"
-        />
-        @if (form.controls.codigo.invalid && form.controls.codigo.touched) {
-          <p class="field-error" role="alert">Ingresá los 6 dígitos del código.</p>
-        }
-      </div>
-
-      @if (otpId() && !expired) {
-        <output class="countdown" data-testid="otp-countdown">
-          Expira en {{ secondsRemaining() }} segundos
-        </output>
-      }
-
-      @if (expired) {
-        <p class="form-error" role="alert" data-testid="otp-expired">
-          El código expiró. Solicitá uno nuevo.
+    @if (telefonoFaltante()) {
+      <form (ngSubmit)="guardarTelefono()" novalidate data-testid="telefono-faltante-form">
+        <p class="form-error" role="alert" data-testid="telefono-faltante-error">
+          Todavía no tenemos un teléfono para enviarte el código por WhatsApp
+          (pasa con cuentas creadas por Google). Cargalo para continuar.
         </p>
-      }
+        <div class="field">
+          <label for="telefono-otp">Teléfono (WhatsApp)</label>
+          <input
+            id="telefono-otp"
+            type="tel"
+            [formControl]="telefonoControl"
+            autocomplete="tel"
+            placeholder="+573001234567"
+            [attr.aria-invalid]="telefonoControl.invalid && telefonoControl.touched"
+          />
+          @if (telefonoControl.invalid && telefonoControl.touched) {
+            <p class="field-error" role="alert">
+              Ingresá un teléfono válido (formato internacional, ej: +573001234567).
+            </p>
+          }
+        </div>
 
-      @if (errorMessage()) {
-        <p class="form-error" role="alert" data-testid="otp-error">{{ errorMessage() }}</p>
-      }
+        @if (errorMessage()) {
+          <p class="form-error" role="alert" data-testid="otp-error">{{ errorMessage() }}</p>
+        }
+
+        <button
+          type="submit"
+          class="btn-primary"
+          data-testid="telefono-faltante-submit"
+          [disabled]="guardandoTelefono()"
+        >
+          {{ guardandoTelefono() ? 'Guardando…' : 'Guardar y enviar código' }}
+        </button>
+      </form>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="verificar()" novalidate>
+        <div class="field">
+          <label for="codigo">Código de verificación</label>
+          <input
+            id="codigo"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            formControlName="codigo"
+            [attr.aria-invalid]="form.controls.codigo.invalid && form.controls.codigo.touched"
+          />
+          @if (form.controls.codigo.invalid && form.controls.codigo.touched) {
+            <p class="field-error" role="alert">Ingresá los 6 dígitos del código.</p>
+          }
+        </div>
+
+        @if (otpId() && !expired) {
+          <output class="countdown" data-testid="otp-countdown">
+            Expira en {{ secondsRemaining() }} segundos
+          </output>
+        }
+
+        @if (expired) {
+          <p class="form-error" role="alert" data-testid="otp-expired">
+            El código expiró. Solicitá uno nuevo.
+          </p>
+        }
+
+        @if (errorMessage()) {
+          <p class="form-error" role="alert" data-testid="otp-error">{{ errorMessage() }}</p>
+        }
+
+        <button
+          type="submit"
+          class="btn-primary"
+          data-testid="otp-verify-submit"
+          [disabled]="verifying() || requesting() || expired"
+        >
+          {{ verifying() ? 'Verificando…' : 'Verificar código' }}
+        </button>
+      </form>
 
       <button
-        type="submit"
-        class="btn-primary"
-        data-testid="otp-verify-submit"
-        [disabled]="verifying() || requesting() || expired"
+        type="button"
+        class="link"
+        data-testid="otp-resend"
+        [disabled]="requesting()"
+        (click)="solicitarOtp()"
       >
-        {{ verifying() ? 'Verificando…' : 'Verificar código' }}
+        {{ requesting() ? 'Reenviando…' : 'Reenviar código' }}
       </button>
-    </form>
-
-    <button
-      type="button"
-      class="link"
-      data-testid="otp-resend"
-      [disabled]="requesting()"
-      (click)="solicitarOtp()"
-    >
-      {{ requesting() ? 'Reenviando…' : 'Reenviar código' }}
-    </button>
+    }
   </section>
 </main>
