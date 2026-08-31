@@ -4,7 +4,7 @@ import { Router, UrlTree, provideRouter } from '@angular/router';
 import type { Session } from '@supabase/supabase-js';
 import { firstValueFrom, isObservable } from 'rxjs';
 
-import { adminGuard, authGuard, logisticaGuard, sessionGuard } from './auth.guard';
+import { adminGuard, authGuard, guestGuard, logisticaGuard, sessionGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { DeviceIdService } from './device-id.service';
 import { DeviceVerificationService } from './device-verification.service';
@@ -63,6 +63,58 @@ describe('authGuard', () => {
   });
 
   it('redirige a /verificar-dispositivo cuando hay sesión pero el dispositivo no está verificado (HU-6.2)', async () => {
+    const result = (await runGuard({ session: fakeSession, verified: false })) as UrlTree;
+    const router = TestBed.inject(Router);
+
+    expect(result instanceof UrlTree).toBeTrue();
+    expect(router.serializeUrl(result)).toBe('/verificar-dispositivo');
+  });
+});
+
+describe('guestGuard', () => {
+  const fakeSession = { user: { id: 'user-1' } } as unknown as Session;
+
+  function runGuard(options: {
+    session: Session | null;
+    verified?: boolean;
+  }) {
+    const authServiceStub = {
+      session: () => options.session,
+      sessionLoaded: signal(true),
+    };
+    const deviceIdStub = { deviceId: 'device-1' };
+    const deviceVerificationStub = {
+      isVerified: () => options.verified ?? false,
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: authServiceStub },
+        { provide: DeviceIdService, useValue: deviceIdStub },
+        { provide: DeviceVerificationService, useValue: deviceVerificationStub },
+      ],
+    });
+
+    return resolveGuardResult(
+      TestBed.runInInjectionContext(() => guestGuard({} as never, { url: '/login' } as never)),
+    );
+  }
+
+  it('permite el acceso a /login cuando no hay sesión', async () => {
+    const result = await runGuard({ session: null });
+    expect(result).toBeTrue();
+  });
+
+  it('redirige a /home cuando ya hay sesión y el dispositivo está verificado (ej. volviendo de un login por Google)', async () => {
+    const result = (await runGuard({ session: fakeSession, verified: true })) as UrlTree;
+    const router = TestBed.inject(Router);
+
+    expect(result instanceof UrlTree).toBeTrue();
+    expect(router.serializeUrl(result)).toBe('/home');
+  });
+
+  it('redirige a /verificar-dispositivo cuando hay sesión pero el dispositivo no está verificado', async () => {
     const result = (await runGuard({ session: fakeSession, verified: false })) as UrlTree;
     const router = TestBed.inject(Router);
 
