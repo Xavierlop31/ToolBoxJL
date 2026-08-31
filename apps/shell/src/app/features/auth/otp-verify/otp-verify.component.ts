@@ -50,11 +50,26 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
     codigo: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
   });
 
+  // Standalone, mismo criterio que login.component.ts: solo se necesita (y
+  // valida) cuando `telefonoFaltante()` es true, así que no tiene sentido
+  // meterlo en `form` junto a `codigo`.
+  readonly telefonoControl = this.formBuilder.nonNullable.control('', [
+    Validators.required,
+    Validators.pattern(/^\+?[0-9]{8,15}$/),
+  ]);
+
   readonly requesting = signal(false);
   readonly verifying = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly otpId = signal<string | null>(null);
   readonly secondsRemaining = signal(0);
+  // Login por Google (a diferencia del signUp por correo/contraseña) no
+  // pasa por ningún formulario que pida teléfono — cuando el backend
+  // rechaza el pedido de OTP con TelefonoNoDisponibleError, mostramos acá
+  // mismo un campo para cargarlo y reintentar, en vez de dejar a la persona
+  // trabada con un error que no puede resolver desde esta pantalla.
+  readonly telefonoFaltante = signal(false);
+  readonly guardandoTelefono = signal(false);
 
   private countdownHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -89,6 +104,7 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
 
     this.requesting.set(true);
     this.errorMessage.set(null);
+    this.telefonoFaltante.set(false);
     this.otpId.set(null);
     this.form.reset({ codigo: '' });
 
@@ -99,12 +115,46 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
         this.requesting.set(false);
       },
       error: (err) => {
+        const mensaje: string | undefined = err?.error?.message;
+
+        // TelefonoNoDisponibleError (apps/api/.../telefono-no-disponible.error.ts)
+        // no tiene un código propio en el 400 que devuelve el backend — se
+        // matchea por el texto estable del mensaje (el resto es el UUID del
+        // usuario, que varía). Login por Google es el caso típico: nunca
+        // pasa por un formulario que pida teléfono.
+        if (mensaje?.includes('no tiene un teléfono registrado')) {
+          this.telefonoFaltante.set(true);
+          this.requesting.set(false);
+          return;
+        }
+
         this.errorMessage.set(
-          err?.error?.message ??
-            'No pudimos enviar el código por WhatsApp. Intenta de nuevo.',
+          mensaje ?? 'No pudimos enviar el código por WhatsApp. Intenta de nuevo.',
         );
         this.requesting.set(false);
       },
+    });
+  }
+
+  guardarTelefono(): void {
+    if (this.telefonoControl.invalid || this.guardandoTelefono()) {
+      this.telefonoControl.markAsTouched();
+      return;
+    }
+
+    this.guardandoTelefono.set(true);
+    this.errorMessage.set(null);
+
+    this.auth.actualizarTelefono(this.telefonoControl.value).then((result) => {
+      this.guardandoTelefono.set(false);
+
+      if (result.error) {
+        this.errorMessage.set(result.error.message);
+        return;
+      }
+
+      this.telefonoFaltante.set(false);
+      this.solicitarOtp();
     });
   }
 
