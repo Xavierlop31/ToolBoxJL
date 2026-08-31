@@ -57,6 +57,42 @@ export const authGuard: CanActivateFn = () => {
 };
 
 /**
+ * Guard inverso de `authGuard`: protege `/login` de un usuario que YA tiene
+ * sesión activa. Sin esto, el login por Google quedaba roto en la práctica
+ * (bug real, testing 2026-08-28): `signInWithGoogle()` redirige a
+ * `window.location.origin` (la raíz, sin path) — y `path: ''` en
+ * `app.routes.ts` manda esa raíz a `/login` incondicionalmente. Supabase SÍ
+ * establecía la sesión bien (el usuario se creaba en Supabase Auth y en
+ * `public.users`), pero nada sacaba a la persona de `/login` después: veía
+ * la misma pantalla de siempre y parecía que el login nunca había
+ * funcionado. Misma espera de `sessionLoaded` que el resto de los guards,
+ * para no decidir con `auth.session()` todavía sin resolver.
+ */
+export const guestGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const deviceVerification = inject(DeviceVerificationService);
+  const deviceId = inject(DeviceIdService);
+  const router = inject(Router);
+
+  return toObservable(auth.sessionLoaded).pipe(
+    filter((loaded) => loaded),
+    take(1),
+    map(() => {
+      const session = auth.session();
+      if (!session) {
+        return true;
+      }
+
+      if (!deviceVerification.isVerified(session.user.id, deviceId.deviceId)) {
+        return router.createUrlTree(['/verificar-dispositivo']);
+      }
+
+      return router.createUrlTree(['/home']);
+    }),
+  );
+};
+
+/**
  * Guard más liviano que `authGuard`: solo exige sesión activa, sin exigir
  * dispositivo verificado. Usado exclusivamente por la ruta
  * `/verificar-dispositivo` — si `authGuard` se usara ahí, un dispositivo no
