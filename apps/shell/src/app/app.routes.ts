@@ -1,12 +1,24 @@
 import { loadRemoteModule } from '@angular-architects/native-federation';
 import { Routes } from '@angular/router';
 
-import { adminGuard, authGuard, logisticaGuard, sessionGuard } from './core/auth/auth.guard';
+import {
+  adminGuard,
+  authGuard,
+  guestGuard,
+  logisticaGuard,
+  sessionGuard,
+} from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   {
+    // `guestGuard`: sin esto, volver de un login por Google (que redirige a
+    // la raíz, sin path — ver signInWithGoogle en auth.service.ts) dejaba a
+    // la persona mirando esta misma pantalla de nuevo, aunque la sesión ya
+    // estuviera creada del lado de Supabase (bug real, testing 2026-08-28).
+    // Ver la nota completa en core/auth/auth.guard.ts.
     path: 'login',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./features/auth/login/login.component').then(
         (m) => m.LoginComponent,
