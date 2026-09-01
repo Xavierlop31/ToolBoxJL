@@ -1,5 +1,6 @@
 import { createBdd } from 'playwright-bdd';
 import { expect, type Page } from '@playwright/test';
+import { prepararSesionAutenticada } from './auth-fixtures';
 
 const { Given, When, Then } = createBdd();
 
@@ -73,6 +74,7 @@ async function prepararOrdenPendienteDePago(page: Page): Promise<void> {
     });
   });
 
+  await prepararSesionAutenticada(page);
   await page.goto(`/catalogo/${MODEL_ID}`);
   await page.fill('#fechaInicio', '2026-10-01');
   await page.fill('#fechaFin', '2026-10-05');

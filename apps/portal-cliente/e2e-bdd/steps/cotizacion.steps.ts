@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { expect } from '@playwright/test';
+import { prepararSesionAutenticada } from './auth-fixtures';
 
 const { Given, When, Then } = createBdd();
 
@@ -40,6 +41,7 @@ Given('que soy un Cliente con un modelo, un rango de fechas y una dirección de 
     });
   });
   await mockZones(page);
+  await prepararSesionAutenticada(page);
 
   // Navegar a la ficha del modelo
   await page.goto('/catalogo/123e4567-e89b-12d3-a456-426614174000');
@@ -108,6 +110,7 @@ Given('que un modelo está marcado como disponible para venta', async ({ page })
     });
   });
   await mockZones(page);
+  await prepararSesionAutenticada(page);
 
   await page.goto('/catalogo/123e4567-e89b-12d3-a456-426614174000');
 });
