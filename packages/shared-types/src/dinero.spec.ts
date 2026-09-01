@@ -14,6 +14,10 @@ describe("Dinero", () => {
     it("lanza si el monto es negativo", () => {
       expect(() => Dinero.pesos(-1)).toThrow(/negativos/);
     });
+
+    it("lanza si el monto está fuera del rango entero seguro", () => {
+      expect(() => Dinero.pesos(2 ** 60)).toThrow(/rango seguro/);
+    });
   });
 
   it("cero() devuelve un Dinero con valor 0", () => {
@@ -54,12 +58,31 @@ describe("Dinero", () => {
     it("lanza con un factor negativo", () => {
       expect(() => Dinero.pesos(100).multiplicarPor(-1)).toThrow(/inválido/);
     });
+
+    it("lanza con un factor no finito (NaN o Infinity)", () => {
+      expect(() => Dinero.pesos(100).multiplicarPor(Number.NaN)).toThrow(
+        /inválido/,
+      );
+      expect(() =>
+        Dinero.pesos(100).multiplicarPor(Number.POSITIVE_INFINITY),
+      ).toThrow(/inválido/);
+    });
+
+    it("multiplicar por 0 da Dinero.cero()", () => {
+      expect(Dinero.pesos(500).multiplicarPor(0).valor).toBe(0);
+    });
   });
 
   describe("comparaciones", () => {
     it("esMayorQue compara montos", () => {
       expect(Dinero.pesos(200).esMayorQue(Dinero.pesos(100))).toBe(true);
       expect(Dinero.pesos(100).esMayorQue(Dinero.pesos(200))).toBe(false);
+    });
+
+    it("esMayorOIgualQue compara montos, incluyendo igualdad", () => {
+      expect(Dinero.pesos(200).esMayorOIgualQue(Dinero.pesos(100))).toBe(true);
+      expect(Dinero.pesos(200).esMayorOIgualQue(Dinero.pesos(200))).toBe(true);
+      expect(Dinero.pesos(100).esMayorOIgualQue(Dinero.pesos(200))).toBe(false);
     });
 
     it("equals compara igualdad por valor", () => {
@@ -71,6 +94,18 @@ describe("Dinero", () => {
   describe("toString", () => {
     it("formatea con separador de miles en formato es-CO", () => {
       expect(Dinero.pesos(150000).toString()).toBe("$ 150.000");
+    });
+  });
+
+  describe("toJSON", () => {
+    it("serializa como el número entero plano en pesos", () => {
+      expect(Dinero.pesos(1234).toJSON()).toBe(1234);
+    });
+
+    it("JSON.stringify serializa un Dinero como un número, no un objeto", () => {
+      expect(JSON.stringify({ monto: Dinero.pesos(1234) })).toBe(
+        '{"monto":1234}',
+      );
     });
   });
 });

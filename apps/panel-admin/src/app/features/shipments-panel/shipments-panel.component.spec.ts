@@ -89,7 +89,7 @@ describe('ShipmentsPanelComponent', () => {
         old: {},
       });
 
-      expect(component.shipments().length).toBe(3);
+      expect(component.shipments()).toHaveSize(3);
       expect(component.shipments()).toContain(nuevoEnvio);
     });
 
@@ -107,7 +107,7 @@ describe('ShipmentsPanelComponent', () => {
         old: { id: 's1' },
       });
 
-      expect(component.shipments().length).toBe(2);
+      expect(component.shipments()).toHaveSize(2);
       const actualizadoEnLista = component.shipments().find((s) => s.id === 's1');
       expect(actualizadoEnLista?.estado_envio).toBe('en_ruta_entrega');
     });
@@ -115,7 +115,7 @@ describe('ShipmentsPanelComponent', () => {
     it('elimina un envío de la lista por DELETE', () => {
       realtimeSubject.next({ eventType: 'DELETE', new: {}, old: { id: 's2' } });
 
-      expect(component.shipments().length).toBe(1);
+      expect(component.shipments()).toHaveSize(1);
       expect(component.shipments().find((s) => s.id === 's2')).toBeUndefined();
     });
 
