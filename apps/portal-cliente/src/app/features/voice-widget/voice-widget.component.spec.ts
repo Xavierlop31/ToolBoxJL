@@ -15,6 +15,7 @@ import { Cart } from '../../core/models/cart.models';
 import { VoiceAgentCredentials } from '../../core/models/voice-agent.models';
 import { LivekitSessionService, VoiceAgentUiState } from '../../core/voice-agent/livekit-session.service';
 import { VoiceAgentTokenService } from '../../core/voice-agent/voice-agent-token.service';
+import { VoiceAgentEvent } from '../../core/models/voice-agent.models';
 import { VoiceWidgetComponent } from './voice-widget.component';
 
 const CREDENTIALS: VoiceAgentCredentials = {
@@ -49,6 +50,7 @@ class FakeVoiceAgentTokenService {
 class FakeLivekitSessionService {
   readonly state: WritableSignal<VoiceAgentUiState> = signal('idle');
   readonly errorMessage: WritableSignal<string | null> = signal(null);
+  readonly events: WritableSignal<VoiceAgentEvent[]> = signal([]);
   readonly connectSpy = jasmine.createSpy('connect').and.callFake(async () => {
     this.state.set('listening');
   });
@@ -205,6 +207,76 @@ describe('VoiceWidgetComponent', () => {
       discardPeriodicTasks();
 
       expect(session.disconnectSpy).toHaveBeenCalled();
+    }),
+  );
+
+  function openPanel(): void {
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector(
+      '[data-testid="voice-widget-button"]',
+    ) as HTMLButtonElement;
+    button.click();
+    tick();
+    fixture.detectChanges();
+  }
+
+  it(
+    'muestra el texto del saludo proactivo en el transcript cuando llega el evento greeting (HU-14.1)',
+    fakeAsync(() => {
+      openPanel();
+      session.events.set([{ type: 'greeting', text: '¡Hola! Soy tu Conserje de Voz.' }]);
+      fixture.detectChanges();
+
+      const transcript = fixture.nativeElement.querySelector('[data-testid="voice-widget-transcript"]');
+      expect(transcript.textContent.trim()).toBe('¡Hola! Soy tu Conserje de Voz.');
+
+      discardPeriodicTasks();
+    }),
+  );
+
+  it(
+    'no renderiza el transcript si todavía no llegó ningún evento greeting',
+    fakeAsync(() => {
+      openPanel();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="voice-widget-transcript"]')).toBeNull();
+
+      discardPeriodicTasks();
+    }),
+  );
+
+  it(
+    'muestra un chip animado "running" mientras una tool está en curso (HU-14.2)',
+    fakeAsync(() => {
+      openPanel();
+      session.events.set([
+        { type: 'tool_status', tool: 'search_catalog', label: 'Buscando en catálogo…', status: 'running' },
+      ]);
+      fixture.detectChanges();
+
+      const chip = fixture.nativeElement.querySelector('[data-testid="voice-widget-chip-running"]');
+      expect(chip.textContent.trim()).toContain('Buscando en catálogo…');
+      expect(fixture.nativeElement.querySelector('[data-testid="voice-widget-chip-done"]')).toBeNull();
+
+      discardPeriodicTasks();
+    }),
+  );
+
+  it(
+    'pasa el chip a estado "done" al concluir la llamada a la tool (HU-14.2)',
+    fakeAsync(() => {
+      openPanel();
+      session.events.set([
+        { type: 'tool_status', tool: 'add_to_cart', label: 'Agregando al carrito…', status: 'running' },
+        { type: 'tool_status', tool: 'add_to_cart', label: 'Agregando al carrito…', status: 'done' },
+      ]);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="voice-widget-chip-running"]')).toBeNull();
+      const chip = fixture.nativeElement.querySelector('[data-testid="voice-widget-chip-done"]');
+      expect(chip.textContent.trim()).toContain('Agregando al carrito…');
+
+      discardPeriodicTasks();
     }),
   );
 });

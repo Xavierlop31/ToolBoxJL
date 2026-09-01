@@ -20,14 +20,17 @@ jest.mock("@livekit/rtc-node", () => {
 
   class MockRoom extends EventEmitter {
     remoteParticipants: Map<string, { identity: string; metadata: string }>;
-    localParticipant: { publishTrack: jest.Mock };
+    localParticipant: { publishTrack: jest.Mock; publishData: jest.Mock };
     connect: jest.Mock;
     disconnect: jest.Mock;
 
     constructor() {
       super();
       this.remoteParticipants = new Map(participantesPendientes.map((p) => [p.identity, p]));
-      this.localParticipant = { publishTrack: jest.fn().mockResolvedValue(undefined) };
+      this.localParticipant = {
+        publishTrack: jest.fn().mockResolvedValue(undefined),
+        publishData: jest.fn().mockResolvedValue(undefined),
+      };
       this.connect = jest.fn().mockResolvedValue(undefined);
       this.disconnect = jest.fn().mockResolvedValue(undefined);
       instanciasRoom.push(this);
@@ -127,10 +130,16 @@ jest.mock("../voice-turn-agent", () => ({
 }));
 
 import { RoomEvent, TrackSource, RemoteAudioTrack } from "@livekit/rtc-node";
-import { manejarSesionDeVoz, type RoomSessionDeps } from "./room-session";
+import { manejarSesionDeVoz, construirEventoSaludo, MENSAJE_BIENVENIDA, type RoomSessionDeps } from "./room-session";
 import { mintarTokenDeAgente } from "./agent-token";
 import { ejecutarTurnoAgente3 } from "../voice-turn-agent";
 import { MetadataJwtNoEncontradoError } from "../metadata";
+
+describe("construirEventoSaludo", () => {
+  it("arma el evento greeting con el mensaje de bienvenida exacto", () => {
+    expect(construirEventoSaludo()).toEqual({ type: "greeting", text: MENSAJE_BIENVENIDA });
+  });
+});
 
 interface RtcNodeMockHelpers {
   __setParticipantesPendientes: (arr: Array<{ identity: string; metadata: string }>) => void;
@@ -138,7 +147,7 @@ interface RtcNodeMockHelpers {
   __ultimaRoomCreada: () => {
     connect: jest.Mock;
     disconnect: jest.Mock;
-    localParticipant: { publishTrack: jest.Mock };
+    localParticipant: { publishTrack: jest.Mock; publishData: jest.Mock };
     remoteParticipants: Map<string, { identity: string; metadata: string }>;
     on: (event: string, listener: (...args: unknown[]) => void) => void;
     off: (event: string, listener: (...args: unknown[]) => void) => void;
@@ -299,7 +308,9 @@ describe("manejarSesionDeVoz", () => {
 
       expect(deps.textToSpeech.sintetizar).toHaveBeenCalledWith("Tenemos un taladro Bosch disponible.");
       const audioSource = rtcNode.__ultimaAudioSourceCreada();
-      expect(audioSource.captureFrame).toHaveBeenCalledTimes(1);
+      // 2 = saludo proactivo (HU-14.1, reproducido al conectar) + la
+      // respuesta de este turno.
+      expect(audioSource.captureFrame).toHaveBeenCalledTimes(2);
     });
 
     it("ignora el turno si la transcripción viene vacía (solo espacios) — no corre el loop de tool calling", async () => {
@@ -307,6 +318,10 @@ describe("manejarSesionDeVoz", () => {
       const deps = crearDeps({ speechToText: { transcribir: jest.fn().mockResolvedValue("   ") } });
 
       await manejarSesionDeVoz(deps, "sala-audio-vacio");
+      // El saludo proactivo (HU-14.1) ya sintetizó/reprodujo audio al
+      // conectar — se congela el conteo acá para asertar que el turno vacío
+      // NO agrega una síntesis nueva.
+      const llamadasTrasElSaludo = (deps.textToSpeech.sintetizar as jest.Mock).mock.calls.length;
 
       const reader = {
         read: jest
@@ -318,7 +333,7 @@ describe("manejarSesionDeVoz", () => {
       await emitirTrackYEsperarLectura(reader);
 
       expect(ejecutarTurnoAgente3).not.toHaveBeenCalled();
-      expect(deps.textToSpeech.sintetizar).not.toHaveBeenCalled();
+      expect(deps.textToSpeech.sintetizar).toHaveBeenCalledTimes(llamadasTrasElSaludo);
     });
 
     it("loguea el error y NO propaga si falla la transcripción (Deepgram caído)", async () => {
@@ -328,6 +343,7 @@ describe("manejarSesionDeVoz", () => {
       });
 
       await manejarSesionDeVoz(deps, "sala-audio-error");
+      const llamadasTrasElSaludo = (deps.textToSpeech.sintetizar as jest.Mock).mock.calls.length;
 
       const reader = {
         read: jest
@@ -342,7 +358,7 @@ describe("manejarSesionDeVoz", () => {
         expect.stringContaining('Error procesando turno en sala "sala-audio-error"'),
         expect.any(Error),
       );
-      expect(deps.textToSpeech.sintetizar).not.toHaveBeenCalled();
+      expect(deps.textToSpeech.sintetizar).toHaveBeenCalledTimes(llamadasTrasElSaludo);
     });
 
     it("ignora tracks remotos que no son de audio (no instancia de RemoteAudioTrack)", async () => {
@@ -369,6 +385,80 @@ describe("manejarSesionDeVoz", () => {
         expect.stringContaining('Error leyendo el stream de audio de la sala "sala-stream-error"'),
         expect.any(Error),
       );
+    });
+  });
+
+  describe("saludo proactivo de bienvenida (HU-14.1)", () => {
+    it("sintetiza y reproduce el saludo apenas publica el track, y lo emite por el canal de datos", async () => {
+      rtcNode.__setParticipantesPendientes([{ identity: "cliente-1", metadata: JWT_VALIDO }]);
+      const deps = crearDeps();
+
+      await manejarSesionDeVoz(deps, "sala-saludo");
+
+      expect(deps.textToSpeech.sintetizar).toHaveBeenCalledWith(
+        expect.stringContaining("Conserje de Voz de ToolBox JL"),
+      );
+      const audioSource = rtcNode.__ultimaAudioSourceCreada();
+      expect(audioSource.captureFrame).toHaveBeenCalledTimes(1);
+
+      const room = rtcNode.__ultimaRoomCreada();
+      expect(room.localParticipant.publishData).toHaveBeenCalledTimes(1);
+      const [data, options] = room.localParticipant.publishData.mock.calls[0];
+      const evento = JSON.parse(new TextDecoder().decode(data as Uint8Array));
+      expect(evento).toEqual({ type: "greeting", text: expect.stringContaining("Conserje de Voz de ToolBox JL") });
+      expect(options).toEqual({ reliable: true });
+    });
+
+    it("loguea el error y NO propaga si falla la síntesis del saludo (ElevenLabs caído)", async () => {
+      rtcNode.__setParticipantesPendientes([{ identity: "cliente-1", metadata: JWT_VALIDO }]);
+      const deps = crearDeps({
+        textToSpeech: { sintetizar: jest.fn().mockRejectedValue(new Error("ElevenLabs no disponible")) },
+      });
+
+      await expect(manejarSesionDeVoz(deps, "sala-saludo-error")).resolves.toBeDefined();
+
+      expect(deps.logger?.error).toHaveBeenCalledWith(
+        expect.stringContaining('Error reproduciendo el saludo de bienvenida en sala "sala-saludo-error"'),
+        expect.any(Error),
+      );
+      const room = rtcNode.__ultimaRoomCreada();
+      expect(room.localParticipant.publishData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("chips de tool-calling en vivo (HU-14.2) — propagación de emitirEvento", () => {
+    it("le pasa a ejecutarTurnoAgente3 una función emitirEvento que publica por el canal de datos de la sala", async () => {
+      rtcNode.__setParticipantesPendientes([{ identity: "cliente-1", metadata: JWT_VALIDO }]);
+      const deps = crearDeps();
+      (ejecutarTurnoAgente3 as jest.Mock).mockImplementation(async (turnoDeps) => {
+        turnoDeps.emitirEvento?.({ type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "running" });
+        return { mensajes: [], respuestaTexto: "Ok.", carritoActualizado: null };
+      });
+
+      await manejarSesionDeVoz(deps, "sala-tool-status");
+      const room = rtcNode.__ultimaRoomCreada();
+      room.localParticipant.publishData.mockClear();
+
+      const reader = {
+        read: jest
+          .fn()
+          .mockResolvedValueOnce({ value: { data: new Int16Array(100).fill(20000), sampleRate: 16000 }, done: false })
+          .mockResolvedValueOnce({ value: { data: new Int16Array(11200).fill(0), sampleRate: 16000 }, done: false })
+          .mockResolvedValue({ done: true }),
+      };
+      rtcNode.__setProximoReader(reader);
+      const track = Object.create(RemoteAudioTrack.prototype) as InstanceType<typeof RemoteAudioTrack>;
+      room.emit(RoomEvent.TrackSubscribed, track);
+      await flushMicrotasks();
+
+      expect(ejecutarTurnoAgente3).toHaveBeenCalledTimes(1);
+      const [turnoDepsPasadas] = (ejecutarTurnoAgente3 as jest.Mock).mock.calls[0];
+      expect(typeof turnoDepsPasadas.emitirEvento).toBe("function");
+
+      expect(room.localParticipant.publishData).toHaveBeenCalledTimes(1);
+      const [data] = room.localParticipant.publishData.mock.calls[0];
+      const evento = JSON.parse(new TextDecoder().decode(data as Uint8Array));
+      expect(evento).toEqual({ type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "running" });
     });
   });
 });

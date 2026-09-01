@@ -19,7 +19,30 @@ import { extraerJwtDeSala, type ParticipanteConMetadata } from "../metadata";
 import { bufferPcmAInt16Array, construirWav } from "../pcm-wav";
 import { TurnBoundaryDetector } from "../turn-boundary-detector";
 import { ejecutarTurnoAgente3, type AnthropicMessagesClient } from "../voice-turn-agent";
+import { codificarVoiceAgentEvent, type VoiceAgentEvent } from "../voice-agent-event";
 import { mintarTokenDeAgente } from "./agent-token";
+
+/**
+ * Mensaje de bienvenida proactivo (HU-14.1, PRD Fase 3 §Épica 14, texto
+ * exacto tomado del criterio de aceptación Gherkin de la HU) — se sintetiza
+ * y reproduce apenas el bot publica su track, SIN esperar a que el cliente
+ * hable primero.
+ */
+export const MENSAJE_BIENVENIDA =
+  "¡Hola! Soy tu Conserje de Voz de ToolBox JL. Estoy aquí para asesorarte con la herramienta " +
+  "adecuada para tu obra, cotizar alquileres o revisar tu pedido. ¿En qué te puedo ayudar hoy?";
+
+/**
+ * Arma el `VoiceAgentEvent` de tipo `greeting` que se publica por el canal
+ * de datos al reproducir el saludo (HU-14.1) — extraído como función pura
+ * exportada (en vez de quedar inline dentro de `reproducirSaludoDeBienvenida`)
+ * para que sea testeable sin un servidor LiveKit real, mismo criterio que
+ * `metadata.ts`/`turn-boundary-detector.ts`/`pcm-wav.ts`: la orquestación
+ * LiveKit no es unit-testeable, pero la lógica de negocio que arma SÍ.
+ */
+export function construirEventoSaludo(): VoiceAgentEvent {
+  return { type: "greeting", text: MENSAJE_BIENVENIDA };
+}
 
 /**
  * Orquestación REAL de una sesión de voz del Agente 3: se une a la sala
@@ -118,6 +141,21 @@ export async function manejarSesionDeVoz(deps: RoomSessionDeps, roomName: string
   await room.connect(deps.liveKitConfig.url, token);
   logger.log(`[Agente 3] Conectado a la sala "${roomName}" como "${identity}".`);
 
+  /**
+   * Publica un `VoiceAgentEvent` por el canal de DATOS de LiveKit (HU-14.1/
+   * 14.2, `voice-agent-event.ts`) — fire-and-forget respecto del llamador
+   * (no se espera a que confirme la entrega): un fallo al publicar un chip
+   * de estado no debería nunca interrumpir el pipeline de voz real
+   * (audio/tool calling), solo se loguea.
+   */
+  function emitirEventoDeVoz(evento: VoiceAgentEvent): void {
+    room.localParticipant
+      ?.publishData(codificarVoiceAgentEvent(evento), { reliable: true })
+      .catch((error: unknown) =>
+        logger.error(`[Agente 3] No se pudo publicar el evento "${evento.type}" en la sala "${roomName}":`, error),
+      );
+  }
+
   const jwt = await resolverJwtConReintentos(room, logger);
 
   const audioSource = new AudioSource(SAMPLE_RATE_PCM, 1);
@@ -126,6 +164,28 @@ export async function manejarSesionDeVoz(deps: RoomSessionDeps, roomName: string
     localTrack,
     new TrackPublishOptions({ source: TrackSource.SOURCE_MICROPHONE }),
   );
+
+  /**
+   * Saludo proactivo (HU-14.1): se sintetiza y reproduce ACÁ, después de
+   * publicar el track del bot y antes de escuchar `RoomEvent.TrackSubscribed`
+   * — mismo patrón síntesis+captureFrame que `manejarTurno`, pero sin pasar
+   * por STT/Claude (no es una respuesta a nada que haya dicho el cliente).
+   * No propaga si falla (ej. ElevenLabs caído): el saludo es una mejora de
+   * experiencia, no debe tumbar el arranque de la sesión de voz.
+   */
+  async function reproducirSaludoDeBienvenida(): Promise<void> {
+    try {
+      const audioPcm = await deps.textToSpeech.sintetizar(MENSAJE_BIENVENIDA);
+      const samplesSaludo = bufferPcmAInt16Array(audioPcm);
+      const frameSaludo = new AudioFrame(samplesSaludo, SAMPLE_RATE_PCM, 1, samplesSaludo.length);
+      await audioSource.captureFrame(frameSaludo);
+      emitirEventoDeVoz(construirEventoSaludo());
+      logger.log(`[Agente 3] Sala "${roomName}": saludo de bienvenida reproducido.`);
+    } catch (error) {
+      logger.error(`[Agente 3] Error reproduciendo el saludo de bienvenida en sala "${roomName}":`, error);
+    }
+  }
+  await reproducirSaludoDeBienvenida();
 
   let mensajes: Anthropic.MessageParam[] = [];
   const detector = new TurnBoundaryDetector();
@@ -146,7 +206,13 @@ export async function manejarSesionDeVoz(deps: RoomSessionDeps, roomName: string
 
       const inicioLlm = Date.now();
       const resultado = await ejecutarTurnoAgente3(
-        { anthropic: deps.anthropic, model: deps.anthropicModel, apiBaseUrl: deps.apiBaseUrl, jwt },
+        {
+          anthropic: deps.anthropic,
+          model: deps.anthropicModel,
+          apiBaseUrl: deps.apiBaseUrl,
+          jwt,
+          emitirEvento: emitirEventoDeVoz,
+        },
         mensajes,
         transcripcion,
       );

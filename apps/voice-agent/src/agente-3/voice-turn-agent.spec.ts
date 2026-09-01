@@ -157,6 +157,108 @@ describe("ejecutarTurnoAgente3 — escenario: confirmación verbal agrega al car
   });
 });
 
+describe("ejecutarTurnoAgente3 — emisión de tool_status por deps.emitirEvento (HU-14.2)", () => {
+  it("emite running antes de despachar y done al resolver, para cada tool call de la respuesta", async () => {
+    const { fetchImpl } = mockFetch({
+      "/catalog/search": () => ({
+        status: 200,
+        body: [{ id: "m1", nombre: "Taladro Percutor", marca: "Bosch", categoria: "percutor", tarifa_dia: 15000, tarifa_semana: 90000 }],
+      }),
+      "/inventory/check-availability": () => ({ status: 200, body: { modelo_id: "m1", unidades_disponibles: 2 } }),
+    });
+
+    let llamada = 0;
+    const anthropic: AnthropicMessagesClient = {
+      create: async () => {
+        llamada++;
+        if (llamada === 1) {
+          return mensajeAssistant([
+            toolUseBlock("t1", "search_catalog", { q: "taladro percutor" }),
+            toolUseBlock("t2", "check_availability", { modelo_id: "m1", fecha_inicio: "2026-09-03", fecha_fin: "2026-09-06" }),
+          ]);
+        }
+        return mensajeAssistant([textoBlock("Te recomiendo el Taladro Percutor Bosch.")]);
+      },
+    };
+
+    const eventos: unknown[] = [];
+    await ejecutarTurnoAgente3(
+      {
+        anthropic,
+        model: "claude-haiku-4-5",
+        apiBaseUrl: "https://api.example.com",
+        jwt: "jwt-cliente",
+        fetchImpl,
+        emitirEvento: (evento) => eventos.push(evento),
+      },
+      [],
+      "Necesito un taladro percutor.",
+    );
+
+    // Ambas tool calls de la misma respuesta se despachan en orden — cada
+    // una emite su running/done ANTES de pasar a la siguiente (no hay
+    // interleaving, ver `ejecutarToolCalls`: loop secuencial con `await`).
+    expect(eventos).toEqual([
+      { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "running" },
+      { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "done" },
+      { type: "tool_status", tool: "check_availability", label: "Verificando disponibilidad…", status: "running" },
+      { type: "tool_status", tool: "check_availability", label: "Verificando disponibilidad…", status: "done" },
+    ]);
+  });
+
+  it("también emite running/done si la tool call falla (ej. add_to_cart con JWT inválido)", async () => {
+    const { fetchImpl } = mockFetch({
+      "/cart/add-item": () => ({ status: 401, body: { error: "unauthorized" } }),
+    });
+    let llamada = 0;
+    const anthropic: AnthropicMessagesClient = {
+      create: async () => {
+        llamada++;
+        if (llamada === 1) {
+          return mensajeAssistant([toolUseBlock("t1", "add_to_cart", { modelo_id: "m1", cantidad: 1 })]);
+        }
+        return mensajeAssistant([textoBlock("Hubo un problema agregando el ítem.")]);
+      },
+    };
+
+    const eventos: unknown[] = [];
+    await ejecutarTurnoAgente3(
+      {
+        anthropic,
+        model: "claude-haiku-4-5",
+        apiBaseUrl: "https://api.example.com",
+        jwt: "jwt-invalido",
+        fetchImpl,
+        emitirEvento: (evento) => eventos.push(evento),
+      },
+      [],
+      "Sí, agregalo.",
+    );
+
+    expect(eventos).toEqual([
+      { type: "tool_status", tool: "add_to_cart", label: "Agregando al carrito…", status: "running" },
+      { type: "tool_status", tool: "add_to_cart", label: "Agregando al carrito…", status: "done" },
+    ]);
+  });
+
+  it("no falla si emitirEvento no se pasa (deps.emitirEvento undefined)", async () => {
+    const { fetchImpl } = mockFetch({
+      "/catalog/search": () => ({ status: 200, body: [] }),
+    });
+    const anthropic: AnthropicMessagesClient = {
+      create: async () => mensajeAssistant([toolUseBlock("t1", "search_catalog", { q: "taladro" })]),
+    };
+
+    await expect(
+      ejecutarTurnoAgente3(
+        { anthropic, model: "claude-haiku-4-5", apiBaseUrl: "https://api.example.com", jwt: "jwt-cliente", fetchImpl, maxIteraciones: 1 },
+        [],
+        "Busco un taladro.",
+      ),
+    ).resolves.toBeDefined();
+  });
+});
+
 describe("ejecutarTurnoAgente3 — manejo de errores de tool", () => {
   it("propaga un tool_result de error si POST /cart/add-item falla, sin lanzar", async () => {
     const { fetchImpl } = mockFetch({

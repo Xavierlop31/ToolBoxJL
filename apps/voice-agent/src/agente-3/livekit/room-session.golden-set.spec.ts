@@ -27,14 +27,17 @@ jest.mock("@livekit/rtc-node", () => {
 
   class MockRoom extends EventEmitter {
     remoteParticipants: Map<string, { identity: string; metadata: string }>;
-    localParticipant: { publishTrack: jest.Mock };
+    localParticipant: { publishTrack: jest.Mock; publishData: jest.Mock };
     connect: jest.Mock;
     disconnect: jest.Mock;
 
     constructor() {
       super();
       this.remoteParticipants = new Map(participantesPendientes.map((p) => [p.identity, p]));
-      this.localParticipant = { publishTrack: jest.fn().mockResolvedValue(undefined) };
+      this.localParticipant = {
+        publishTrack: jest.fn().mockResolvedValue(undefined),
+        publishData: jest.fn().mockResolvedValue(undefined),
+      };
       this.connect = jest.fn().mockResolvedValue(undefined);
       this.disconnect = jest.fn().mockResolvedValue(undefined);
       instanciasRoom.push(this);
@@ -141,7 +144,7 @@ interface RtcNodeMockHelpers {
   __setParticipantesPendientes: (arr: Array<{ identity: string; metadata: string }>) => void;
   __setProximoReader: (reader: { read: jest.Mock } | null) => void;
   __ultimaRoomCreada: () => {
-    localParticipant: { publishTrack: jest.Mock };
+    localParticipant: { publishTrack: jest.Mock; publishData: jest.Mock };
     remoteParticipants: Map<string, { identity: string; metadata: string }>;
     emit: (event: string, ...args: unknown[]) => boolean;
   };
@@ -287,6 +290,34 @@ describe("Golden set — Agente 3 (Conserje de voz, loop de tool calling REAL)",
     expect(urlBusqueda).toContain("q=taladro");
     expect(urlBusqueda).toContain("categoria=taladro");
     expect(fetchMock.mock.calls.some(([url]: [string]) => url.includes("/cart/add-item"))).toBe(false);
+  });
+
+  it("1b. el tool call de search_catalog publica los chips running/done por el canal de datos de la sala (HU-14.2)", async () => {
+    const fetchMock = fetchGlobalMockDe({
+      "/catalog/search": [
+        { id: MODELO_TALADRO, nombre: "Taladro Percutor Bosch", marca: "Bosch", categoria: "taladro", tarifa_dia: 20000, tarifa_semana: 100000 },
+      ],
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const anthropic = anthropicConSecuencia([
+      toolUse("search_catalog", { q: "taladro percutor", categoria: "taladro" }, "tool_1"),
+      sinToolCalls("Tenemos un Taladro Percutor Bosch disponible, ¿te sirve?"),
+    ]);
+    const deps = crearDeps({ anthropic });
+
+    await manejarSesionDeVoz(deps, "sala-tool-status");
+    const room = rtcNode.__ultimaRoomCreada();
+    room.localParticipant.publishData.mockClear(); // descarta el evento "greeting" del saludo (HU-14.1)
+
+    await emitirTurnoDeAudio();
+
+    const eventosPublicados = room.localParticipant.publishData.mock.calls.map(([data]: [Uint8Array]) =>
+      JSON.parse(new TextDecoder().decode(data)),
+    );
+    expect(eventosPublicados).toEqual([
+      { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "running" },
+      { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "done" },
+    ]);
   });
 
   it(

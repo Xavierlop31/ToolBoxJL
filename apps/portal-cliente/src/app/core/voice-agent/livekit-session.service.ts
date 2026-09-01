@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { RemoteTrack, Room, RoomEvent, Track } from 'livekit-client';
 
-import { VoiceAgentCredentials } from '../models/voice-agent.models';
+import { VoiceAgentCredentials, VoiceAgentEvent } from '../models/voice-agent.models';
 import { LIVEKIT_ROOM_FACTORY } from './livekit-room-factory';
 
 /**
@@ -47,9 +47,20 @@ export class LivekitSessionService {
 
   private readonly stateSignal = signal<VoiceAgentUiState>('idle');
   private readonly errorMessageSignal = signal<string | null>(null);
+  /**
+   * Log ordenado de los `VoiceAgentEvent` recibidos por el canal de DATOS de
+   * LiveKit en la sesión actual (HU-14.1/14.2, `RoomEvent.DataReceived`) —
+   * el saludo proactivo y los chips de tool-calling en vivo. Se limpia al
+   * arrancar una sesión nueva (`connect()`), no al cerrar (`disconnect()`
+   * hace `teardown()` sin tocarlo) para que el widget pueda seguir
+   * mostrando el transcript de la sesión recién cerrada mientras el panel
+   * sigue abierto.
+   */
+  private readonly eventsSignal = signal<VoiceAgentEvent[]>([]);
 
   readonly state = this.stateSignal.asReadonly();
   readonly errorMessage = this.errorMessageSignal.asReadonly();
+  readonly events = this.eventsSignal.asReadonly();
 
   /**
    * Conecta a la sala LiveKit con las credenciales de `POST
@@ -61,6 +72,7 @@ export class LivekitSessionService {
   async connect(credentials: VoiceAgentCredentials): Promise<void> {
     this.stateSignal.set('connecting');
     this.errorMessageSignal.set(null);
+    this.eventsSignal.set([]);
 
     const room = this.roomFactory();
     this.room = room;
@@ -140,6 +152,47 @@ export class LivekitSessionService {
       this.room = null;
       this.stateSignal.set('idle');
     });
+
+    // Canal de DATOS de LiveKit (HU-14.1/14.2) — el Agente 3 publica acá el
+    // saludo proactivo y los chips de estado de tool-calling
+    // (`LocalParticipant.publishData` del lado de `apps/voice-agent`, ver
+    // `voice-agent-event.ts`). Hasta Sprint 9 este widget solo usaba el
+    // canal de AUDIO de LiveKit (ver ADR de alcance en
+    // `voice-widget.component.ts`) — este es el primer uso del canal de
+    // datos.
+    room.on(RoomEvent.DataReceived, (payload: Uint8Array) => {
+      const evento = this.parseVoiceAgentEvent(payload);
+      if (evento) {
+        this.eventsSignal.update((events) => [...events, evento]);
+      }
+    });
+  }
+
+  /**
+   * Decodifica un payload crudo de `RoomEvent.DataReceived` a
+   * `VoiceAgentEvent` — devuelve `null` (y loguea un warning) si el payload
+   * no es JSON válido o no tiene la forma esperada, para no romper la
+   * sesión de voz por un mensaje malformado/de otro tipo publicado en la
+   * sala.
+   */
+  private parseVoiceAgentEvent(payload: Uint8Array): VoiceAgentEvent | null {
+    try {
+      const decoded: unknown = JSON.parse(new TextDecoder().decode(payload));
+      if (this.esVoiceAgentEvent(decoded)) {
+        return decoded;
+      }
+      console.warn('[Conserje de Voz] Evento de datos con forma inesperada, se ignora:', decoded);
+      return null;
+    } catch (error) {
+      console.warn('[Conserje de Voz] No se pudo decodificar el payload de datos de LiveKit:', error);
+      return null;
+    }
+  }
+
+  private esVoiceAgentEvent(value: unknown): value is VoiceAgentEvent {
+    if (typeof value !== 'object' || value === null || !('type' in value)) return false;
+    const candidato = value as { type: unknown };
+    return candidato.type === 'greeting' || candidato.type === 'tool_status';
   }
 
   private async teardown(): Promise<void> {
