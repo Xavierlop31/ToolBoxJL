@@ -34,4 +34,7 @@ export const environment = {
     url: 'https://REEMPLAZAR-EN-VERCEL.supabase.co',
     anonKey: 'REEMPLAZAR-CON-SUPABASE-ANON-KEY-DE-PRODUCCION',
   },
+  // El acceso rápido por rol (Sprint 12, HU-11.2) es solo de desarrollo —
+  // en producción queda vacío a propósito, ver environment.development.ts.
+  quickAccessDemo: [] as ReadonlyArray<{ rol: string; label: string; email: string }>,
 };
