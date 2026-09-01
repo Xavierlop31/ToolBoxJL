@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { environment } from '../../../../environments/environment';
@@ -24,6 +24,7 @@ export class LoginComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly mode = signal<AuthMode>('signIn');
   readonly loading = signal(false);
@@ -101,7 +102,11 @@ export class LoginComponent {
       return;
     }
 
-    await this.router.navigateByUrl('/home');
+    // Auth-wall (HU-11.1 parte 2): si se llegó acá con `?returnUrl=...` (ej.
+    // redirigido desde portal-cliente al intentar cotizar sin sesión),
+    // volvemos ahí en vez de al home genérico.
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    await this.router.navigateByUrl(returnUrl ?? '/home');
   }
 
   /**

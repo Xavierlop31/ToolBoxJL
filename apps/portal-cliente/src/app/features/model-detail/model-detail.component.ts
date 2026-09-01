@@ -1,12 +1,27 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { AuthService } from '../../core/auth/auth.service';
+import { ReturnIntentService } from '../../core/auth/return-intent.service';
+import { CartService } from '../../core/cart/cart.service';
 import { CatalogService } from '../../core/catalog/catalog.service';
-import { ToolModel } from '../../core/models/catalog.models';
+import { ToolModel, Zona } from '../../core/models/catalog.models';
 import { Quote, Order, Payment, MetodoPago } from '../../core/models/order.models';
 import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
+
+/** Forma persistida del intento guardado antes de redirigir a /login (auth-wall, HU-11.1). */
+interface ReturnIntentData {
+  modeloId: string;
+  form: {
+    tipo: string;
+    fechaInicio: string;
+    fechaFin: string;
+    direccionEntrega: string;
+    zonaId: string;
+  };
+}
 
 /**
  * Ficha de modelo + consulta de disponibilidad + cotización y creación de órdenes (RF-2.1).
@@ -22,8 +37,12 @@ import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-imag
 })
 export class ModelDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly catalog = inject(CatalogService);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly auth = inject(AuthService);
+  private readonly cartService = inject(CartService);
+  private readonly returnIntent = inject(ReturnIntentService);
 
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -49,12 +68,18 @@ export class ModelDetailComponent implements OnInit {
   readonly paymentResult = signal<Payment | null>(null);
   readonly selectedMetodoPago = signal<MetodoPago>('pse');
 
-  // Zonas de entrega simuladas para cumplir con el DTO
-  readonly zonas = [
-    { id: 'b8c8d8e8-f8a8-4b8c-8d8e-8f8a8b8c8d8e', nombre: 'Zona Norte (Bogotá)' },
-    { id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', nombre: 'Zona Centro (Bogotá)' },
-    { id: 'f8e8d8c8-b8a8-4b8c-8d8e-8f8a8b8c8d8e', nombre: 'Zona Sur (Bogotá)' },
-  ];
+  // HU-12.2: zonas reales por ciudad (GET /zones?ciudad=) — ya no un array
+  // hardcodeado. El zonaId enviado a /orders/quote y /orders debe ser un
+  // UUID real devuelto por el backend.
+  readonly ciudades = ['Medellín', 'Bogotá'] as const;
+  readonly ciudadSeleccionada = signal<string>('Bogotá');
+  readonly zonas = signal<Zona[]>([]);
+  readonly zonasLoading = signal(false);
+
+  // "Agregar al Carrito" (HU-12.2, alcance mínimo — Sprint 12)
+  readonly addToCartLoading = signal(false);
+  readonly addToCartError = signal<string | null>(null);
+  readonly toastMessage = signal<string | null>(null);
 
   readonly form = this.formBuilder.nonNullable.group({
     tipo: ['alquiler', Validators.required],
@@ -83,6 +108,8 @@ export class ModelDetailComponent implements OnInit {
       return;
     }
 
+    this.cargarZonas(this.ciudadSeleccionada());
+
     this.catalog.getModelById(id).subscribe({
       next: (model) => {
         this.model.set(model);
@@ -106,10 +133,39 @@ export class ModelDetailComponent implements OnInit {
 
         // Forzar validaciones iniciales para alquiler
         this.form.get('tipo')?.setValue('alquiler');
+
+        // Auth-wall (HU-11.1 parte 2): si el cliente volvió de /login con un
+        // intento guardado para ESTE modelo, precargamos el form con esos
+        // valores — sin auto-ejecutar getQuote() de nuevo, que confirme el
+        // submit una vez más.
+        const intento = this.returnIntent.recuperarIntento<ReturnIntentData>();
+        if (intento && intento.datos.modeloId === model.id) {
+          this.form.patchValue(intento.datos.form);
+        }
       },
       error: () => {
         this.errorMessage.set('No pudimos cargar la ficha del modelo.');
         this.loading.set(false);
+      },
+    });
+  }
+
+  onCiudadChange(ciudad: string): void {
+    this.ciudadSeleccionada.set(ciudad);
+    this.form.patchValue({ zonaId: '' });
+    this.cargarZonas(ciudad);
+  }
+
+  private cargarZonas(ciudad: string): void {
+    this.zonasLoading.set(true);
+    this.catalog.getZones(ciudad).subscribe({
+      next: (zonas) => {
+        this.zonas.set(zonas);
+        this.zonasLoading.set(false);
+      },
+      error: () => {
+        this.zonas.set([]);
+        this.zonasLoading.set(false);
       },
     });
   }
@@ -146,6 +202,13 @@ export class ModelDetailComponent implements OnInit {
     const model = this.model();
     if (!model || this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+
+    // Auth-wall (HU-11.1 parte 2): "Cotizar" es la primera acción real que
+    // necesita sesión. Sin sesión, guardamos el intento y mandamos a login.
+    if (!this.auth.isAuthenticated()) {
+      this.redirigirALoginConIntento(model.id);
       return;
     }
 
@@ -240,5 +303,64 @@ export class ModelDetailComponent implements OnInit {
         this.paymentLoading.set(false);
       }
     });
+  }
+
+  /**
+   * "Agregar al Carrito" (HU-12.2, alcance mínimo — Sprint 12). Mismo
+   * auth-wall que `getQuote()`: sin sesión, guarda el intento y redirige a
+   * login. Cantidad fija en 1 (no hay selector de cantidad en este form);
+   * `dias` solo aplica si la modalidad es alquiler y hay un rango válido.
+   */
+  addItem(): void {
+    const model = this.model();
+    if (!model) return;
+
+    if (!this.auth.isAuthenticated()) {
+      this.redirigirALoginConIntento(model.id);
+      return;
+    }
+
+    const { tipo, fechaInicio, fechaFin } = this.form.getRawValue();
+    const dias =
+      tipo === 'alquiler' ? this.calcularDias(fechaInicio, fechaFin) : undefined;
+
+    this.addToCartLoading.set(true);
+    this.addToCartError.set(null);
+
+    this.cartService.addItem(model.id, 1, dias).subscribe({
+      next: () => {
+        this.addToCartLoading.set(false);
+        this.mostrarToast('Se agregó al carrito.');
+      },
+      error: (err) => {
+        this.addToCartLoading.set(false);
+        this.addToCartError.set(
+          err?.error?.message || 'No pudimos agregar el producto al carrito.',
+        );
+      },
+    });
+  }
+
+  private calcularDias(fechaInicio: string, fechaFin: string): number | undefined {
+    if (!fechaInicio || !fechaFin) return undefined;
+    const inicio = new Date(fechaInicio).getTime();
+    const fin = new Date(fechaFin).getTime();
+    if (Number.isNaN(inicio) || Number.isNaN(fin) || fin <= inicio) return undefined;
+    return Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+  }
+
+  private mostrarToast(mensaje: string): void {
+    this.toastMessage.set(mensaje);
+    setTimeout(() => this.toastMessage.set(null), 3000);
+  }
+
+  private redirigirALoginConIntento(modeloId: string): void {
+    this.returnIntent.guardarIntento({
+      modeloId,
+      form: this.form.getRawValue(),
+    } satisfies ReturnIntentData);
+    void this.router.navigateByUrl(
+      `/login?returnUrl=${encodeURIComponent(window.location.pathname)}`,
+    );
   }
 }

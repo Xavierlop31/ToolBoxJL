@@ -50,6 +50,12 @@
                 <span class="rate-amount">\${{ model.tarifa_semana | number }} <small>COP / sem</small></span>
               </div>
             }
+            @if (model.disponible_para_venta && model.precio_venta) {
+              <div class="rate-card rate-sale">
+                <span class="rate-label">Precio de Venta</span>
+                <span class="rate-amount">\${{ model.precio_venta | number }} <small>COP</small></span>
+              </div>
+            }
           </div>
 
           <!-- Specs chips -->
@@ -145,22 +151,53 @@
           </div>
 
           <div class="field">
-            <label for="zonaId">Zona de entrega</label>
-            <select id="zonaId" formControlName="zonaId">
-              <option value="">Selecciona una zona</option>
-              @for (zona of zonas; track zona.id) {
-                <option [value]="zona.id">{{ zona.nombre }}</option>
+            <label for="ciudad">Ciudad</label>
+            <select id="ciudad" [value]="ciudadSeleccionada()" (change)="onCiudadChange($any($event.target).value)">
+              @for (ciudad of ciudades; track ciudad) {
+                <option [value]="ciudad">{{ ciudad }}</option>
               }
             </select>
           </div>
 
-          <button type="submit" class="btn-primary" [disabled]="quoteLoading()">
-            {{ quoteLoading() ? 'Calculando cotización…' : 'Calcular Cotización' }}
-          </button>
+          <div class="field">
+            <label for="zonaId">Zona de entrega</label>
+            <select id="zonaId" formControlName="zonaId">
+              <option value="">Selecciona una zona</option>
+              @for (zona of zonas(); track zona.id) {
+                <option [value]="zona.id">{{ zona.nombre }}</option>
+              }
+            </select>
+            @if (zonasLoading()) {
+              <span class="hint-text">Cargando zonas…</span>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" [disabled]="quoteLoading()">
+              {{ quoteLoading() ? 'Calculando cotización…' : 'Calcular Cotización' }}
+            </button>
+            <button
+              type="button"
+              class="btn-secondary btn-add-cart"
+              data-testid="add-to-cart"
+              (click)="addItem()"
+              [disabled]="addToCartLoading()"
+            >
+              {{ addToCartLoading() ? 'Agregando…' : 'Agregar al Carrito' }}
+            </button>
+          </div>
         </form>
 
         @if (quoteError()) {
           <p class="form-error" role="alert">{{ quoteError() }}</p>
+        }
+
+        @if (addToCartError()) {
+          <p class="form-error" role="alert">{{ addToCartError() }}</p>
+        }
+
+        @if (toastMessage(); as toast) {
+          <output class="toast-confirmacion" role="status">{{ toast }}</output>
         }
 
         <!-- Desglose de Cotización -->

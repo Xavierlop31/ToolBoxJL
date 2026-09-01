@@ -26,9 +26,18 @@ export interface ToolModel {
   manual_pdf_url?: string;
   imagen_url?: string | null;
   disponible_para_venta?: boolean;
+  /** COP. Solo aplica si disponible_para_venta=true; null si no está en venta directa (HU-12.2). */
+  precio_venta?: number | null;
 }
 
 export interface AvailabilityResult {
   modelo_id: string;
   unidades_disponibles: number;
+}
+
+/** Refleja el schema `Zona` de openapi.yaml (`GET /zones`, HU-12.2, Fase 3). */
+export interface Zona {
+  id: string;
+  nombre: string;
+  ciudad: 'Medellín' | 'Bogotá';
 }

@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { AvailabilityResult, ToolModel } from '../models/catalog.models';
+import { AvailabilityResult, ToolModel, Zona } from '../models/catalog.models';
 import { Quote, OrderInput, Order, Payment, MetodoPago } from '../models/order.models';
 
 export interface CatalogSearchParams {
@@ -52,5 +52,12 @@ export class CatalogService {
 
   payOrder(orderId: string, metodo: MetodoPago): Observable<Payment> {
     return this.http.post<Payment>(`${this.apiUrl}/orders/${orderId}/pay`, { metodo });
+  }
+
+  /** `GET /zones?ciudad=` (HU-12.2) — reemplaza el array de zonas hardcodeado del form. */
+  getZones(ciudad?: string): Observable<Zona[]> {
+    let params = new HttpParams();
+    if (ciudad) params = params.set('ciudad', ciudad);
+    return this.http.get<Zona[]>(`${this.apiUrl}/zones`, { params });
   }
 }
