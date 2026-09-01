@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { Cart } from '../models/cart.models';
+import { Cart, CartItem } from '../models/cart.models';
 
 /**
  * Carrito del Cliente autenticado (`GET /cart`, openapi.yaml).
@@ -38,6 +38,22 @@ export class CartService {
   refresh(): Observable<Cart> {
     return this.http
       .get<Cart>(`${this.apiUrl}/cart`)
+      .pipe(tap((cart) => this.cartSignal.set(cart)));
+  }
+
+  /**
+   * `POST /cart/add-item` (HU-12.2, alcance mínimo — Sprint 12). Actualiza
+   * el signal `cart`/`itemCount` con el carrito ya actualizado que devuelve
+   * el backend, igual que `refresh()`.
+   */
+  addItem(modeloId: string, cantidad: number, dias?: number): Observable<Cart> {
+    const body: CartItem = {
+      modelo_id: modeloId,
+      cantidad,
+      ...(dias ? { dias } : {}),
+    };
+    return this.http
+      .post<Cart>(`${this.apiUrl}/cart/add-item`, body)
       .pipe(tap((cart) => this.cartSignal.set(cart)));
   }
 }

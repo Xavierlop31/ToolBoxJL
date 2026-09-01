@@ -1,4 +1,15 @@
 <main class="auth-screen">
+  <div class="auth-branding">
+    <span class="brand-badge">ToolBox JL Suite</span>
+    <h2 class="brand-title">
+      Control industrial de alquiler, venta y logística de herramientas.
+    </h2>
+    <p class="brand-copy">
+      Una sola plataforma para clientes, almacenistas, repartidores, gerentes
+      y administradores.
+    </p>
+  </div>
+
   <section class="auth-card" aria-labelledby="auth-title">
     <h1 id="auth-title">{{ isSignUp ? 'Creá tu cuenta' : 'Iniciá sesión' }}</h1>
     <p class="auth-subtitle">ToolBox JL — alquiler y venta de herramientas</p>
@@ -107,5 +118,23 @@
         <button type="button" class="link" (click)="toggleMode()">Registrate</button>
       }
     </p>
+
+    @if (quickAccessOptions.length) {
+      <div class="quick-access">
+        <p class="quick-access-title">Acceso rápido (solo desarrollo)</p>
+        <div class="quick-access-buttons">
+          @for (opcion of quickAccessOptions; track opcion.rol) {
+            <button
+              type="button"
+              class="btn-quick-access"
+              [disabled]="loading()"
+              (click)="quickAccess(opcion)"
+            >
+              {{ opcion.label }}
+            </button>
+          }
+        </div>
+      </div>
+    }
   </section>
 </main>

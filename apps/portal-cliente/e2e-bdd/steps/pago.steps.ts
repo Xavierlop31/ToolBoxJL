@@ -1,5 +1,6 @@
 import { createBdd } from 'playwright-bdd';
 import { expect, type Page } from '@playwright/test';
+import { prepararSesionAutenticada } from './auth-fixtures';
 
 const { Given, When, Then } = createBdd();
 
@@ -61,6 +62,19 @@ async function prepararOrdenPendienteDePago(page: Page): Promise<void> {
     });
   });
 
+  // Sprint 12 (HU-12.2): el select de zona ahora carga async desde
+  // GET /zones?ciudad= — sin mockearlo, selectOption cuelga hasta timeout.
+  await page.route('**/zones*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 'b8c8d8e8-f8a8-4b8c-8d8e-8f8a8b8c8d8e', nombre: 'Zona Norte', ciudad: 'Bogotá' },
+      ]),
+    });
+  });
+
+  await prepararSesionAutenticada(page);
   await page.goto(`/catalogo/${MODEL_ID}`);
   await page.fill('#fechaInicio', '2026-10-01');
   await page.fill('#fechaFin', '2026-10-05');

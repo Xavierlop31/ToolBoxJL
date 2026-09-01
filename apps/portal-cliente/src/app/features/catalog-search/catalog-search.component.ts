@@ -1,12 +1,15 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ToolModel } from '../../core/models/catalog.models';
+import { ActiveOrdersComponent } from '../active-orders/active-orders.component';
 
 import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
+
+export const PAGE_SIZES = [6, 12, 24] as const;
 
 /**
  * Búsqueda pública de catálogo — RF-1.1 (visibilidad del catálogo),
@@ -16,7 +19,7 @@ import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-imag
 @Component({
   selector: 'app-catalog-search',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DecimalPipe],
+  imports: [ReactiveFormsModule, RouterLink, DecimalPipe, ActiveOrdersComponent],
   templateUrl: './catalog-search.component.html',
   styleUrl: './catalog-search.component.scss',
 })
@@ -29,6 +32,13 @@ export class CatalogSearchComponent implements OnInit {
   readonly results = signal<ToolModel[]>([]);
 
   readonly selectedCategory = signal<string>('ALL');
+
+  // Paginación (HU-12.1) — page 1-based, pageSize uno de PAGE_SIZES.
+  readonly pageSizes = PAGE_SIZES;
+  readonly page = signal(1);
+  readonly pageSize = signal<(typeof PAGE_SIZES)[number]>(6);
+  readonly total = signal(0);
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 
   readonly form = this.formBuilder.nonNullable.group({
     q: [''],
@@ -56,6 +66,26 @@ export class CatalogSearchComponent implements OnInit {
     } else {
       this.form.patchValue({ q: cat });
     }
+    this.page.set(1);
+    this.search();
+  }
+
+  setPageSize(size: (typeof PAGE_SIZES)[number]): void {
+    this.pageSize.set(size);
+    this.page.set(1);
+    this.search();
+  }
+
+  onPageSizeChange(value: string): void {
+    const size = Number(value);
+    if (PAGE_SIZES.includes(size as (typeof PAGE_SIZES)[number])) {
+      this.setPageSize(size as (typeof PAGE_SIZES)[number]);
+    }
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages()) return;
+    this.page.set(page);
     this.search();
   }
 
@@ -64,9 +94,10 @@ export class CatalogSearchComponent implements OnInit {
     this.errorMessage.set(null);
 
     const query = this.form.getRawValue().q?.trim() || undefined;
-    this.catalog.search({ q: query }).subscribe({
-      next: (models) => {
-        this.results.set(models);
+    this.catalog.searchPaged({ q: query }, this.page(), this.pageSize()).subscribe({
+      next: ({ items, total }) => {
+        this.results.set(items);
+        this.total.set(total);
         this.loading.set(false);
       },
       error: () => {

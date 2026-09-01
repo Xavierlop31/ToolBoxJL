@@ -1,8 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { environment } from '../../../../environments/environment';
 
 type AuthMode = 'signIn' | 'signUp';
 
@@ -23,6 +24,7 @@ export class LoginComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly mode = signal<AuthMode>('signIn');
   readonly loading = signal(false);
@@ -38,6 +40,12 @@ export class LoginComponent {
   // validarse), así que meterlo en el FormGroup obligaría a togglear sus
   // validators ahí también sin ganar nada — separado es más simple de leer.
   readonly telefonoControl = this.formBuilder.nonNullable.control('');
+
+  // Acceso rápido por rol (Sprint 12, HU-11.2) — solo desarrollo, ver
+  // apps/shell/src/environments/environment.development.ts.
+  readonly quickAccessOptions = environment.production
+    ? []
+    : environment.quickAccessDemo;
 
   get isSignUp(): boolean {
     return this.mode() === 'signUp';
@@ -94,7 +102,33 @@ export class LoginComponent {
       return;
     }
 
-    await this.router.navigateByUrl('/home');
+    // Auth-wall (HU-11.1 parte 2): si se llegó acá con `?returnUrl=...` (ej.
+    // redirigido desde portal-cliente al intentar cotizar sin sesión),
+    // volvemos ahí en vez de al home genérico.
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    await this.router.navigateByUrl(returnUrl ?? '/home');
+  }
+
+  /**
+   * Precarga el correo demo del rol elegido y dispara el submit ya
+   * existente. El password NO se precarga (no hay secretos en el bundle):
+   * si el form queda inválido por falta de password, submit() se limita a
+   * marcar los campos como touched, tal como con cualquier envío manual.
+   */
+  quickAccess(opcion: { email: string }): void {
+    if (this.loading()) {
+      return;
+    }
+
+    if (this.isSignUp) {
+      this.toggleMode();
+    }
+
+    this.form.patchValue({ email: opcion.email, password: '' });
+    this.errorMessage.set(null);
+    this.infoMessage.set(null);
+
+    void this.submit();
   }
 
   async continueWithGoogle(): Promise<void> {

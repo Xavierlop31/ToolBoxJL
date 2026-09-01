@@ -1,0 +1,44 @@
+@if (isAuthenticated()) {
+  <section class="active-orders card-industrial" data-testid="active-orders">
+    <h2 class="section-title">Mis Pedidos Activos</h2>
+
+    @if (loading()) {
+      <output>Cargando tus pedidos…</output>
+    }
+
+    @if (errorMessage()) {
+      <p class="form-error" role="alert">{{ errorMessage() }}</p>
+    }
+
+    @if (!loading() && orders().length === 0 && !errorMessage()) {
+      <p class="empty-hint">No tenés pedidos activos por ahora.</p>
+    }
+
+    @if (orders().length > 0) {
+      <ul class="orders-list">
+        @for (order of orders(); track order.id) {
+          <li class="order-row">
+            <div class="order-main">
+              <span class="order-id">#{{ order.id.slice(0, 8) }}</span>
+              <span class="order-date">{{ order.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
+              <span class="order-tipo">{{ order.tipo === 'alquiler' ? 'Alquiler' : 'Venta' }}</span>
+              <span class="order-badge" [attr.data-estado]="order.estado">
+                {{ estadoLabel[order.estado] }}
+              </span>
+            </div>
+          </li>
+        }
+      </ul>
+
+      @if (totalPages() > 1) {
+        <nav class="pagination" aria-label="Paginación de pedidos activos">
+          <button type="button" [disabled]="page() === 1" (click)="goToPage(page() - 1)">Anterior</button>
+          <span>Página {{ page() }} de {{ totalPages() }}</span>
+          <button type="button" [disabled]="page() === totalPages()" (click)="goToPage(page() + 1)">
+            Siguiente
+          </button>
+        </nav>
+      }
+    }
+  </section>
+}
