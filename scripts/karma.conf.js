@@ -35,7 +35,7 @@
 // fuerza la búsqueda a empezar en el cwd de la app en vez de en la ubicación
 // física de este archivo.
 
-const path = require("path");
+const path = require("node:path");
 
 const appDir = process.cwd();
 const appName = path.basename(appDir);
@@ -44,7 +44,7 @@ function requerirDesdeApp(nombrePaquete) {
   return require(require.resolve(nombrePaquete, { paths: [appDir] }));
 }
 
-module.exports = function (config) {
+module.exports = function karmaConfig(config) {
   config.set({
     basePath: "",
     frameworks: ["jasmine", "@angular-devkit/build-angular"],

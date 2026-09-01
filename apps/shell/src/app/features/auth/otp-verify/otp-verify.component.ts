@@ -60,7 +60,7 @@ export class OtpVerifyComponent implements OnInit, OnDestroy {
   // `guardarTelefono()`; un `[formControl]` standalone en el input, sin
   // `[formGroup]` en el `<form>`, no alcanza).
   readonly telefonoForm = this.formBuilder.nonNullable.group({
-    telefono: ['', [Validators.required, Validators.pattern(/^\+?[0-9]{8,15}$/)]],
+    telefono: ['', [Validators.required, Validators.pattern(/^\+?\d{8,15}$/)]],
   });
 
   readonly requesting = signal(false);

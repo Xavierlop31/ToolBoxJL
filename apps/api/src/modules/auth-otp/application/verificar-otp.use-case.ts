@@ -36,7 +36,7 @@ export class VerificarOtpUseCase {
     deviceId: string,
   ): Promise<OtpVerificado> {
     const otp = await this.otps.buscarPorId(otpId);
-    if (!otp || otp.usuarioId !== usuario.id || otp.deviceId !== deviceId) {
+    if (otp?.usuarioId !== usuario.id || otp?.deviceId !== deviceId) {
       // Mismo mensaje genérico para "no existe" y "no corresponde a este
       // usuario/dispositivo" — no dar pistas de cuál de los dos pasó.
       throw new OtpInvalidoError("El OTP no existe, expiró, o ya fue utilizado.");
