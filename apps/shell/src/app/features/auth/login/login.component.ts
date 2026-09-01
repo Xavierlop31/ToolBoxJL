@@ -51,7 +51,7 @@ export class LoginComponent {
     if (this.isSignUp) {
       this.telefonoControl.addValidators([
         Validators.required,
-        Validators.pattern(/^\+?[0-9]{8,15}$/),
+        Validators.pattern(/^\+?\d{8,15}$/),
       ]);
     } else {
       this.telefonoControl.clearValidators();
