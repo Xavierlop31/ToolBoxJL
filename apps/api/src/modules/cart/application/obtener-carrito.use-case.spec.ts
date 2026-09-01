@@ -32,7 +32,9 @@ describe("ObtenerCarritoUseCase", () => {
 
     const carrito = await obtenerCarrito.ejecutar("cliente-1");
 
-    expect(carrito.items).toEqual([{ modelo_id: modelo.id, cantidad: 2, dias: 3 }]);
+    expect(carrito.items).toEqual([
+      { id: expect.any(String), modelo_id: modelo.id, cantidad: 2, dias: 3 },
+    ]);
     expect(carrito.total).toBe(2 * (3 * 10_000));
   });
 });

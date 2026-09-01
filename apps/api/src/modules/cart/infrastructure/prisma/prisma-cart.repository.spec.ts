@@ -39,19 +39,19 @@ describe("PrismaCartRepository", () => {
     expect(resultado).toEqual({
       clienteId: "cliente-1",
       items: [
-        { modelo_id: "modelo-1", cantidad: 2, dias: 3 },
-        { modelo_id: "modelo-2", cantidad: 1, dias: null },
+        { id: "item-1", modelo_id: "modelo-1", cantidad: 2, dias: 3 },
+        { id: "item-2", modelo_id: "modelo-2", cantidad: 1, dias: null },
       ],
     });
   });
 
-  it("guardarItems() reemplaza las líneas del carrito dentro de una transacción cuando hay items", async () => {
+  it("guardarItems() reemplaza las líneas del carrito dentro de una transacción cuando hay items, preservando el `id` de cada línea", async () => {
     prisma.cart.upsert.mockResolvedValueOnce({ id: "cart-1", clienteId: "cliente-1" });
     prisma.$transaction.mockResolvedValueOnce([{ count: 1 }, { count: 2 }]);
 
     const items = [
-      { modelo_id: "modelo-1", cantidad: 2, dias: 3 },
-      { modelo_id: "modelo-2", cantidad: 1, dias: null },
+      { id: "item-1", modelo_id: "modelo-1", cantidad: 2, dias: 3 },
+      { id: "item-2", modelo_id: "modelo-2", cantidad: 1, dias: null },
     ];
 
     const resultado = await repo.guardarItems("cliente-1", items);
@@ -64,8 +64,8 @@ describe("PrismaCartRepository", () => {
     expect(prisma.cartItem.deleteMany).toHaveBeenCalledWith({ where: { cartId: "cart-1" } });
     expect(prisma.cartItem.createMany).toHaveBeenCalledWith({
       data: [
-        { cartId: "cart-1", modeloId: "modelo-1", cantidad: 2, dias: 3 },
-        { cartId: "cart-1", modeloId: "modelo-2", cantidad: 1, dias: null },
+        { id: "item-1", cartId: "cart-1", modeloId: "modelo-1", cantidad: 2, dias: 3 },
+        { id: "item-2", cartId: "cart-1", modeloId: "modelo-2", cantidad: 1, dias: null },
       ],
     });
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);

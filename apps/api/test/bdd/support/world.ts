@@ -123,6 +123,8 @@ import { CART_REPOSITORY } from "../../../src/modules/cart/infrastructure/cart.t
 import { InMemoryCartRepository } from "../../../src/modules/cart/infrastructure/in-memory/in-memory-cart.repository";
 import { ObtenerCarritoUseCase } from "../../../src/modules/cart/application/obtener-carrito.use-case";
 import { AgregarItemCarritoUseCase } from "../../../src/modules/cart/application/agregar-item-carrito.use-case";
+import { ActualizarCantidadCarritoUseCase } from "../../../src/modules/cart/application/actualizar-cantidad-carrito.use-case";
+import { EliminarItemCarritoUseCase } from "../../../src/modules/cart/application/eliminar-item-carrito.use-case";
 
 /**
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
@@ -185,9 +187,15 @@ export class ToolboxWorld extends CucumberWorld {
 
   obtenerCarrito!: ObtenerCarritoUseCase;
   agregarItemCarrito!: AgregarItemCarritoUseCase;
+  /** Sprint 13, HU-12.3 (Issue #146) — PATCH/DELETE /cart/items/{id}. */
+  actualizarCantidadCarrito!: ActualizarCantidadCarritoUseCase;
+  eliminarItemCarrito!: EliminarItemCarritoUseCase;
   /** Conveniencia para el step Given de HU-10.2 (herramienta que el Agente 3 "recomendó" antes de la confirmación verbal). */
   herramientaRecomendada?: ToolModel;
   ultimoCarrito?: Cart;
+  /** Conveniencia para los steps de HU-12.3 (id de la línea del carrito bajo prueba). */
+  itemCarritoId?: string;
+  errorCarrito?: Error;
 
   usuarioActualId!: string;
   rolActual!: Rol;
@@ -301,6 +309,8 @@ export class ToolboxWorld extends CucumberWorld {
         ConsultarProductividadRepartidoresUseCase,
         ObtenerCarritoUseCase,
         AgregarItemCarritoUseCase,
+        ActualizarCantidadCarritoUseCase,
+        EliminarItemCarritoUseCase,
       ],
     }).compile();
 
@@ -357,6 +367,8 @@ export class ToolboxWorld extends CucumberWorld {
 
     this.obtenerCarrito = this.moduleRef.get(ObtenerCarritoUseCase);
     this.agregarItemCarrito = this.moduleRef.get(AgregarItemCarritoUseCase);
+    this.actualizarCantidadCarrito = this.moduleRef.get(ActualizarCantidadCarritoUseCase);
+    this.eliminarItemCarrito = this.moduleRef.get(EliminarItemCarritoUseCase);
 
     this.ultimosLogs = [];
   }
