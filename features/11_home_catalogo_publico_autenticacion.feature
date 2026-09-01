@@ -29,8 +29,7 @@ Característica: Experiencia de Entrada, Home & Autenticación
     Dado que fui redirigido al login tras intentar alquilar una herramienta
     Cuando completo mi autenticación exitosamente
     Entonces el sistema recupera la intención de compra guardada
-    Y me redirige automáticamente de vuelta a la ficha técnica de esa herramienta con mis fechas/zona precargadas
-    Sin que tenga que volver a buscar la herramienta en el catálogo.
+    Y me redirige automáticamente de vuelta a la ficha técnica de esa herramienta con mis fechas/zona precargadas, sin que tenga que volver a buscarla en el catálogo.
 
   @HU-11.2 @Auth @LoginIndustrial
   Escenario: Visualización del panel dividido de inicio de sesión
