@@ -64,14 +64,19 @@ export async function procesarMensajeEntrante(
   const logger = new Logger("ProcesarMensajeEntranteUseCase");
   const fetchImpl = deps.fetchImpl ?? fetch;
   const maxIteraciones = deps.maxIteraciones ?? 6;
+  const esAudio = mensaje.tipo === "audio";
+  const inicio = Date.now();
 
+  const inicioStt = Date.now();
   const transcripcion = await transcribir(deps, mensaje);
+  const duracionSttMs = Date.now() - inicioStt;
   if (!transcripcion.trim()) {
     await responder(deps, mensaje, MENSAJE_SIN_CONTENIDO);
     return { transcripcion: "", respuestaTexto: MENSAJE_SIN_CONTENIDO };
   }
 
   const bearerToken = await deps.authGateway.obtenerAccessToken();
+  const inicioLlm = Date.now();
   const { resumenTexto, linkDePagoOfrecido } = await ejecutarLoopDeToolCalling(
     deps,
     bearerToken,
@@ -79,10 +84,30 @@ export async function procesarMensajeEntrante(
     maxIteraciones,
     fetchImpl,
   );
+  const duracionLlmMs = Date.now() - inicioLlm;
 
   const respuestaTexto = componerRespuestaFinal(resumenTexto, linkDePagoOfrecido);
-  logger.log(`Teléfono ${mensaje.telefono}: "${transcripcion}" → "${respuestaTexto}"`);
-  await responder(deps, mensaje, respuestaTexto);
+  const duracionTtsMs = await responder(deps, mensaje, respuestaTexto);
+
+  if (esAudio) {
+    // Instrumentación de latencia por etapa (TRD §3, RNF-2) — solo tiene
+    // sentido medir STT/TTS para notas de voz; un mensaje de texto no pasa
+    // por esos dos servicios. `deps` no tiene un logger inyectado (a
+    // diferencia de `RoomSessionDeps` del Agente 3), así que se usa el
+    // mismo `Logger` de Nest ya instanciado arriba.
+    const latenciaMs = Date.now() - inicio;
+    logger.log(
+      `Teléfono ${mensaje.telefono}: turno de voz resuelto en ${latenciaMs}ms ` +
+        `(STT: ${duracionSttMs}ms, LLM: ${duracionLlmMs}ms, TTS: ${duracionTtsMs ?? 0}ms).`,
+    );
+    if (latenciaMs > 2500) {
+      logger.warn(
+        `RNF-2 excedido: turno de voz del teléfono ${mensaje.telefono} tardó ${latenciaMs}ms (objetivo < 2500ms).`,
+      );
+    }
+  } else {
+    logger.log(`Teléfono ${mensaje.telefono}: "${transcripcion}" → "${respuestaTexto}"`);
+  }
 
   return { transcripcion, respuestaTexto };
 }
@@ -261,15 +286,19 @@ async function transcribir(deps: ProcesarMensajeEntranteDeps, mensaje: WebhookIn
   return deps.speechToText.transcribir(buffer, mimeType);
 }
 
+/** Devuelve la duración de la síntesis TTS en ms (solo cuando el mensaje es de audio), o `null` si respondió por texto. */
 async function responder(
   deps: ProcesarMensajeEntranteDeps,
   mensaje: WebhookInboundMessage,
   texto: string,
-): Promise<void> {
+): Promise<number | null> {
   if (mensaje.tipo === "audio") {
+    const inicioTts = Date.now();
     const audio = await deps.textToSpeech.sintetizar(texto);
+    const duracionTtsMs = Date.now() - inicioTts;
     await deps.whatsapp.enviarNotaDeVoz(mensaje.telefono, audio);
-    return;
+    return duracionTtsMs;
   }
   await deps.whatsapp.enviarTexto(mensaje.telefono, texto);
+  return null;
 }
