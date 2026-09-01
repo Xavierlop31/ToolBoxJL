@@ -1,17 +1,13 @@
+import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Cart, CartItem } from "@toolboxjl/shared-types";
 import { TOOL_MODEL_REPOSITORY } from "../../catalog-inventory/infrastructure/catalog-inventory.tokens";
 import type { ToolModelRepository } from "../../catalog-inventory/domain/tool-model.repository";
 import { ModeloNoEncontradoError } from "../../catalog-inventory/domain/errors/modelo-no-encontrado.error";
+import { aCartItemDto } from "../domain/cart-item.mapper";
 import { calcularTotalCarrito, cargarModelosDelCarrito } from "../domain/cart-pricing.service";
-import type { CartLineItem, CartRepository } from "../domain/cart.repository";
+import type { CartRepository } from "../domain/cart.repository";
 import { CART_REPOSITORY } from "../infrastructure/cart.tokens";
-
-function aCartItemDto(item: CartLineItem): CartItem {
-  return item.dias
-    ? { modelo_id: item.modelo_id, cantidad: item.cantidad, dias: item.dias }
-    : { modelo_id: item.modelo_id, cantidad: item.cantidad };
-}
 
 /**
  * POST /cart/add-item (HU-10.1/10.2, Issues #26/#27). Invocado directamente
@@ -48,12 +44,18 @@ export class AgregarItemCarritoUseCase {
     if (indiceExistente >= 0) {
       const existente = items[indiceExistente];
       items[indiceExistente] = {
+        id: existente.id,
         modelo_id: existente.modelo_id,
         cantidad: existente.cantidad + itemInput.cantidad,
         dias: itemInput.dias ?? existente.dias,
       };
     } else {
       items.push({
+        // Id nuevo (Sprint 13, HU-12.3) — `guardarItems` persiste este id
+        // tal cual, así queda estable para futuros `PATCH`/`DELETE
+        // /cart/items/{id}` (ver comentario de `guardarItems` en
+        // domain/cart.repository.ts).
+        id: randomUUID(),
         modelo_id: itemInput.modelo_id,
         cantidad: itemInput.cantidad,
         dias: itemInput.dias ?? null,

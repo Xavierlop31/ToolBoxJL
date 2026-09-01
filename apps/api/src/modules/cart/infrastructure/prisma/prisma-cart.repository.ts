@@ -5,6 +5,7 @@ import type { CartAggregate, CartLineItem, CartRepository } from "../../domain/c
 
 function aLineaDominio(item: PrismaCartItem): CartLineItem {
   return {
+    id: item.id,
     modelo_id: item.modeloId,
     cantidad: item.cantidad,
     dias: item.dias ?? null,
@@ -45,13 +46,18 @@ export class PrismaCartRepository implements CartRepository {
     // cantidad de un modelo ya existente, etc.) ya la resolvió el use case
     // que llama acá (AgregarItemCarritoUseCase); este repositorio solo
     // persiste el resultado, mismo criterio documentado en
-    // domain/cart.repository.ts.
+    // domain/cart.repository.ts. `id` se pasa explícito en `createMany`
+    // (Sprint 13, HU-12.3) — así el `id` de cada línea sobrevive al
+    // reemplazo "wholesale" en vez de que Prisma genere uno nuevo cada vez
+    // (`@default(uuid())` del schema solo aplica cuando `id` no viene en
+    // `data`).
     await this.prisma.$transaction([
       this.prisma.cartItem.deleteMany({ where: { cartId: carrito.id } }),
       ...(items.length > 0
         ? [
             this.prisma.cartItem.createMany({
               data: items.map((item) => ({
+                id: item.id,
                 cartId: carrito.id,
                 modeloId: item.modelo_id,
                 cantidad: item.cantidad,

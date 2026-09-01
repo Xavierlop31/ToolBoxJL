@@ -14,7 +14,29 @@ module.exports = {
       "../../features/07_kpis_analitica.feature",
       "../../features/08_agente_ruteo.feature",
       "../../features/09_agente_whatsapp.feature",
-      "../../features/10_agente_conserje_voz.feature"
+      "../../features/10_agente_conserje_voz.feature",
+      // `12_catalogo_avanzado_carrito.feature` (Sprint 13, Issue #146,
+      // HU-12.3): a diferencia de los `.feature` de arriba, sus 4
+      // escenarios `@HU-12.3` comparten EXACTAMENTE los mismos tags
+      // (`@HU-12.3 @Sprint13 @CarritoCompras`) — no hay un tag propio por
+      // escenario (como sí existe `@HU-8.1` vs `@HU-8.2`) para filtrar solo
+      // los 2 que sí tienen step definitions acá. Por eso se seleccionan
+      // por NÚMERO DE LÍNEA (sintaxis `archivo.feature:línea` de
+      // cucumber-js) en vez de por tag: `:69` ("Modificación de cantidades
+      // de un producto" → PATCH /cart/items/{id}) y `:76` ("Eliminación de
+      // un producto del carrito" → DELETE /cart/items/{id}), ver
+      // carrito-multi-item.steps.ts. Los otros 2 escenarios `@HU-12.3`
+      // ("Visualización del listado de ítems en el carrito" y "Cálculo del
+      // resumen de compra consolidado") son puro layout de frontend
+      // (imagen miniatura, panel lateral) sin contenido verificable desde
+      // este TestingModule — le compete al subagente `frontend-developer`/
+      // `qa-testing`. Los escenarios `@HU-12.1`/`@HU-12.2` de este mismo
+      // archivo (Sprint 12, ya en `dev`) tampoco se conectan acá por el
+      // mismo motivo (paginación/UI del catálogo, sin lógica de backend
+      // nueva verificable vía Cucumber) — quedan fuera de este archivo de
+      // paths por completo al no listarse líneas de ellos.
+      "../../features/12_catalogo_avanzado_carrito.feature:69",
+      "../../features/12_catalogo_avanzado_carrito.feature:76"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],
