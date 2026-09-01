@@ -10,7 +10,6 @@ import {
 } from './core/auth/auth.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
   {
     // `guestGuard`: sin esto, volver de un login por Google (que redirige a
     // la raíz, sin path — ver signInWithGoogle en auth.service.ts) dejaba a
