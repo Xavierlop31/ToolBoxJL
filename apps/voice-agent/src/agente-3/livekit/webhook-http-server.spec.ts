@@ -92,7 +92,7 @@ describe("crearServidorWebhook", () => {
     await levantarServidor();
 
     const { status } = await post(port, "/livekit/webhook", JSON.stringify({ event: "participant_joined" }), {
-      authorize: "firma-valida",
+      authorization: "firma-valida",
     });
 
     expect(status).toBe(200);
