@@ -48,7 +48,7 @@ export function crearServidorWebhook(deps: WebhookHttpServerDeps): http.Server {
       void (async () => {
         try {
           const body = Buffer.concat(chunks).toString("utf-8");
-          const authHeader = req.headers.authorize as string | undefined;
+          const authHeader = req.headers.authorization as string | undefined;
           const evento = await receiver.receive(body, authHeader);
 
           const decision = decidirSiUnirseASala({
