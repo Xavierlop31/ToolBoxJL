@@ -136,27 +136,36 @@ export async function manejarSesionDeVoz(deps: RoomSessionDeps, roomName: string
     const inicio = Date.now();
     try {
       const wav = construirWav(muestras, SAMPLE_RATE_PCM, 1);
+      const inicioStt = Date.now();
       const transcripcion = await deps.speechToText.transcribir(wav, "audio/wav");
+      const duracionSttMs = Date.now() - inicioStt;
       if (!transcripcion.trim()) {
         logger.log(`[Agente 3] Sala "${roomName}": turno sin transcripción utilizable, se ignora.`);
         return;
       }
 
+      const inicioLlm = Date.now();
       const resultado = await ejecutarTurnoAgente3(
         { anthropic: deps.anthropic, model: deps.anthropicModel, apiBaseUrl: deps.apiBaseUrl, jwt },
         mensajes,
         transcripcion,
       );
+      const duracionLlmMs = Date.now() - inicioLlm;
       mensajes = resultado.mensajes;
 
+      const inicioTts = Date.now();
       const audioPcm = await deps.textToSpeech.sintetizar(resultado.respuestaTexto);
+      const duracionTtsMs = Date.now() - inicioTts;
       const samplesRespuesta = bufferPcmAInt16Array(audioPcm);
       const frame = new AudioFrame(samplesRespuesta, SAMPLE_RATE_PCM, 1, samplesRespuesta.length);
       await audioSource.captureFrame(frame);
 
       const latenciaMs = Date.now() - inicio;
+      // Desglose por etapa (TRD §3, RNF-2: "logging de tiempos por etapa
+      // (STT, LLM, TTS)") además del total end-to-end ya existente.
       logger.log(
-        `[Agente 3] Sala "${roomName}" — turno resuelto en ${latenciaMs}ms. ` +
+        `[Agente 3] Sala "${roomName}" — turno resuelto en ${latenciaMs}ms ` +
+          `(STT: ${duracionSttMs}ms, LLM: ${duracionLlmMs}ms, TTS: ${duracionTtsMs}ms). ` +
           `Transcripción: "${transcripcion}". Respuesta: "${resultado.respuestaTexto}". ` +
           `${resultado.carritoActualizado ? "Carrito actualizado." : ""}`,
       );
