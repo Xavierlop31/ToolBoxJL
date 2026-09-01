@@ -227,7 +227,12 @@ paths:
       summary: Búsqueda de modelos disponibles en el catálogo
       description: >
         Endpoint público. También usado por el Agente 3 (Conserje de Voz) vía
-        tool calling para responder solicitudes de búsqueda por voz.
+        tool calling para responder solicitudes de búsqueda por voz — por eso
+        `page`/`pageSize` son opcionales y NO cambian la forma de la
+        respuesta (sigue siendo un array plano): omitidos, se devuelve el
+        resultado completo sin paginar (comportamiento histórico, el que usan
+        los Agentes 2/3); provistos, el array devuelto es la página pedida y
+        el total real va en el header `X-Total-Count` (HU-12.1, Fase 3).
       tags: [Catálogo e Inventario]
       security: []
       x-roles: [público]
@@ -245,14 +250,51 @@ paths:
         - name: fecha_fin
           in: query
           schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1 }
+          description: "1-based. Si se omite (junto con pageSize), no pagina."
+        - name: pageSize
+          in: query
+          schema: { type: integer, enum: [6, 12, 24] }
       responses:
         "200":
-          description: Lista de modelos que cumplen el criterio de búsqueda.
+          description: >
+            Lista de modelos que cumplen el criterio de búsqueda (página
+            pedida si se enviaron page/pageSize, completa si no).
+          headers:
+            X-Total-Count:
+              description: Total de resultados sin paginar. Presente solo si se pidió paginación.
+              schema: { type: integer }
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/ToolModel" }
+
+  /zones:
+    get:
+      operationId: listZones
+      summary: Listar zonas logísticas de una ciudad — HU-12.2, Fase 3
+      description: >
+        Público (se consulta desde la ficha técnica antes de que el visitante
+        se autentique). Sin `ciudad`, devuelve todas las zonas de todas las
+        ciudades.
+      tags: [Catálogo e Inventario]
+      security: []
+      x-roles: [público]
+      parameters:
+        - name: ciudad
+          in: query
+          schema: { type: string, enum: [Medellín, Bogotá] }
+      responses:
+        "200":
+          description: Zonas que cumplen el filtro de ciudad.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Zona" }
 
   /catalog/models/{id}:
     get:
@@ -439,6 +481,44 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /orders:
+    get:
+      operationId: listMyOrders
+      summary: Listar mis pedidos (cliente autenticado) — HU-12.1, Fase 3
+      description: >
+        Pedidos del cliente autenticado (el `cliente_id` sale del JWT, no es
+        un parámetro) para la sección "Mis Pedidos Activos" del Home/Catálogo.
+        Paginado en bloques de 5 por defecto.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente]
+      parameters:
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [pendiente_pago, confirmada, en_curso, devuelta, cerrada, cancelada]
+          description: Sin este filtro, devuelve todos los estados.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: Página de pedidos del cliente, ordenados del más reciente al más antiguo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, page, pageSize]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Order" }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       operationId: createOrder
       summary: Crear orden (alquiler o venta)
@@ -1013,11 +1093,28 @@ components:
         interes_mora_dia: { type: number }
         manual_pdf_url: { type: string, format: uri }
         disponible_para_venta: { type: boolean }
+        precio_venta:
+          type: integer
+          nullable: true
+          description: >
+            COP. Solo aplica si disponible_para_venta=true; null si el
+            modelo no está en venta directa (HU-12.2, Fase 3).
 
     ToolModelInput:
       allOf:
         - $ref: "#/components/schemas/ToolModel"
       required: [nombre, marca, categoria, tarifa_dia]
+
+    Zona:
+      type: object
+      description: >
+        HU-12.2 (Fase 3): antes zona_id era un UUID suelto sin relación a
+        ciudad; este schema formaliza esa relación para el selector dinámico
+        Medellín/Bogotá de la ficha técnica.
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string, example: "Chapinero" }
+        ciudad: { type: string, enum: [Medellín, Bogotá] }
 
     ToolUnit:
       type: object
