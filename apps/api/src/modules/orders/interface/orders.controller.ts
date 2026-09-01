@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { Roles } from "../../auth/interface/decorators/roles.decorator";
@@ -18,9 +19,12 @@ import { CotizarOrdenUseCase } from "../application/cotizar-orden.use-case";
 import { CrearOrdenUseCase } from "../application/crear-orden.use-case";
 import { ObtenerOrdenUseCase } from "../application/obtener-orden.use-case";
 import { ExtenderAlquilerUseCase } from "../application/extender-alquiler.use-case";
+import { ListarMisOrdenesUseCase } from "../application/listar-mis-ordenes.use-case";
+import type { ListarMisOrdenesResultado } from "../application/listar-mis-ordenes.use-case";
 import { CotizarOrdenDto } from "./dto/cotizar-orden.dto";
 import { CrearOrdenDto } from "./dto/crear-orden.dto";
 import { ExtenderAlquilerDto } from "./dto/extender-alquiler.dto";
+import { ListarMisOrdenesQueryDto } from "./dto/listar-mis-ordenes.query.dto";
 import { ModeloNoEncontradoError } from "../../catalog-inventory/domain/errors/modelo-no-encontrado.error";
 import { SinUnidadesDisponiblesError } from "../domain/errors/sin-unidades-disponibles.error";
 import { OrdenNoEncontradaError } from "../domain/errors/orden-no-encontrada.error";
@@ -36,6 +40,7 @@ export class OrdersController {
     private readonly crearOrden: CrearOrdenUseCase,
     private readonly obtenerOrden: ObtenerOrdenUseCase,
     private readonly extenderAlquiler: ExtenderAlquilerUseCase,
+    private readonly listarMisOrdenes: ListarMisOrdenesUseCase,
   ) {}
 
   @Roles("cliente")
@@ -73,6 +78,22 @@ export class OrdersController {
       }
       throw error;
     }
+  }
+
+  /**
+   * GET /orders (HU-12.1, Fase 3) — "Mis Pedidos Activos". Declarado antes
+   * de `obtenerPorId` en la clase: aunque `orders` y `orders/:id` son paths
+   * literales distintos (sin ambigüedad real de matching en Express/Nest),
+   * se mantiene este orden para que la ruta exacta quede registrada antes
+   * que la parametrizada.
+   */
+  @Roles("cliente")
+  @Get("orders")
+  async listar(
+    @Query() query: ListarMisOrdenesQueryDto,
+    @UsuarioActual() usuario: UsuarioAutenticado,
+  ): Promise<ListarMisOrdenesResultado> {
+    return this.listarMisOrdenes.ejecutar(usuario.id, query);
   }
 
   @Roles("cliente", "admin", "gerente", "almacenista", "repartidor")

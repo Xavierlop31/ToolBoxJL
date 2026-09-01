@@ -66,7 +66,7 @@ Then(
 
     const resultadosBusqueda = await this.buscarCatalogo.ejecutar({});
     assert.ok(
-      resultadosBusqueda.some((m) => m.id === modelo.id),
+      resultadosBusqueda.items.some((m) => m.id === modelo.id),
       "el modelo recién creado debería aparecer en la búsqueda de catálogo",
     );
   },

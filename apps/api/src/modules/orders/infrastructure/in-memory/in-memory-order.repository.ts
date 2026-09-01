@@ -105,4 +105,28 @@ export class InMemoryOrderRepository implements OrderRepository {
     this.ordenes.set(id, actualizada);
     return actualizada;
   }
+
+  async listarPorCliente(
+    clienteId: string,
+    filtro: { estado?: EstadoOrden; page: number; pageSize: number },
+  ): Promise<{ items: Order[]; total: number }> {
+    // El Map preserva el orden de inserción (más antigua primero); se
+    // invierte para simular "más reciente primero" sin depender de un campo
+    // `created_at` propio (el `Order` de dominio no lo expone, ver
+    // openapi.yaml `#/components/schemas/Order`) — mismo criterio de
+    // ordenamiento que la implementación Prisma, que sí ordena por el
+    // `createdAt` interno de la tabla.
+    const todas = [...this.ordenes.values()]
+      .filter(
+        (orden) =>
+          orden.cliente_id === clienteId &&
+          (!filtro.estado || orden.estado === filtro.estado),
+      )
+      .reverse();
+    const inicio = (filtro.page - 1) * filtro.pageSize;
+    return {
+      items: todas.slice(inicio, inicio + filtro.pageSize),
+      total: todas.length,
+    };
+  }
 }

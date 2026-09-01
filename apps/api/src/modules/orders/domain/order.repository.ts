@@ -63,4 +63,16 @@ export interface OrderRepository {
    * fecha.
    */
   extenderFecha(id: string, nuevaFechaFin: string): Promise<Order>;
+  /**
+   * Sprint 12 (HU-12.1) — pedidos del cliente autenticado para "Mis Pedidos
+   * Activos" (GET /orders, Home/Catálogo). `clienteId` nunca es un query
+   * param manipulable por el cliente — sale de `@UsuarioActual()` (JWT), ver
+   * `ListarMisOrdenesUseCase`. Ordenado por fecha de creación descendente
+   * (más reciente primero); `estado` sin definir trae todos los estados.
+   * `page` es 1-based.
+   */
+  listarPorCliente(
+    clienteId: string,
+    filtro: { estado?: EstadoOrden; page: number; pageSize: number },
+  ): Promise<{ items: Order[]; total: number }>;
 }
