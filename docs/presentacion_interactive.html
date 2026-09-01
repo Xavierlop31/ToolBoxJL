@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToolBox JL — Presentación Demo en Vivo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:ital,wght@0,700;0,900;1,900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand-blue: #141CDB;
+      --brand-dark: #0B0E3D;
+      --brand-red: #E70012;
+      --surface-bg: #F5FAFF;
+      --surface-card: #FFFFFF;
+      --surface-low: #EEF4FB;
+      --border-color: #DCE3EA;
+      --text-main: #0B0E3D;
+      --text-muted: #64748B;
+      --color-success: #1E9E5A;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--brand-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    .slide-deck {
+      flex: 1;
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: var(--surface-bg);
+      display: none;
+      flex-direction: column;
+      padding: 3rem 4rem;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .slide.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .slide.dark {
+      background-color: var(--brand-dark);
+      color: white;
+    }
+
+    .header-tag {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--brand-red);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    .slide-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 2.2rem;
+      color: var(--brand-dark);
+      margin-bottom: 2rem;
+    }
+
+    .slide.dark .slide-title {
+      color: white;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      flex: 1;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.2rem;
+      flex: 1;
+    }
+
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 12px rgba(11, 14, 61, 0.04);
+    }
+
+    .card.problem {
+      border-left: 4px solid var(--brand-red);
+    }
+
+    .card.solution {
+      border-left: 4px solid var(--color-success);
+    }
+
+    .card.featured {
+      border-top: 4px solid var(--brand-blue);
+    }
+
+    .card h3 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .card p, .card ul {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: #334155;
+    }
+
+    .card ul {
+      padding-left: 1.2rem;
+    }
+
+    .card ul li {
+      margin-bottom: 0.5rem;
+    }
+
+    .media-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .media-card img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 0.4rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-right: 0.5rem;
+      background: rgba(20, 28, 219, 0.1);
+      color: var(--brand-blue);
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 2rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      background: rgba(11, 14, 61, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 0.6rem 1.2rem;
+      border-radius: 30px;
+      color: white;
+      z-index: 100;
+    }
+
+    .controls button {
+      background: var(--brand-blue);
+      border: none;
+      color: white;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .controls button:hover {
+      background: #0003A8;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 4px;
+      background: var(--brand-red);
+      width: 10%;
+      transition: width 0.3s;
+      z-index: 200;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="progress-bar" id="progress"></div>
+
+  <div class="slide-deck">
+
+    <!-- SLIDE 1: PORTADA -->
+    <div class="slide dark active">
+      <div class="header-tag" style="color: #FF5A5F;">DEMO EN VIVO · EVALUACIÓN FINAL</div>
+      <h1 class="slide-title" style="font-size: 3.5rem; line-height: 1.1; margin-bottom: 1rem;">
+        TOOLBOX JL
+      </h1>
+      <p style="font-size: 1.4rem; color: #94A3B8; max-width: 800px; margin-bottom: 2.5rem;">
+        Plataforma Inteligente de Alquiler y Venta de Herramientas Eléctricas Pesadas con Agentes de IA y Arquitectura Limpia.
+      </p>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <span class="badge-pill" style="background: rgba(255,255,255,0.1); color: white;">⚡ Clean Architecture + DDD</span>
+        <span class="badge-pill" style="background: rgba(255,255,255,0.1); color: white;">🤖 3 Agentes de IA Autónomos</span>
+        <span class="badge-pill" style="background: rgba(255,255,255,0.1); color: white;">📱 4 Microfrontends (Native Federation)</span>
+        <span class="badge-pill" style="background: #1E9E5A; color: white;">🧪 180 Tests en Verde (100%)</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: MOMENTO 1 - EL PROBLEMA -->
+    <div class="slide">
+      <div class="header-tag">MOMENTO 1: QUÉ PROBLEMA RESUELVE (0:00 - 2:00)</div>
+      <h2 class="slide-title">1. El Problema en Obra y la Solución ToolBox JL</h2>
+      <div class="grid-2">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="card problem">
+            <h3 style="color: var(--brand-red);">❌ 1. Falta de Trazabilidad Unitaria</h3>
+            <p>Pérdidas millonarias por extravío o cambio de equipos en obra. No se conoce qué unidad física específica tiene cada cliente.</p>
+          </div>
+          <div class="card problem">
+            <h3 style="color: var(--brand-red);">❌ 2. Fricción y Cotizaciones Lentas</h3>
+            <p>Procesos manuales para asesorar técnicamente según la tarea (potencia, voltaje, brocas) y calcular depósitos de garantía.</p>
+          </div>
+          <div class="card problem">
+            <h3 style="color: var(--brand-red);">❌ 3. Logística y Moras Ineficientes</h3>
+            <p>Rutas desordenadas, checklists en papel sin evidencia fotográfica y disputas por cobro de moras.</p>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="card solution">
+            <h3 style="color: var(--color-success);">✅ Trazabilidad Serializada con QR</h3>
+            <p>Cada unidad física tiene un código QR único que vincula su número de serie, cliente y registro de inspección.</p>
+          </div>
+          <div class="card solution">
+            <h3 style="color: var(--color-success);">✅ Conserje de Voz AI en Vivo</h3>
+            <p>Agente WebRTC embebido en el portal que asesora técnicamente con grounding del catálogo real sin alucinar.</p>
+          </div>
+          <div class="card solution">
+            <h3 style="color: var(--color-success);">✅ PWA Logística + Ruteo Autónomo</h3>
+            <p>Agente 1 optimiza rutas nocturnas; app móvil para conductor con checklist fotográfico e inspección digital.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: MOMENTO 3 - ARQUITECTURA -->
+    <div class="slide">
+      <div class="header-tag">MOMENTO 3: DECISIÓN TÉCNICA DESTACADA</div>
+      <h2 class="slide-title">2. Arquitectura de Software & Ecosistema Tecnológico</h2>
+      <div class="grid-4">
+        <div class="card featured">
+          <h3 style="color: var(--brand-blue);">4 Microfrontends</h3>
+          <p><strong>Angular 19 + Native Federation</strong></p>
+          <ul>
+            <li>Shell Host (Auth/Core)</li>
+            <li>Portal Cliente (B2C)</li>
+            <li>Panel Admin (BI)</li>
+            <li>PWA Logística (Offline)</li>
+            <li>UI-Kit compartido</li>
+          </ul>
+        </div>
+        <div class="card featured">
+          <h3 style="color: var(--brand-dark);">Backend Modular</h3>
+          <p><strong>NestJS + Clean Architecture</strong></p>
+          <ul>
+            <li>Dominio DDD desacoplado</li>
+            <li>Contratos OpenAPI v3</li>
+            <li>Catalog, Orders, Fleet, Analytics Modules</li>
+            <li>Workers batch para moras</li>
+          </ul>
+        </div>
+        <div class="card featured">
+          <h3 style="color: var(--brand-dark);">Data & Auth</h3>
+          <p><strong>Supabase (PostgreSQL)</strong></p>
+          <ul>
+            <li>Row-Level Security (RLS)</li>
+            <li>JWT con roles seguros</li>
+            <li>Storage para evidencias</li>
+            <li>Supabase Realtime</li>
+          </ul>
+        </div>
+        <div class="card featured">
+          <h3 style="color: var(--brand-blue);">Infraestructura</h3>
+          <p><strong>Producción Multi-Cloud</strong></p>
+          <ul>
+            <li>Vercel: SPAs desplegadas</li>
+            <li>Railway: API y Workers</li>
+            <li>GitHub Actions CI/CD</li>
+            <li>180 Tests en verde</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: LOS 3 AGENTES DE IA -->
+    <div class="slide">
+      <div class="header-tag">CRITERIO 3: INTELIGENCIA CON FUNDAMENTO</div>
+      <h2 class="slide-title">3. Ecosistema de 3 Agentes de IA Especializados</h2>
+      <div class="grid-3">
+        <div class="card" style="border-top: 4px solid var(--brand-blue);">
+          <h3 style="color: var(--brand-blue);">🤖 Agente 1: Ruteo Nocturno</h3>
+          <p><strong>Optimización de Rutas Diarias</strong></p>
+          <ul style="margin-top: 1rem;">
+            <li>Job batch que corre cada noche.</li>
+            <li>Agrupa entregas y recolecciones por zonas geográficas.</li>
+            <li>Usa Tool Calling tipado para consultar pedidos pendientes y asignar paradas al repartidor.</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 4px solid var(--brand-dark);">
+          <h3 style="color: var(--brand-dark);">🤖 Agente 2: WhatsApp Multimodal</h3>
+          <p><strong>Asistencia Omnicanal</strong></p>
+          <ul style="margin-top: 1rem;">
+            <li>Integración con WhatsApp Cloud API.</li>
+            <li>Transcripción de notas de voz con <strong>Deepgram</strong> y síntesis con <strong>ElevenLabs</strong>.</li>
+            <li>Atiende dudas y consulta estado de órdenes en tiempo real.</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 4px solid var(--brand-red);">
+          <h3 style="color: var(--brand-red);">🤖 Agente 3: Conserje de Voz</h3>
+          <p><strong>Voz WebRTC en Vivo</strong></p>
+          <ul style="margin-top: 1rem;">
+            <li>Embebido en el Portal del Cliente con <strong>LiveKit</strong>.</li>
+            <li>Latencia bidireccional < 800ms.</li>
+            <li><strong>Grounding estricto:</strong> ejecuta <code>searchCatalog()</code> y no inventa herramientas ni precios.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: MOMENTO 2 - DEMO PORTAL CLIENTE -->
+    <div class="slide">
+      <div class="header-tag">MOMENTO 2: DEMO EN VIVO (2:00 - 4:00)</div>
+      <h2 class="slide-title">4. Demo en Vivo: Portal del Cliente & Catálogo</h2>
+      <div class="grid-2">
+        <div class="media-card">
+          <img src="screenshots/screenshot_03_portal_cliente_catalogo.png" onerror="this.onerror=null; this.src='screenshot_03_portal_cliente_catalogo.png';" alt="Portal del Cliente Catálogo">
+        </div>
+        <div class="card" style="border-left: 4px solid var(--brand-blue);">
+          <h3 style="color: var(--brand-blue);">Puntos Clave a Demostrar:</h3>
+          <ul style="margin-top: 1rem; font-size: 1.05rem; line-height: 1.8;">
+            <li><strong>Identidad Industrial Racing:</strong> Paleta Brand Blue (<code>#141CDB</code>) y Brand Red (<code>#E70012</code>) de Google Stitch.</li>
+            <li><strong>Filtros por Categoría:</strong> Demolición, Perforación, Corte y Medición.</li>
+            <li><strong>Conserje de Voz AI:</strong> Demostración de consulta técnica sin alucinaciones.</li>
+            <li><strong>Cotizador Interactivo:</strong> Tarifa por días + Depósito de garantía reembolsable.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: MOMENTO 2 - DEMO PWA LOGÍSTICA -->
+    <div class="slide">
+      <div class="header-tag">MOMENTO 2: DEMO EN VIVO (4:00 - 5:45)</div>
+      <h2 class="slide-title">5. Demo en Vivo: PWA Logística y Trazabilidad QR</h2>
+      <div class="grid-2">
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+          <div class="media-card" style="width: 48%;">
+            <img src="screenshots/screenshot_06_pwa_logistica_ruta.png" onerror="this.onerror=null; this.src='screenshot_06_pwa_logistica_ruta.png';" alt="PWA Ruta">
+          </div>
+          <div class="media-card" style="width: 48%;">
+            <img src="screenshots/screenshot_07_pwa_logistica_scanner.png" onerror="this.onerror=null; this.src='screenshot_07_pwa_logistica_scanner.png';" alt="PWA Scanner QR">
+          </div>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--color-success);">
+          <h3 style="color: var(--color-success);">Innovación en Campo:</h3>
+          <ul style="margin-top: 1rem; font-size: 1.05rem; line-height: 1.8;">
+            <li><strong>Diseño Táctil Ergonómico:</strong> Touch targets $\ge 56$px pensados para celular en obra.</li>
+            <li><strong>Ruta Diaria Inteligente:</strong> Secuencia de paradas optimizadas por el Agente 1.</li>
+            <li><strong>Escáner QR Unitario:</strong> Registro del número de serie exacto de la herramienta física.</li>
+            <li><strong>Checklist Fotográfico:</strong> Evidencia del estado del equipo para evitar fraudes y calcular moras.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: MOMENTO 2 - DEMO PANEL ADMIN -->
+    <div class="slide">
+      <div class="header-tag">MOMENTO 2: DEMO EN VIVO (5:45 - 7:30)</div>
+      <h2 class="slide-title">6. Demo en Vivo: Panel Administrativo & Dashboards de BI</h2>
+      <div class="grid-2">
+        <div style="display: flex; flex-direction: column; gap: 1rem; justify-content: center;">
+          <div class="media-card" style="height: 48%;">
+            <img src="screenshots/screenshot_04_panel_admin_ingresos.png" onerror="this.onerror=null; this.src='screenshot_04_panel_admin_ingresos.png';" alt="Dashboard Ingresos">
+          </div>
+          <div class="media-card" style="height: 48%;">
+            <img src="screenshots/screenshot_05_panel_admin_utilizacion.png" onerror="this.onerror=null; this.src='screenshot_05_panel_admin_utilizacion.png';" alt="Dashboard Utilización y Productividad">
+          </div>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--brand-dark);">
+          <h3 style="color: var(--brand-dark);">Visibilidad Gerencial y Operativa:</h3>
+          <ul style="margin-top: 0.8rem; font-size: 1rem; line-height: 1.7;">
+            <li><strong>Dashboard de Ingresos (<code>/analitica/ingresos</code>):</strong><br>Desglose en tiempo real de ventas directas, tarifas de alquiler recaudadas y cobros por mora automáticos.</li>
+            <li><strong>Dashboard de Utilización (<code>/analitica/utilizacion-productividad</code>):</strong><br>Tasa de utilización global de herramientas (84.5%), demanda por modelo y marcas líderes.</li>
+            <li><strong>Productividad de Repartidores:</strong><br>Tabla de cumplimiento de rutas, entregas y recolecciones finalizadas y porcentaje de puntualidad en obra.</li>
+            <li><strong>Control de Flota y Envíos:</strong><br>Monitoreo centralizado de despachos y registro de capacidad vehicular.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: CALIDAD Y CI/CD -->
+    <div class="slide">
+      <div class="header-tag">CRITERIOS 4 Y 5: TESTS Y CI/CD</div>
+      <h2 class="slide-title">7. Calidad Verificada y Pipeline CI/CD en Producción</h2>
+      <div class="grid-4">
+        <div class="card" style="border-top: 4px solid var(--color-success);">
+          <h3 style="color: var(--color-success);">180 Tests Unitarios</h3>
+          <p><strong>100% SUCCESS Frontend</strong></p>
+          <ul>
+            <li>Portal Cliente: 59</li>
+            <li>Panel Admin: 43</li>
+            <li>PWA Logística: 36</li>
+            <li>Shell Host: 38</li>
+            <li>UI-Kit: 4</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 4px solid var(--brand-blue);">
+          <h3 style="color: var(--brand-blue);">Contratos OpenAPI</h3>
+          <p><strong>Validación Spectral</strong></p>
+          <ul>
+            <li>openapi.yaml como single source of truth</li>
+            <li>DTOs tipados compartidos</li>
+            <li>Cero endpoints rotos</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 4px solid var(--brand-blue);">
+          <h3 style="color: var(--brand-blue);">Pipeline CI/CD</h3>
+          <p><strong>GitHub Actions</strong></p>
+          <ul>
+            <li>Turborepo Pipeline</li>
+            <li>Lint, test y build automáticos</li>
+            <li>PR #116 y #117 en verde</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 4px solid var(--brand-dark);">
+          <h3 style="color: var(--brand-dark);">Publicado Vivo</h3>
+          <p><strong>Despliegue Multi-Cloud</strong></p>
+          <ul>
+            <li>4 SPAs en Vercel</li>
+            <li>API y Jobs en Railway</li>
+            <li>PostgreSQL en Supabase</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: CIERRE -->
+    <div class="slide dark">
+      <div class="header-tag" style="color: #FF5A5F;">CIERRE Y PREGUNTAS</div>
+      <h1 class="slide-title" style="font-size: 3.5rem; margin-bottom: 1.5rem;">
+        ¡Muchas Gracias!
+      </h1>
+      <p style="font-size: 1.3rem; color: #94A3B8; margin-bottom: 2rem;">
+        Estamos listos para la sesión de preguntas y retroalimentación del jurado.
+      </p>
+      <div class="card" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); max-width: 600px;">
+        <h3 style="color: white; margin-bottom: 0.8rem;">Enlaces Vivos del Proyecto:</h3>
+        <p style="color: #CBD5E1; line-height: 1.8;">
+          • <strong>Shell Host:</strong> <a href="https://tool-box-jl-shell.vercel.app" target="_blank" style="color: #60A5FA;">tool-box-jl-shell.vercel.app</a><br>
+          • <strong>Portal Cliente:</strong> <a href="https://tool-box-jl-portal-cliente.vercel.app" target="_blank" style="color: #60A5FA;">tool-box-jl-portal-cliente.vercel.app</a><br>
+          • <strong>PWA Logística:</strong> <a href="https://tool-box-jl-pwa-logistica.vercel.app" target="_blank" style="color: #60A5FA;">tool-box-jl-pwa-logistica.vercel.app</a><br>
+          • <strong>Panel Admin:</strong> <a href="https://tool-box-jl-panel-admin.vercel.app" target="_blank" style="color: #60A5FA;">tool-box-jl-panel-admin.vercel.app</a><br>
+          • <strong>Repositorio:</strong> <a href="https://github.com/Xavierlop31/ToolBoxJL" target="_blank" style="color: #60A5FA;">github.com/Xavierlop31/ToolBoxJL</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="controls">
+    <button onclick="prevSlide()">◀ Anterior</button>
+    <span id="slideCounter" style="font-weight: 600; font-size: 0.9rem;">1 / 10</span>
+    <button onclick="nextSlide()">Siguiente ▶</button>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const counter = document.getElementById('slideCounter');
+    const progress = document.getElementById('progress');
+    let currentSlide = 0;
+
+    function showSlide(index) {
+      if (index < 0 || index >= slides.length) return;
+      slides[currentSlide].classList.remove('active');
+      currentSlide = index;
+      slides[currentSlide].classList.add('active');
+      counter.textContent = `${currentSlide + 1} / ${slides.length}`;
+      progress.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) showSlide(currentSlide - 1);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.key === 'f') {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+  </script>
+</body>
+</html>
