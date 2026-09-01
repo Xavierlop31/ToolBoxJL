@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { Cart, CartItem } from '../models/cart.models';
+import { Cart, CartItem, CheckoutCartInput, CheckoutCartResult } from '../models/cart.models';
 
 /**
  * Carrito del Cliente autenticado (`GET /cart`, openapi.yaml).
@@ -55,5 +55,50 @@ export class CartService {
     return this.http
       .post<Cart>(`${this.apiUrl}/cart/add-item`, body)
       .pipe(tap((cart) => this.cartSignal.set(cart)));
+  }
+
+  /**
+   * `PATCH /cart/items/{id}` (HU-12.3, Sprint 13). `itemId` es `CartItem.id`
+   * (la línea), no el `modelo_id`. Actualiza el signal `cart`/`itemCount`
+   * con el carrito ya actualizado que devuelve el backend, igual que
+   * `refresh()`/`addItem()`.
+   */
+  updateItemQuantity(itemId: string, cantidad: number): Observable<Cart> {
+    return this.http
+      .patch<Cart>(`${this.apiUrl}/cart/items/${itemId}`, { cantidad })
+      .pipe(tap((cart) => this.cartSignal.set(cart)));
+  }
+
+  /**
+   * `DELETE /cart/items/{id}` (HU-12.3, Sprint 13). `itemId` es
+   * `CartItem.id` (la línea), no el `modelo_id`.
+   */
+  removeItem(itemId: string): Observable<Cart> {
+    return this.http
+      .delete<Cart>(`${this.apiUrl}/cart/items/${itemId}`)
+      .pipe(tap((cart) => this.cartSignal.set(cart)));
+  }
+
+  /**
+   * `POST /orders/checkout-cart` (HU-12.3, Sprint 13) — procesa TODAS las
+   * líneas del carrito activo de una sola vez (best-effort: una línea que
+   * falle no cancela las demás). El shape de `CheckoutCartResult`
+   * (`{ordenes_creadas, fallos}`) NO es un `Cart`, así que a diferencia de
+   * `refresh()`/`addItem()`/`updateItemQuantity()`/`removeItem()` esta
+   * llamada no actualiza el signal `cart` — el consumidor (`CartPageComponent`)
+   * llama `refresh()` explícitamente después para reflejar qué líneas quedaron
+   * (las que fallaron siguen en el carrito, las exitosas ya no).
+   */
+  checkoutCart(
+    direccionEntrega: string,
+    zonaId: string,
+    returnMode?: 'en_sede' | 'recogida_domicilio',
+  ): Observable<CheckoutCartResult> {
+    const body: CheckoutCartInput = {
+      direccion_entrega: direccionEntrega,
+      zona_id: zonaId,
+      ...(returnMode ? { return_mode: returnMode } : {}),
+    };
+    return this.http.post<CheckoutCartResult>(`${this.apiUrl}/orders/checkout-cart`, body);
   }
 }

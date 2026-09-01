@@ -43,6 +43,15 @@ export const remoteRoutes: Routes = [
         title: 'Catálogo — ToolBox JL',
       },
       {
+        // HU-12.3 (Sprint 13): tiene que ir ANTES de ':id' — si no, ':id'
+        // (wildcard de un solo segmento) intercepta "/carrito" como si fuera
+        // un modelo_id y nunca llega a este componente.
+        path: 'carrito',
+        loadComponent: () =>
+          import('../features/cart/cart-page.component').then((m) => m.CartPageComponent),
+        title: 'Mi Carrito — ToolBox JL',
+      },
+      {
         path: ':id',
         loadComponent: () =>
           import('../features/model-detail/model-detail.component').then(
