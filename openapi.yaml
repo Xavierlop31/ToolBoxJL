@@ -227,7 +227,12 @@ paths:
       summary: Búsqueda de modelos disponibles en el catálogo
       description: >
         Endpoint público. También usado por el Agente 3 (Conserje de Voz) vía
-        tool calling para responder solicitudes de búsqueda por voz.
+        tool calling para responder solicitudes de búsqueda por voz — por eso
+        `page`/`pageSize` son opcionales y NO cambian la forma de la
+        respuesta (sigue siendo un array plano): omitidos, se devuelve el
+        resultado completo sin paginar (comportamiento histórico, el que usan
+        los Agentes 2/3); provistos, el array devuelto es la página pedida y
+        el total real va en el header `X-Total-Count` (HU-12.1, Fase 3).
       tags: [Catálogo e Inventario]
       security: []
       x-roles: [público]
@@ -245,14 +250,51 @@ paths:
         - name: fecha_fin
           in: query
           schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1 }
+          description: "1-based. Si se omite (junto con pageSize), no pagina."
+        - name: pageSize
+          in: query
+          schema: { type: integer, enum: [6, 12, 24] }
       responses:
         "200":
-          description: Lista de modelos que cumplen el criterio de búsqueda.
+          description: >
+            Lista de modelos que cumplen el criterio de búsqueda (página
+            pedida si se enviaron page/pageSize, completa si no).
+          headers:
+            X-Total-Count:
+              description: Total de resultados sin paginar. Presente solo si se pidió paginación.
+              schema: { type: integer }
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/ToolModel" }
+
+  /zones:
+    get:
+      operationId: listZones
+      summary: Listar zonas logísticas de una ciudad — HU-12.2, Fase 3
+      description: >
+        Público (se consulta desde la ficha técnica antes de que el visitante
+        se autentique). Sin `ciudad`, devuelve todas las zonas de todas las
+        ciudades.
+      tags: [Catálogo e Inventario]
+      security: []
+      x-roles: [público]
+      parameters:
+        - name: ciudad
+          in: query
+          schema: { type: string, enum: [Medellín, Bogotá] }
+      responses:
+        "200":
+          description: Zonas que cumplen el filtro de ciudad.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Zona" }
 
   /catalog/models/{id}:
     get:
@@ -439,6 +481,44 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /orders:
+    get:
+      operationId: listMyOrders
+      summary: Listar mis pedidos (cliente autenticado) — HU-12.1, Fase 3
+      description: >
+        Pedidos del cliente autenticado (el `cliente_id` sale del JWT, no es
+        un parámetro) para la sección "Mis Pedidos Activos" del Home/Catálogo.
+        Paginado en bloques de 5 por defecto.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente]
+      parameters:
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [pendiente_pago, confirmada, en_curso, devuelta, cerrada, cancelada]
+          description: Sin este filtro, devuelve todos los estados.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: Página de pedidos del cliente, ordenados del más reciente al más antiguo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, page, pageSize]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Order" }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       operationId: createOrder
       summary: Crear orden (alquiler o venta)
@@ -817,6 +897,93 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /cart/items/{id}:
+    patch:
+      operationId: updateCartItem
+      summary: Cambiar la cantidad de una línea del carrito — HU-12.3, Fase 3
+      description: >
+        `id` es el id de la línea (`CartItem.id`), no el `modelo_id`. No
+        soporta cambiar `dias`/modalidad de una línea existente — para eso,
+        eliminar y volver a agregar.
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cantidad]
+              properties:
+                cantidad: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Carrito actualizado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: removeCartItem
+      summary: Eliminar una línea del carrito — HU-12.3, Fase 3
+      description: "`id` es el id de la línea (`CartItem.id`), no el `modelo_id`."
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      responses:
+        "200":
+          description: Carrito actualizado (sin la línea eliminada).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /orders/checkout-cart:
+    post:
+      operationId: checkoutCart
+      summary: Confirmar el carrito completo como órdenes — HU-12.3, Fase 3
+      description: >
+        A diferencia de `POST /orders` (una orden, un `modelo_id`), este
+        endpoint procesa TODAS las líneas del carrito activo del cliente de
+        una sola vez, con la misma zona/dirección de entrega para todas
+        (checkout consolidado, botón "Proceder al Pago" del carrito). Crea
+        una orden independiente por cada línea del carrito (reutiliza la
+        misma lógica de `CrearOrdenUseCase`, una vez por línea) — best
+        effort: una línea que falle (ej. sin unidades disponibles) no
+        cancela las demás. Las líneas creadas exitosamente se retiran del
+        carrito; las que fallaron quedan para que el cliente las reintente o
+        elimine. No inicia el pago (eso sigue siendo `POST /orders/{id}/pay`
+        por cada orden resultante, igual que el flujo de un solo ítem).
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direccion_entrega, zona_id]
+              properties:
+                direccion_entrega: { type: string }
+                zona_id: { type: string, format: uuid }
+                return_mode:
+                  type: string
+                  enum: [en_sede, recogida_domicilio]
+      responses:
+        "200":
+          description: Resultado del checkout — puede incluir éxitos y fallos parciales.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutCartResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /voice-agent/livekit-token:
     post:
       operationId: issueVoiceAgentLivekitToken
@@ -1013,11 +1180,28 @@ components:
         interes_mora_dia: { type: number }
         manual_pdf_url: { type: string, format: uri }
         disponible_para_venta: { type: boolean }
+        precio_venta:
+          type: integer
+          nullable: true
+          description: >
+            COP. Solo aplica si disponible_para_venta=true; null si el
+            modelo no está en venta directa (HU-12.2, Fase 3).
 
     ToolModelInput:
       allOf:
         - $ref: "#/components/schemas/ToolModel"
       required: [nombre, marca, categoria, tarifa_dia]
+
+    Zona:
+      type: object
+      description: >
+        HU-12.2 (Fase 3): antes zona_id era un UUID suelto sin relación a
+        ciudad; este schema formaliza esa relación para el selector dinámico
+        Medellín/Bogotá de la ficha técnica.
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string, example: "Chapinero" }
+        ciudad: { type: string, enum: [Medellín, Bogotá] }
 
     ToolUnit:
       type: object
@@ -1226,6 +1410,16 @@ components:
       type: object
       required: [modelo_id, cantidad]
       properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: >
+            Id de la línea (Sprint 13, HU-12.3) — no se manda en
+            `POST /cart/add-item` (el backend lo asigna), pero sí es
+            necesario para `PATCH`/`DELETE /cart/items/{id}`. Ausente en el
+            body de request, siempre presente en las respuestas que
+            devuelven `Cart`.
         modelo_id: { type: string, format: uuid }
         cantidad: { type: integer, minimum: 1 }
         dias: { type: integer, minimum: 1 }
@@ -1237,3 +1431,20 @@ components:
           type: array
           items: { $ref: "#/components/schemas/CartItem" }
         total: { type: integer, description: "COP" }
+
+    CheckoutCartResult:
+      type: object
+      description: Respuesta de `POST /orders/checkout-cart` (HU-12.3, Fase 3) — éxitos y fallos parciales por línea.
+      required: [ordenes_creadas, fallos]
+      properties:
+        ordenes_creadas:
+          type: array
+          items: { $ref: "#/components/schemas/Order" }
+        fallos:
+          type: array
+          items:
+            type: object
+            required: [modelo_id, motivo]
+            properties:
+              modelo_id: { type: string, format: uuid }
+              motivo: { type: string }

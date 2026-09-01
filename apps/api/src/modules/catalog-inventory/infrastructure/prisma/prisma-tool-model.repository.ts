@@ -3,6 +3,7 @@ import type { ToolModel as PrismaToolModel } from "@prisma/client";
 import type { ToolModel, ToolModelInput } from "@toolboxjl/shared-types";
 import type {
   FiltroBusquedaCatalogo,
+  ResultadoBusquedaCatalogoPaginado,
   ToolModelRepository,
 } from "../../domain/tool-model.repository";
 import { PrismaService } from "./prisma.service";
@@ -22,7 +23,28 @@ function aDominio(m: PrismaToolModel): ToolModel {
     deposito_pct: m.depositoPct,
     interes_mora_dia: m.interesMoraDia,
     manual_pdf_url: m.manualPdfUrl,
+    precio_venta: m.precioVenta,
     disponible_para_venta: m.disponibleParaVenta,
+  };
+}
+
+/**
+ * Sprint 12 (HU-12.1) — condición `where` compartida entre `buscar()` y
+ * `buscarPaginado()`, para no duplicar el armado del filtro de texto
+ * libre/categoría en ambos métodos.
+ */
+function construirWhere(filtro: FiltroBusquedaCatalogo) {
+  return {
+    ...(filtro.categoria ? { categoria: filtro.categoria } : {}),
+    ...(filtro.q
+      ? {
+          OR: [
+            { nombre: { contains: filtro.q, mode: "insensitive" as const } },
+            { marca: { contains: filtro.q, mode: "insensitive" as const } },
+            { categoria: { contains: filtro.q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
   };
 }
 
@@ -49,6 +71,7 @@ export class PrismaToolModelRepository implements ToolModelRepository {
         depositoPct: input.deposito_pct ?? undefined,
         interesMoraDia: input.interes_mora_dia ?? undefined,
         manualPdfUrl: input.manual_pdf_url ?? undefined,
+        precioVenta: input.precio_venta ?? undefined,
         disponibleParaVenta: input.disponible_para_venta ?? true,
       },
     });
@@ -62,19 +85,25 @@ export class PrismaToolModelRepository implements ToolModelRepository {
 
   async buscar(filtro: FiltroBusquedaCatalogo): Promise<ToolModel[]> {
     const encontrados = await this.prisma.toolModel.findMany({
-      where: {
-        ...(filtro.categoria ? { categoria: filtro.categoria } : {}),
-        ...(filtro.q
-          ? {
-              OR: [
-                { nombre: { contains: filtro.q, mode: "insensitive" } },
-                { marca: { contains: filtro.q, mode: "insensitive" } },
-                { categoria: { contains: filtro.q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
+      where: construirWhere(filtro),
     });
     return encontrados.map(aDominio);
+  }
+
+  async buscarPaginado(
+    filtro: FiltroBusquedaCatalogo,
+    page: number,
+    pageSize: number,
+  ): Promise<ResultadoBusquedaCatalogoPaginado> {
+    const where = construirWhere(filtro);
+    const [total, encontrados] = await Promise.all([
+      this.prisma.toolModel.count({ where }),
+      this.prisma.toolModel.findMany({
+        where,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+    return { items: encontrados.map(aDominio), total };
   }
 }

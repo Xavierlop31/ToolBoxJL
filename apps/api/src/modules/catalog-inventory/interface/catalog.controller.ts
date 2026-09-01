@@ -5,7 +5,9 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Res,
 } from "@nestjs/common";
+import type { Response } from "express";
 import type { ToolModel } from "@toolboxjl/shared-types";
 import { Public } from "../../auth/interface/decorators/public.decorator";
 import { BuscarCatalogoUseCase } from "../application/buscar-catalogo.use-case";
@@ -28,8 +30,15 @@ export class CatalogController {
 
   @Public()
   @Get("catalog/search")
-  async search(@Query() query: BuscarCatalogoQueryDto): Promise<ToolModel[]> {
-    return this.buscarCatalogo.ejecutar(query);
+  async search(
+    @Query() query: BuscarCatalogoQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ToolModel[]> {
+    const resultado = await this.buscarCatalogo.ejecutar(query);
+    if (resultado.total !== undefined) {
+      res.setHeader("X-Total-Count", String(resultado.total));
+    }
+    return resultado.items;
   }
 
   @Public()

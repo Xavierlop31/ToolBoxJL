@@ -58,8 +58,11 @@ const APPS = {
   // queda desactualizado respecto al environment.ts real de la app, el
   // síntoma es un error de TypeScript en el build de Vercel ("Property
   // 'apiUrl' does not exist on type...") — no un error de este script (que
-  // corre sin problema, solo que genera un objeto incompleto).
-  shell: { apiUrl: true, supabase: true },
+  // corre sin problema, solo que genera un objeto incompleto). Mismo
+  // síntoma real el 2026-09-01 con `quickAccessDemo` (Sprint 12, HU-11.2):
+  // el campo se agregó al `environment.ts` commiteado pero no acá, y el
+  // archivo generado en el build de Vercel lo pisó sin ese campo.
+  shell: { apiUrl: true, supabase: true, quickAccessDemo: true },
   "portal-cliente": { apiUrl: true, supabase: true },
   "panel-admin": { apiUrl: true, supabase: true },
   "pwa-logistica": { apiUrl: true },
@@ -133,6 +136,17 @@ function generarEnvironment(app) {
       `    url: ${comoLiteralTs(supabaseUrl)},`,
       `    anonKey: ${comoLiteralTs(supabaseKey)},`,
       "  },",
+    );
+  }
+  // No depende de ninguna variable NG_APP_* — siempre vacío en producción
+  // (Sprint 12, HU-11.2: el acceso rápido por rol es solo de desarrollo, ver
+  // environment.development.ts). Tiene que emitirse con el mismo tipo que
+  // el `environment.ts` commiteado — un `[]` sin anotar infiere `never[]`,
+  // que rompe de tipos donde el componente de login itera sobre el array
+  // esperando `{ rol, label, email }`.
+  if (forma.quickAccessDemo) {
+    campos.push(
+      "  quickAccessDemo: [] as readonly { rol: string; label: string; email: string }[],",
     );
   }
 

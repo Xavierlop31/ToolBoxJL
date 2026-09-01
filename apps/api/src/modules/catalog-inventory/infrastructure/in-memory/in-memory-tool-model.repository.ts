@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { ToolModel, ToolModelInput } from "@toolboxjl/shared-types";
 import type {
   FiltroBusquedaCatalogo,
+  ResultadoBusquedaCatalogoPaginado,
   ToolModelRepository,
 } from "../../domain/tool-model.repository";
 
@@ -31,6 +32,7 @@ export class InMemoryToolModelRepository implements ToolModelRepository {
       deposito_pct: input.deposito_pct ?? null,
       interes_mora_dia: input.interes_mora_dia ?? null,
       manual_pdf_url: input.manual_pdf_url ?? null,
+      precio_venta: input.precio_venta ?? null,
       disponible_para_venta: input.disponible_para_venta ?? true,
     };
     this.modelos.set(modelo.id, modelo);
@@ -42,6 +44,23 @@ export class InMemoryToolModelRepository implements ToolModelRepository {
   }
 
   async buscar(filtro: FiltroBusquedaCatalogo): Promise<ToolModel[]> {
+    return this.filtrar(filtro);
+  }
+
+  async buscarPaginado(
+    filtro: FiltroBusquedaCatalogo,
+    page: number,
+    pageSize: number,
+  ): Promise<ResultadoBusquedaCatalogoPaginado> {
+    const encontrados = this.filtrar(filtro);
+    const inicio = (page - 1) * pageSize;
+    return {
+      items: encontrados.slice(inicio, inicio + pageSize),
+      total: encontrados.length,
+    };
+  }
+
+  private filtrar(filtro: FiltroBusquedaCatalogo): ToolModel[] {
     const q = filtro.q?.toLowerCase();
     return [...this.modelos.values()].filter((m) => {
       const coincideCategoria = filtro.categoria

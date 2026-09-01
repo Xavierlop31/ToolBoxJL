@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { buscarCatalogo, consultarDisponibilidad, type DisponibilidadApi, type ToolModelApi } from "./catalog-api-client";
 import { agregarAlCarrito, type CartApi } from "./cart-api-client";
 import { AGENTE_3_TOOLS, construirSystemPromptAgente3 } from "./tools";
+import { etiquetaDeTool, type VoiceAgentEvent } from "./voice-agent-event";
 
 /**
  * Cliente mínimo de `@anthropic-ai/sdk` que este archivo necesita — mismo
@@ -23,6 +24,18 @@ export interface Agente3TurnoDeps {
   fetchImpl?: typeof fetch;
   /** Tope de seguridad de iteraciones del loop de tool calling POR TURNO. Default: 6. */
   maxIteraciones?: number;
+  /**
+   * Emite un evento por el canal de datos de LiveKit hacia el widget del
+   * Portal Cliente (HU-14.2, "Indicador Visual de Acciones y Tool Calling
+   * en Tiempo Real" — TRD, `voice-agent-event.ts`) — `undefined` en
+   * contextos que no necesitan/pueden publicar por LiveKit (tests, golden
+   * set que no lo pasa explícitamente): en ese caso no se emite nada, el
+   * loop de tool calling funciona igual. Deliberadamente síncrono
+   * (`=> void`, no `Promise`) para no acoplar este módulo al SDK real de
+   * LiveKit ni bloquear el loop de tool calling en la publicación —
+   * `room-session.ts` es quien decide cómo (y si) de verdad la despacha.
+   */
+  emitirEvento?: (evento: VoiceAgentEvent) => void;
 }
 
 export interface Agente3TurnoResultado {
@@ -143,12 +156,19 @@ async function despacharAddToCart(
   }
 }
 
-/** Despacha UNA tool call a su handler según `toolUse.name` — las tres tools declaradas en `AGENTE_3_TOOLS`, más una respuesta explícita para cualquier otra (no debería pasar, pero evita dejar a Claude esperando un `tool_result` que nunca llega). */
+/** Despacha UNA tool call a su handler según `toolUse.name` — las tres tools declaradas en `AGENTE_3_TOOLS`, más una respuesta explícita para cualquier otra (no debería pasar, pero evita dejar a Claude esperando un `tool_result` que nunca llega). Emite `tool_status`/`running` (HU-14.2) ANTES de despachar — `ejecutarToolCalls` emite el `done` correspondiente cuando esta promesa resuelve. */
 function despacharToolUse(
   deps: Agente3TurnoDeps,
   fetchImpl: typeof fetch,
   toolUse: Anthropic.ToolUseBlock,
 ): Promise<DespachoToolUse> {
+  deps.emitirEvento?.({
+    type: "tool_status",
+    tool: toolUse.name,
+    label: etiquetaDeTool(toolUse.name),
+    status: "running",
+  });
+
   switch (toolUse.name) {
     case "search_catalog":
       return despacharSearchCatalog(deps, fetchImpl, toolUse);
@@ -191,6 +211,12 @@ async function ejecutarToolCalls(
 
   for (const toolUse of toolUseBlocks) {
     const despacho = await despacharToolUse(deps, fetchImpl, toolUse);
+    deps.emitirEvento?.({
+      type: "tool_status",
+      tool: toolUse.name,
+      label: etiquetaDeTool(toolUse.name),
+      status: "done",
+    });
     resultado.toolResults.push(despacho.toolResult);
     if (despacho.ultimaBusqueda !== undefined) resultado.ultimaBusqueda = despacho.ultimaBusqueda;
     if (despacho.ultimaDisponibilidad !== undefined) resultado.ultimaDisponibilidad = despacho.ultimaDisponibilidad;

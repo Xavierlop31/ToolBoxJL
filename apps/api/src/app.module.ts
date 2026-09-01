@@ -13,6 +13,7 @@ import { AnalyticsModule } from "./modules/analytics/interface/analytics.module"
 import { WhatsAppWebhookModule } from "./modules/whatsapp-webhook/interface/whatsapp-webhook.module";
 import { CartModule } from "./modules/cart/interface/cart.module";
 import { VoiceAgentModule } from "./modules/voice-agent/interface/voice-agent.module";
+import { ZonesModule } from "./modules/zones/interface/zones.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -53,6 +54,12 @@ import { VoiceAgentModule } from "./modules/voice-agent/interface/voice-agent.mo
  * voice-agent/application/emitir-token-livekit.use-case.ts para la decisión
  * de arquitectura clave de este sprint (el Agente 3 no tiene cuenta de
  * servicio propia).
+ * Sprint 12: + ZonesModule (Épica 12, HU-12.2 — zonas logísticas por ciudad
+ * para el selector dinámico de la ficha técnica del catálogo, GET /zones
+ * público). Además, en este sprint: paginación de GET /catalog/search,
+ * GET /orders ("Mis Pedidos Activos") y ToolModel.precio_venta (cambios en
+ * los módulos existentes CatalogInventoryModule/OrdersModule, sin módulo
+ * nuevo propio para esos dos).
  */
 @Module({
   imports: [
@@ -72,6 +79,7 @@ import { VoiceAgentModule } from "./modules/voice-agent/interface/voice-agent.mo
     WhatsAppWebhookModule,
     CartModule,
     VoiceAgentModule,
+    ZonesModule,
   ],
 })
 export class AppModule {}

@@ -9,6 +9,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { ModelDetailComponent } from './model-detail.component';
 import { environment } from '../../../environments/environment';
 import { Order, Quote } from '../../core/models/order.models';
+import { AuthService } from '../../core/auth/auth.service';
 
 describe('ModelDetailComponent', () => {
   let fixture: ComponentFixture<ModelDetailComponent>;
@@ -38,6 +39,12 @@ describe('ModelDetailComponent', () => {
             snapshot: { paramMap: convertToParamMap(paramMapId ? { id: paramMapId } : {}) },
           },
         },
+        // Sprint 12 (HU-11.1, auth-wall): getQuote()/addItem() ahora exigen
+        // sesión activa antes de llamar a la API. Todos los tests de este
+        // archivo asumen un Cliente ya autenticado (el auth-wall en sí no es
+        // lo que se testea acá) — se mockea `AuthService` en vez de simular
+        // una sesión real de Supabase.
+        { provide: AuthService, useValue: { isAuthenticated: () => true } },
       ],
     }).compileComponents();
   }
@@ -68,7 +75,17 @@ describe('ModelDetailComponent', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    // Sprint 12 (HU-12.2): ngOnInit ahora también dispara GET /zones (carga
+    // de zonas dinámicas por ciudad) además de GET /catalog/models/:id. Los
+    // tests de este archivo son anteriores a ese cambio y no la conocen —
+    // se drena acá en vez de tocar cada test individualmente, ya que ningún
+    // test de este archivo versa sobre el comportamiento de zonas.
+    httpMock
+      .match((req) => req.url.includes('/zones'))
+      .forEach((req) => req.flush([]));
+    httpMock.verify();
+  });
 
   describe('ngOnInit', () => {
     it('sin id en la ruta, setea error y no hace ninguna llamada HTTP', async () => {

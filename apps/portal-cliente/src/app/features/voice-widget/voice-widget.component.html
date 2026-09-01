@@ -68,6 +68,31 @@
               Carrito: {{ cartItemCount() }} artículo(s)
             </p>
           }
+
+          @if (greetingText(); as greeting) {
+            <p class="voice-widget__transcript" data-testid="voice-widget-transcript">
+              {{ greeting }}
+            </p>
+          }
+
+          @if (toolChips().length > 0) {
+            <ul class="voice-widget__chips" data-testid="voice-widget-chips">
+              @for (chip of toolChips(); track $index) {
+                <li
+                  class="voice-widget__chip"
+                  [class.voice-widget__chip--done]="chip.status === 'done'"
+                  [attr.data-testid]="'voice-widget-chip-' + chip.status"
+                >
+                  @if (chip.status === 'running') {
+                    <span class="voice-widget__chip-spinner" aria-hidden="true"></span>
+                  } @else {
+                    <span class="voice-widget__chip-check" aria-hidden="true">✓</span>
+                  }
+                  {{ chip.label }}
+                </li>
+              }
+            </ul>
+          }
         </div>
       </section>
     }

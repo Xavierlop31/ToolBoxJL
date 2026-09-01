@@ -1,0 +1,222 @@
+<main class="cart-page">
+  <div class="breadcrumb-nav">
+    <a routerLink="/catalogo" class="btn-back">
+      <span class="material-symbols-outlined">arrow_back</span>
+      <span>Seguir Comprando</span>
+    </a>
+  </div>
+
+  <h1 class="page-title">Mi Carrito</h1>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <span class="material-symbols-outlined spin-icon">progress_activity</span>
+      <output>Cargando tu carrito…</output>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="form-error-box" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <p class="form-error">{{ errorMessage() }}</p>
+    </div>
+  }
+
+  @if (!loading() && lineas().length === 0 && !checkoutResult()) {
+    <div class="empty-cart" data-testid="empty-cart">
+      <span class="material-symbols-outlined empty-icon">shopping_cart</span>
+      <h2>Tu carrito está vacío</h2>
+      <p>Explorá el catálogo y agregá las herramientas que necesitás.</p>
+      <a routerLink="/catalogo" class="btn-primary">Explorar Catálogo</a>
+    </div>
+  }
+
+  @if (lineas().length > 0) {
+    <div class="cart-grid">
+      <section class="cart-lines" aria-label="Productos en el carrito">
+        @for (linea of lineas(); track linea.id) {
+          <article class="cart-line card-industrial" data-testid="cart-line">
+            <img
+              [src]="getToolImage(linea.modelo)"
+              [alt]="linea.modelo.nombre"
+              class="line-image"
+              (error)="onImageError($event)"
+            />
+
+            <div class="line-info">
+              <h3 class="line-nombre">{{ linea.modelo.nombre }}</h3>
+              <p class="line-marca">{{ linea.modelo.marca }}</p>
+              <span class="line-modalidad" [class.modalidad-alquiler]="linea.esAlquiler" [class.modalidad-venta]="!linea.esAlquiler">
+                @if (linea.esAlquiler) {
+                  Alquiler · {{ linea.dias }} día{{ linea.dias === 1 ? '' : 's' }}
+                } @else {
+                  Venta
+                }
+              </span>
+              <p class="line-tarifa">
+                \${{ linea.tarifaUnitaria | number }} COP
+                @if (linea.esAlquiler) {
+                  <small>/ día</small>
+                }
+              </p>
+            </div>
+
+            <div class="line-quantity">
+              <span class="qty-label">Cantidad</span>
+              <div class="qty-control">
+                <button
+                  type="button"
+                  class="qty-btn"
+                  data-testid="qty-decrease"
+                  (click)="decreaseQuantity(linea)"
+                  [disabled]="linea.cantidad <= 1 || updatingItemId() === linea.id"
+                  aria-label="Disminuir cantidad"
+                >
+                  −
+                </button>
+                <span class="qty-value" data-testid="qty-value">{{ linea.cantidad }}</span>
+                <button
+                  type="button"
+                  class="qty-btn"
+                  data-testid="qty-increase"
+                  (click)="increaseQuantity(linea)"
+                  [disabled]="updatingItemId() === linea.id"
+                  aria-label="Aumentar cantidad"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div class="line-subtotal">
+              <span class="subtotal-label">Subtotal</span>
+              <span class="subtotal-amount" data-testid="line-subtotal">\${{ linea.subtotal | number }} COP</span>
+            </div>
+
+            <button
+              type="button"
+              class="btn-remove"
+              data-testid="remove-item"
+              (click)="removeItem(linea)"
+              [disabled]="updatingItemId() === linea.id"
+              aria-label="Eliminar producto"
+            >
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </article>
+        }
+      </section>
+
+      <aside class="cart-summary card-industrial" aria-labelledby="summary-title">
+        <h2 id="summary-title">Resumen de tu Pedido</h2>
+
+        <div class="summary-lines">
+          <p>
+            <span>Subtotal Alquileres</span>
+            <span data-testid="subtotal-alquileres">\${{ subtotalAlquileres() | number }} COP</span>
+          </p>
+          <p>
+            <span>Subtotal Ventas Directas</span>
+            <span data-testid="subtotal-ventas">\${{ subtotalVentas() | number }} COP</span>
+          </p>
+          <p class="summary-pending">
+            <span>Recargo Logístico</span>
+            <span data-testid="recargo-pendiente">Se calcula al confirmar tu pedido</span>
+          </p>
+          <p class="summary-pending">
+            <span>Depósito de Garantía (reembolsable)</span>
+            <span data-testid="deposito-pendiente">Se calcula al confirmar tu pedido</span>
+          </p>
+          <p class="summary-total">
+            <span>Gran Total</span>
+            <span data-testid="gran-total">\${{ granTotal() | number }} COP</span>
+          </p>
+        </div>
+
+        @if (!showCheckoutForm()) {
+          <button type="button" class="btn-checkout" data-testid="proceed-to-payment" (click)="abrirCheckout()">
+            Proceder al Pago / Confirmar Orden
+          </button>
+        }
+
+        @if (showCheckoutForm()) {
+          <form class="checkout-form" [formGroup]="checkoutForm" (ngSubmit)="confirmarCheckout()" novalidate data-testid="checkout-form">
+            <h3>Datos de entrega</h3>
+
+            <div class="field">
+              <label for="direccionEntrega">Dirección de entrega</label>
+              <input id="direccionEntrega" type="text" formControlName="direccionEntrega" placeholder="Ej. Calle 100 # 15-20" />
+              @if (checkoutForm.get('direccionEntrega')?.touched && checkoutForm.get('direccionEntrega')?.invalid) {
+                <span class="field-error">La dirección de entrega es obligatoria.</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="ciudad">Ciudad</label>
+              <select id="ciudad" [value]="ciudadSeleccionada()" (change)="onCiudadChange($any($event.target).value)">
+                @for (ciudad of ciudades; track ciudad) {
+                  <option [value]="ciudad">{{ ciudad }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="zonaId">Zona de entrega</label>
+              <select id="zonaId" formControlName="zonaId">
+                <option value="">Selecciona una zona</option>
+                @for (zona of zonas(); track zona.id) {
+                  <option [value]="zona.id">{{ zona.nombre }}</option>
+                }
+              </select>
+              @if (zonasLoading()) {
+                <span class="hint-text">Cargando zonas…</span>
+              }
+              @if (checkoutForm.get('zonaId')?.touched && checkoutForm.get('zonaId')?.invalid) {
+                <span class="field-error">Selecciona una zona de entrega.</span>
+              }
+            </div>
+
+            @if (checkoutError()) {
+              <p class="form-error" role="alert">{{ checkoutError() }}</p>
+            }
+
+            <div class="checkout-actions">
+              <button type="button" class="btn-secondary" (click)="cancelarCheckout()" [disabled]="checkoutLoading()">
+                Cancelar
+              </button>
+              <button type="submit" class="btn-checkout" data-testid="confirm-checkout" [disabled]="checkoutLoading()">
+                {{ checkoutLoading() ? 'Procesando…' : 'Confirmar Pedido' }}
+              </button>
+            </div>
+          </form>
+        }
+
+      </aside>
+    </div>
+  }
+
+  @if (checkoutResult(); as resultado) {
+    <div class="checkout-result" data-testid="checkout-result">
+      @if (resultado.ordenes_creadas.length > 0) {
+        <div class="checkout-success">
+          <span class="material-symbols-outlined">check_circle</span>
+          <p>
+            Se {{ resultado.ordenes_creadas.length === 1 ? 'creó' : 'crearon' }}
+            <strong>{{ resultado.ordenes_creadas.length }}</strong>
+            {{ resultado.ordenes_creadas.length === 1 ? 'orden' : 'órdenes' }} exitosamente.
+          </p>
+        </div>
+      }
+      @if (resultado.fallos.length > 0) {
+        <div class="checkout-fallos">
+          <p class="fallos-title">Algunos productos no pudieron procesarse y siguen en tu carrito:</p>
+          <ul>
+            @for (fallo of resultado.fallos; track fallo.modelo_id) {
+              <li data-testid="checkout-fallo">{{ fallo.motivo }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  }
+</main>

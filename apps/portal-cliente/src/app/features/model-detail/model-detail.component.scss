@@ -421,3 +421,48 @@ output {
   color: #ba1a1a;
   margin-bottom: 24px;
 }
+
+.rate-card.rate-sale {
+  background: #fff3e0;
+
+  .rate-amount {
+    color: #b45309;
+  }
+}
+
+.hint-text {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--tbjl-color-neutral-500, #757588);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+
+  .btn-primary {
+    flex: 1;
+  }
+
+  .btn-add-cart {
+    flex: 1;
+    background-color: var(--tbjl-color-primary-500, #141cdb);
+
+    &:hover:not(:disabled) {
+      background-color: var(--tbjl-color-primary-600, #0003a8);
+    }
+  }
+}
+
+.toast-confirmacion {
+  display: block;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background-color: #e6f7ef;
+  color: #0d5f32;
+  border: 1px solid #b7ebd0;
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  font-weight: 600;
+  text-align: center;
+}

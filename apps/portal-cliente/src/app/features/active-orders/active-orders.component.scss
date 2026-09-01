@@ -1,0 +1,80 @@
+.active-orders {
+  margin-top: 32px;
+  padding: 24px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--tbjl-color-neutral-900, #161c21);
+}
+
+.empty-hint {
+  color: var(--tbjl-color-neutral-500, #757588);
+}
+
+.orders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+}
+
+.order-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.order-id {
+  font-family: monospace;
+  color: var(--tbjl-color-neutral-500, #757588);
+}
+
+.order-badge {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--tbjl-color-primary-50, #e0e0ff);
+  color: var(--tbjl-color-primary-700, #0b0e3d);
+
+  &[data-estado='en_curso'] {
+    background: #e6f7ef;
+    color: #0d5f32;
+  }
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+
+  button {
+    padding: 6px 14px;
+    border: 1px solid var(--tbjl-color-border, #dce3ea);
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    background: #fff;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}

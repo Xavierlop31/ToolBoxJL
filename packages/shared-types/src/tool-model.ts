@@ -28,6 +28,7 @@ export interface ToolModel {
   manual_pdf_url?: string | null;
   imagen_url?: string | null;
   disponible_para_venta: boolean;
+  precio_venta?: number | null;
 }
 
 /**
