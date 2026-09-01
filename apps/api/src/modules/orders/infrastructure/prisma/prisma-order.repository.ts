@@ -146,4 +146,25 @@ export class PrismaOrderRepository implements OrderRepository {
     });
     return aDominio(actualizado);
   }
+
+  async listarPorCliente(
+    clienteId: string,
+    filtro: { estado?: EstadoOrden; page: number; pageSize: number },
+  ): Promise<{ items: Order[]; total: number }> {
+    const where = {
+      clienteId,
+      ...(filtro.estado ? { estado: filtro.estado } : {}),
+    };
+    const [total, encontradas] = await Promise.all([
+      this.prisma.order.count({ where }),
+      this.prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" as const },
+        skip: (filtro.page - 1) * filtro.pageSize,
+        take: filtro.pageSize,
+        include: { items: true },
+      }),
+    ]);
+    return { items: encontradas.map(aDominio), total };
+  }
 }

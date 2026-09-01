@@ -59,6 +59,11 @@ export class CrearModeloDto implements ToolModelInput {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  precio_venta?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   deposito_pct?: number;
 
   @IsOptional()

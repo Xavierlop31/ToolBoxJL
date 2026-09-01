@@ -5,6 +5,7 @@ import { CotizarOrdenUseCase } from "../application/cotizar-orden.use-case";
 import { CrearOrdenUseCase } from "../application/crear-orden.use-case";
 import { ObtenerOrdenUseCase } from "../application/obtener-orden.use-case";
 import { ExtenderAlquilerUseCase } from "../application/extender-alquiler.use-case";
+import { ListarMisOrdenesUseCase } from "../application/listar-mis-ordenes.use-case";
 import { ORDER_REPOSITORY } from "../infrastructure/orders.tokens";
 import { PrismaOrderRepository } from "../infrastructure/prisma/prisma-order.repository";
 import { OrdersController } from "./orders.controller";
@@ -27,6 +28,7 @@ import { PrismaService } from "../../catalog-inventory/infrastructure/prisma/pri
     CrearOrdenUseCase,
     ObtenerOrdenUseCase,
     ExtenderAlquilerUseCase,
+    ListarMisOrdenesUseCase,
   ],
   exports: [
     ORDER_REPOSITORY,
@@ -34,6 +36,7 @@ import { PrismaService } from "../../catalog-inventory/infrastructure/prisma/pri
     CrearOrdenUseCase,
     ObtenerOrdenUseCase,
     ExtenderAlquilerUseCase,
+    ListarMisOrdenesUseCase,
   ],
 })
 export class OrdersModule {}
