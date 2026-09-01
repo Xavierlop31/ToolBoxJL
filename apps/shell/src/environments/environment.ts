@@ -36,5 +36,5 @@ export const environment = {
   },
   // El acceso rápido por rol (Sprint 12, HU-11.2) es solo de desarrollo —
   // en producción queda vacío a propósito, ver environment.development.ts.
-  quickAccessDemo: [] as ReadonlyArray<{ rol: string; label: string; email: string }>,
+  quickAccessDemo: [] as readonly { rol: string; label: string; email: string }[],
 };
