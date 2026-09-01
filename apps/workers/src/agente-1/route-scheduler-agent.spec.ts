@@ -28,6 +28,22 @@ function fakeFetch(): jest.Mock {
   });
 }
 
+/** Igual que `fakeFetch()` pero con vehículos/pedidos/rutas-publicadas parametrizables, para los casos del golden set. */
+function fakeFetchCon(vehiculos: unknown[], pedidos: unknown[], rutasPublicadas: unknown[]): jest.Mock {
+  return jest.fn(async (url: string, init?: RequestInit) => {
+    if (url.endsWith("/fleet/vehicles")) {
+      return { ok: true, status: 200, json: async () => vehiculos } as Response;
+    }
+    if (url.endsWith("/logistics/pending-orders")) {
+      return { ok: true, status: 200, json: async () => pedidos } as Response;
+    }
+    if (url.endsWith("/logistics/assign-routes") && init?.method === "POST") {
+      return { ok: true, status: 201, json: async () => rutasPublicadas } as Response;
+    }
+    throw new Error(`fakeFetchCon: URL inesperada en el test: ${url}`);
+  });
+}
+
 function mensajeConToolUse(name: string, input: unknown, extraTexto?: string): Anthropic.Message {
   const content: Anthropic.ContentBlock[] = [];
   if (extraTexto) {
@@ -162,5 +178,99 @@ describe("ejecutarAgente1", () => {
     const segundaLlamada = create.mock.calls[1][0];
     const ultimoMensaje = segundaLlamada.messages[segundaLlamada.messages.length - 1];
     expect(JSON.stringify(ultimoMensaje)).toContain("is_error");
+  });
+
+  it("Golden set: pedido cuyo peso/volumen excede la capacidad de todo vehículo de su zona queda sin asignar, y el texto final lo menciona por shipment_id", async () => {
+    const vehiculosCapacidadChica = [
+      { id: "v1", tipo: "moto", capacidad_kg: 20, capacidad_m3: 0.5, zonas: ["zona-1"], repartidor_id: null },
+    ];
+    const pedidosConUnoQueNoEntra = [
+      { id: "s1", order_id: "o1", vehiculo_id: null, tipo: "entrega", estado_envio: "pendiente_asignacion", zona_id: "zona-1", peso_kg: 10, volumen_m3: 0.2 },
+      { id: "s2", order_id: "o2", vehiculo_id: null, tipo: "entrega", estado_envio: "pendiente_asignacion", zona_id: "zona-1", peso_kg: 500, volumen_m3: 5 },
+    ];
+    const rutasPublicadasParciales = [
+      { id: "r1", vehiculo_id: "v1", fecha: "2026-08-26", paradas: ["s1"], generada_por: "agente_1" },
+    ];
+    const create = jest
+      .fn<Promise<Anthropic.Message>, [Anthropic.MessageCreateParamsNonStreaming]>()
+      .mockResolvedValueOnce(mensajeConToolUse("get_pending_orders", {}))
+      .mockResolvedValueOnce(
+        mensajeConToolUse(
+          "assign_routes",
+          { rutas: [{ vehiculo_id: "v1", fecha: "2026-08-26", paradas: ["s1"] }] },
+          "El pedido s2 quedó sin asignar: excede la capacidad de todos los vehículos de su zona.",
+        ),
+      );
+    const anthropic: AnthropicMessagesClient = { create };
+    const fetchImpl = fakeFetchCon(vehiculosCapacidadChica, pedidosConUnoQueNoEntra, rutasPublicadasParciales);
+
+    const resultado = await ejecutarAgente1({ ...baseDeps, anthropic, fetchImpl: fetchImpl as unknown as typeof fetch });
+
+    expect(resultado.rutasPublicadas).toEqual(rutasPublicadasParciales);
+    expect(resultado.rutasPublicadas.flatMap((r) => r.paradas)).not.toContain("s2");
+    expect(resultado.resumenTexto).toContain("s2");
+    expect(resultado.resumenTexto.toLowerCase()).toContain("capacidad");
+  });
+
+  it("Golden set: pedido sin zona/peso/volumen conocido queda sin asignar, mencionado con motivo 'datos insuficientes'", async () => {
+    const vehiculos = [
+      { id: "v1", tipo: "camioneta", capacidad_kg: 500, capacidad_m3: 3, zonas: ["zona-1"], repartidor_id: null },
+    ];
+    const pedidosConDatosFaltantes = [
+      { id: "s1", order_id: "o1", vehiculo_id: null, tipo: "entrega", estado_envio: "pendiente_asignacion", zona_id: "zona-1", peso_kg: 10, volumen_m3: 0.2 },
+      { id: "s2", order_id: "o2", vehiculo_id: null, tipo: "entrega", estado_envio: "pendiente_asignacion", zona_id: null, peso_kg: null, volumen_m3: null },
+    ];
+    const rutasPublicadasParciales = [
+      { id: "r1", vehiculo_id: "v1", fecha: "2026-08-26", paradas: ["s1"], generada_por: "agente_1" },
+    ];
+    const create = jest
+      .fn<Promise<Anthropic.Message>, [Anthropic.MessageCreateParamsNonStreaming]>()
+      .mockResolvedValueOnce(mensajeConToolUse("get_pending_orders", {}))
+      .mockResolvedValueOnce(
+        mensajeConToolUse(
+          "assign_routes",
+          { rutas: [{ vehiculo_id: "v1", fecha: "2026-08-26", paradas: ["s1"] }] },
+          "El pedido s2 quedó sin asignar: datos insuficientes (sin zona/peso/volumen conocidos).",
+        ),
+      );
+    const anthropic: AnthropicMessagesClient = { create };
+    const fetchImpl = fakeFetchCon(vehiculos, pedidosConDatosFaltantes, rutasPublicadasParciales);
+
+    const resultado = await ejecutarAgente1({ ...baseDeps, anthropic, fetchImpl: fetchImpl as unknown as typeof fetch });
+
+    expect(resultado.rutasPublicadas.flatMap((r) => r.paradas)).not.toContain("s2");
+    expect(resultado.resumenTexto).toContain("s2");
+    expect(resultado.resumenTexto.toLowerCase()).toContain("datos insuficientes");
+  });
+
+  it("Golden set: pedido de una zona sin ningún vehículo asignado queda sin asignar", async () => {
+    const vehiculosSoloZona1 = [
+      { id: "v1", tipo: "camioneta", capacidad_kg: 500, capacidad_m3: 3, zonas: ["zona-1"], repartidor_id: null },
+    ];
+    const pedidosConZonaSinVehiculo = [
+      { id: "s1", order_id: "o1", vehiculo_id: null, tipo: "entrega", estado_envio: "pendiente_asignacion", zona_id: "zona-1", peso_kg: 10, volumen_m3: 0.2 },
+      { id: "s2", order_id: "o2", vehiculo_id: null, tipo: "entrega", estado_envio: "pendiente_asignacion", zona_id: "zona-9", peso_kg: 5, volumen_m3: 0.1 },
+    ];
+    const rutasPublicadasParciales = [
+      { id: "r1", vehiculo_id: "v1", fecha: "2026-08-26", paradas: ["s1"], generada_por: "agente_1" },
+    ];
+    const create = jest
+      .fn<Promise<Anthropic.Message>, [Anthropic.MessageCreateParamsNonStreaming]>()
+      .mockResolvedValueOnce(mensajeConToolUse("get_pending_orders", {}))
+      .mockResolvedValueOnce(
+        mensajeConToolUse(
+          "assign_routes",
+          { rutas: [{ vehiculo_id: "v1", fecha: "2026-08-26", paradas: ["s1"] }] },
+          "El pedido s2 quedó sin asignar: no hay ningún vehículo asignado a la zona zona-9.",
+        ),
+      );
+    const anthropic: AnthropicMessagesClient = { create };
+    const fetchImpl = fakeFetchCon(vehiculosSoloZona1, pedidosConZonaSinVehiculo, rutasPublicadasParciales);
+
+    const resultado = await ejecutarAgente1({ ...baseDeps, anthropic, fetchImpl: fetchImpl as unknown as typeof fetch });
+
+    expect(resultado.rutasPublicadas.flatMap((r) => r.paradas)).not.toContain("s2");
+    expect(resultado.resumenTexto).toContain("s2");
+    expect(resultado.resumenTexto.toLowerCase()).toContain("zona");
   });
 });
