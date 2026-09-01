@@ -336,3 +336,31 @@
   font-weight: 700;
   color: var(--tbjl-color-secondary-500, #e70012);
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 24px 0;
+
+  select {
+    margin-left: 6px;
+    padding: 4px 8px;
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    border: 1px solid var(--tbjl-color-border, #dce3ea);
+  }
+
+  button {
+    padding: 6px 14px;
+    border: 1px solid var(--tbjl-color-border, #dce3ea);
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    background: #fff;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
