@@ -1,7 +1,27 @@
+import { Page } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { expect } from '@playwright/test';
 
 const { Given, When, Then } = createBdd();
+
+/**
+ * Sprint 12 (HU-12.2): la ficha de modelo ya no trae un array de zonas
+ * hardcodeado — el `<select id="zonaId">` se puebla async desde
+ * `GET /zones?ciudad=`. Sin mockear esa ruta, el select queda vacío y
+ * `page.selectOption('#zonaId', ...)` cuelga hasta el timeout. Devuelve la
+ * misma zona (`b8c8d8e8-...`) que ya usaban estos steps antes del cambio.
+ */
+async function mockZones(page: Page): Promise<void> {
+  await page.route('**/zones*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 'b8c8d8e8-f8a8-4b8c-8d8e-8f8a8b8c8d8e', nombre: 'Zona Norte', ciudad: 'Bogotá' },
+      ]),
+    });
+  });
+}
 
 Given('que soy un Cliente con un modelo, un rango de fechas y una dirección de entrega seleccionados', async ({ page }) => {
   // Mockear la respuesta de la ficha del modelo
@@ -19,6 +39,7 @@ Given('que soy un Cliente con un modelo, un rango de fechas y una dirección de 
       })
     });
   });
+  await mockZones(page);
 
   // Navegar a la ficha del modelo
   await page.goto('/catalogo/123e4567-e89b-12d3-a456-426614174000');
@@ -86,6 +107,7 @@ Given('que un modelo está marcado como disponible para venta', async ({ page })
       })
     });
   });
+  await mockZones(page);
 
   await page.goto('/catalogo/123e4567-e89b-12d3-a456-426614174000');
 });
