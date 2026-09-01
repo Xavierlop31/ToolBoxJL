@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { CartService } from '../../core/cart/cart.service';
 import { LivekitSessionService, VoiceAgentUiState } from '../../core/voice-agent/livekit-session.service';
 import { VoiceAgentTokenService } from '../../core/voice-agent/voice-agent-token.service';
+import { buildToolChips, ToolChip } from './tool-chips';
 
 const ESTADO_LABELS: Record<VoiceAgentUiState, string> = {
   idle: 'Listo',
@@ -81,6 +82,24 @@ export class VoiceWidgetComponent implements OnDestroy {
   );
 
   readonly statusLabel = computed(() => ESTADO_LABELS[this.displayState()]);
+
+  /**
+   * Texto del saludo proactivo (HU-14.1) — se busca el primer evento
+   * `greeting` recibido por el canal de datos de LiveKit en la sesión
+   * actual (`LivekitSessionService.events()`). El Agente 3 solo publica UNO
+   * por sesión (`room-session.ts`, `reproducirSaludoDeBienvenida`), así que
+   * "el primero" y "el único" coinciden.
+   */
+  readonly greetingText = computed(
+    () => this.session.events().find((evento) => evento.type === 'greeting')?.text ?? null,
+  );
+
+  /**
+   * Chips de tool-calling en vivo (HU-14.2), derivados del mismo log de
+   * eventos con la función pura de `tool-chips.ts` — ver ahí el criterio de
+   * "un chip por invocación, no por nombre de tool".
+   */
+  readonly toolChips = computed<ToolChip[]>(() => buildToolChips(this.session.events()));
 
   /**
    * Nombre accesible del botón flotante (fab). El badge de cantidad del
