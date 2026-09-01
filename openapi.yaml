@@ -897,6 +897,93 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /cart/items/{id}:
+    patch:
+      operationId: updateCartItem
+      summary: Cambiar la cantidad de una línea del carrito — HU-12.3, Fase 3
+      description: >
+        `id` es el id de la línea (`CartItem.id`), no el `modelo_id`. No
+        soporta cambiar `dias`/modalidad de una línea existente — para eso,
+        eliminar y volver a agregar.
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cantidad]
+              properties:
+                cantidad: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Carrito actualizado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: removeCartItem
+      summary: Eliminar una línea del carrito — HU-12.3, Fase 3
+      description: "`id` es el id de la línea (`CartItem.id`), no el `modelo_id`."
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      responses:
+        "200":
+          description: Carrito actualizado (sin la línea eliminada).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /orders/checkout-cart:
+    post:
+      operationId: checkoutCart
+      summary: Confirmar el carrito completo como órdenes — HU-12.3, Fase 3
+      description: >
+        A diferencia de `POST /orders` (una orden, un `modelo_id`), este
+        endpoint procesa TODAS las líneas del carrito activo del cliente de
+        una sola vez, con la misma zona/dirección de entrega para todas
+        (checkout consolidado, botón "Proceder al Pago" del carrito). Crea
+        una orden independiente por cada línea del carrito (reutiliza la
+        misma lógica de `CrearOrdenUseCase`, una vez por línea) — best
+        effort: una línea que falle (ej. sin unidades disponibles) no
+        cancela las demás. Las líneas creadas exitosamente se retiran del
+        carrito; las que fallaron quedan para que el cliente las reintente o
+        elimine. No inicia el pago (eso sigue siendo `POST /orders/{id}/pay`
+        por cada orden resultante, igual que el flujo de un solo ítem).
+      tags: [Carrito y Conserje de Voz]
+      x-roles: [cliente]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direccion_entrega, zona_id]
+              properties:
+                direccion_entrega: { type: string }
+                zona_id: { type: string, format: uuid }
+                return_mode:
+                  type: string
+                  enum: [en_sede, recogida_domicilio]
+      responses:
+        "200":
+          description: Resultado del checkout — puede incluir éxitos y fallos parciales.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutCartResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /voice-agent/livekit-token:
     post:
       operationId: issueVoiceAgentLivekitToken
@@ -1323,6 +1410,16 @@ components:
       type: object
       required: [modelo_id, cantidad]
       properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: >
+            Id de la línea (Sprint 13, HU-12.3) — no se manda en
+            `POST /cart/add-item` (el backend lo asigna), pero sí es
+            necesario para `PATCH`/`DELETE /cart/items/{id}`. Ausente en el
+            body de request, siempre presente en las respuestas que
+            devuelven `Cart`.
         modelo_id: { type: string, format: uuid }
         cantidad: { type: integer, minimum: 1 }
         dias: { type: integer, minimum: 1 }
@@ -1334,3 +1431,20 @@ components:
           type: array
           items: { $ref: "#/components/schemas/CartItem" }
         total: { type: integer, description: "COP" }
+
+    CheckoutCartResult:
+      type: object
+      description: Respuesta de `POST /orders/checkout-cart` (HU-12.3, Fase 3) — éxitos y fallos parciales por línea.
+      required: [ordenes_creadas, fallos]
+      properties:
+        ordenes_creadas:
+          type: array
+          items: { $ref: "#/components/schemas/Order" }
+        fallos:
+          type: array
+          items:
+            type: object
+            required: [modelo_id, motivo]
+            properties:
+              modelo_id: { type: string, format: uuid }
+              motivo: { type: string }
