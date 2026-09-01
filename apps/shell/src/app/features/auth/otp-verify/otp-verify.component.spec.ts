@@ -179,7 +179,7 @@ describe('OtpVerifyComponent', () => {
         expira_en: new Date(Date.now() + 30_000).toISOString(),
       }),
     );
-    component.telefonoControl.setValue('+573001234567');
+    component.telefonoForm.controls.telefono.setValue('+573001234567');
 
     component.guardarTelefono();
     await fixture.whenStable();
@@ -187,6 +187,36 @@ describe('OtpVerifyComponent', () => {
     expect(authServiceSpy.actualizarTelefono).toHaveBeenCalledWith('+573001234567');
     expect(component.telefonoFaltante()).toBeFalse();
     expect(component.otpId()).toBe('otp-2');
+  });
+
+  it('el submit real del form de teléfono (botón, no llamada directa) dispara guardarTelefono sin recargar la página', async () => {
+    // A diferencia de los demás tests de este archivo (que llaman
+    // `component.guardarTelefono()` directo), este dispara el evento
+    // `submit` real sobre el `<form>` del DOM -- es la única forma de
+    // detectar el bug real que motivó este test: `(ngSubmit)` sin
+    // `[formGroup]` en el `<form>` no lo intercepta Angular, así que el
+    // navegador hace un submit HTML nativo (recarga de página) en vez de
+    // llamar a `guardarTelefono()`. Con `[formGroup]="telefonoForm"` bien
+    // bindeado, `dispatchEvent(new Event('submit'))` SÍ debe traducirse en
+    // una llamada a `actualizarTelefono()`.
+    await setup({ session: fakeSession, alreadyVerified: false });
+    otpServiceSpy.requestOtp.and.returnValue(
+      (await import('rxjs')).throwError(() => ({
+        error: { message: 'no tiene un teléfono registrado disponible' },
+      })),
+    );
+    fixture.detectChanges();
+    expect(component.telefonoFaltante()).toBeTrue();
+
+    component.telefonoForm.controls.telefono.setValue('+573001234567');
+    fixture.detectChanges();
+
+    const form = fixture.nativeElement.querySelector(
+      '[data-testid="telefono-faltante-form"]',
+    ) as HTMLFormElement;
+    form.dispatchEvent(new Event('submit'));
+
+    expect(authServiceSpy.actualizarTelefono).toHaveBeenCalledWith('+573001234567');
   });
 
   it('guardarTelefono: no llama a actualizarTelefono si el teléfono queda inválido', async () => {
