@@ -62,7 +62,7 @@ describe('InMemoryToolUnitStatusLogRepository', () => {
 
     const entradas = await repo.listarPorUnidad('unidad-1');
 
-    expect(entradas).toHaveSize(1);
+    expect(entradas).toHaveLength(1);
     expect(entradas[0].unidad_id).toBe('unidad-1');
   });
 
