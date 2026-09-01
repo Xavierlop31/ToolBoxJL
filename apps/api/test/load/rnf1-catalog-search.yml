@@ -1,0 +1,27 @@
+# RNF-1 (TRD §3): latencia de operaciones CRUD de la API, objetivo p95 < 200ms.
+#
+# Target: /catalog/search (openapi.yaml:224) — endpoint público (`security: []`),
+# de solo lectura, sin efectos secundarios. Se eligió a propósito por ser el único
+# endpoint seguro para correr contra producción real: no hay ambiente de staging
+# en Railway (un solo environment "production" en el proyecto Api-ToolBox-JL,
+# confirmado 2026-09-01) y el proyecto está a días de la presentación — carga muy
+# conservadora (2 req/s, 20s, sin ramp-up agresivo) para no arriesgar el entorno
+# de demo. NO usar este arnés contra endpoints de escritura (orders, payments,
+# etc.) sin revisar antes con el Arquitecto.
+config:
+  target: "https://api-toolboxjl-production.up.railway.app"
+  phases:
+    - duration: 20
+      arrivalRate: 2
+      name: "RNF-1 smoke — 2 req/s por 20s"
+  ensure:
+    p95: 200
+scenarios:
+  - name: "Buscar en catálogo (sin filtros)"
+    flow:
+      - get:
+          url: "/api/v1/catalog/search"
+  - name: "Buscar en catálogo (con filtro de categoría)"
+    flow:
+      - get:
+          url: "/api/v1/catalog/search?categoria=Taladros"
