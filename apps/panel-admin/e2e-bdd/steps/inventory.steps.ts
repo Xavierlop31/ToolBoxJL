@@ -340,7 +340,7 @@ Then('se abre un modal con el formulario de alta de unidad física.', async ({ p
 // --- HU-13.2: registro exitoso y QR imprimible ---
 
 Given(
-  String.raw`completo los campos obligatorios: Modelo de Herramienta, Número de Serie del Fabricante, Fecha de Adquisición, Costo de Compra y Ubicación en Bodega \(Estante\/Fila\)`,
+  String.raw`que completo los campos obligatorios: Modelo de Herramienta, Número de Serie del Fabricante, Fecha de Adquisición, Costo de Compra y Ubicación en Bodega \(Estante\/Fila\)`,
   async ({ page }) => {
     await mockInventoryMetrics(page);
     await mockInventoryUnits(page);
