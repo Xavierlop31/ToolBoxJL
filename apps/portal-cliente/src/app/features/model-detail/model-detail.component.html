@@ -213,11 +213,6 @@
               }
             </ul>
             <div class="quote-totals">
-              <p>Tarifa Base: <span>{{ quote.tarifa_base }} COP</span></p>
-              <p>Recargo Logístico: <span>{{ quote.recargo_logistico }} COP</span></p>
-              @if (quote.deposito_garantia > 0) {
-                <p>Depósito de Garantía: <span>{{ quote.deposito_garantia }} COP</span></p>
-              }
               <p class="total-pay">Total a Pagar: <span data-testid="quote-total">{{ quote.total }} COP</span></p>
             </div>
 
