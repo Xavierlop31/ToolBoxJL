@@ -488,17 +488,48 @@ paths:
     get:
       operationId: getToolUnitById
       summary: Ficha de una unidad física al escanear su QR (RF-1.4)
-      description: Devuelve la ficha de una unidad física, incluida su hoja de vida resumida, a partir del escaneo de su QR.
+      description: >
+        Devuelve la ficha de una unidad física a partir del escaneo de su
+        QR. NO incluye la hoja de vida completa (para eso ver
+        `GET /inventory/units/{id}/history`) — corregido en Sprint 14, la
+        descripción original de este endpoint prometía una "hoja de vida
+        resumida" que nunca llegó a declararse en el schema `ToolUnit`.
       tags: [Catálogo e Inventario]
-      x-roles: [almacenista, repartidor]
+      x-roles: [almacenista, repartidor, admin]
       parameters:
         - $ref: "#/components/parameters/idPath"
       responses:
         "200":
-          description: Ficha de la unidad, incluida su hoja de vida resumida.
+          description: Ficha de la unidad.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ToolUnit" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /inventory/units/{id}/history:
+    get:
+      operationId: getToolUnitHistory
+      summary: Hoja de vida completa de una unidad (HU-13.1, botón "Historial")
+      description: >
+        Todas las entradas de `tool_unit_status_log` de esta unidad, orden
+        cronológico descendente (más reciente primero) — gap detectado en
+        Sprint 14 al implementar el botón "Historial" del panel de
+        inventario: no existía ningún endpoint para listar la hoja de vida
+        completa, solo el estado actual.
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      responses:
+        "200":
+          description: Hoja de vida completa de la unidad.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ToolUnitStatusLogEntry" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
