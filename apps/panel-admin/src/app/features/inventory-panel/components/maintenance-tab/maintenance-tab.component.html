@@ -1,0 +1,69 @@
+<section class="maintenance-tab">
+  @if (loading()) {
+    <output>Cargando mantenimiento…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <ul class="maintenance-list" data-testid="maintenance-list">
+      @for (unit of units(); track unit.id) {
+        <li class="maintenance-item" data-testid="maintenance-row">
+          <div class="maintenance-main">
+            <span class="badge" [class.badge-mantenimiento]="unit.estado === 'En Mantenimiento'" [class.badge-baja]="unit.estado === 'Dado de Baja'">
+              {{ unit.estado }}
+            </span>
+            <div class="maintenance-info">
+              <strong>{{ unit.modelo_nombre }}</strong>
+              <span>Serial {{ unit.numero_serie }}</span>
+            </div>
+          </div>
+
+          @if (unit.ultimo_evento_mantenimiento; as evento) {
+            <dl class="maintenance-event">
+              @if (evento.tipo_mantenimiento) {
+                <div><dt>Tipo</dt><dd>{{ evento.tipo_mantenimiento }}</dd></div>
+              }
+              @if (evento.falla_reportada) {
+                <div><dt>Falla reportada</dt><dd>{{ evento.falla_reportada }}</dd></div>
+              }
+              @if (evento.tecnico_asignado) {
+                <div><dt>Técnico asignado</dt><dd>{{ evento.tecnico_asignado }}</dd></div>
+              }
+              @if (evento.fecha_prevista_fin) {
+                <div><dt>Fecha prevista de fin</dt><dd>{{ evento.fecha_prevista_fin }}</dd></div>
+              }
+              @if (evento.motivo_baja) {
+                <div><dt>Motivo de baja</dt><dd>{{ evento.motivo_baja }}</dd></div>
+              }
+            </dl>
+          }
+
+          @if (unit.estado === 'En Mantenimiento') {
+            <div class="maintenance-actions">
+              <button type="button" (click)="reintegrar(unit)" data-testid="btn-reintegrar">
+                Reintegrar a Servicio
+              </button>
+              <button type="button" class="btn-danger" (click)="declararBaja(unit)" data-testid="btn-declarar-baja">
+                Declarar Baja Definitiva
+              </button>
+            </div>
+          }
+        </li>
+      } @empty {
+        <li>No hay herramientas en reparación, inspección ni dadas de baja.</li>
+      }
+    </ul>
+  }
+</section>
+
+@if (statusChangeTarget(); as target) {
+  <app-status-change-modal
+    [unit]="target.unit"
+    [presetEstado]="target.presetEstado"
+    (closed)="statusChangeTarget.set(null)"
+    (updated)="onStatusUpdated()"
+  ></app-status-change-modal>
+}

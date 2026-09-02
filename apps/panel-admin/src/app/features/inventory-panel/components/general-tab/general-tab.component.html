@@ -1,0 +1,107 @@
+<section class="general-tab">
+  <div class="toolbar">
+    <div class="filters">
+      <input
+        type="search"
+        placeholder="Buscar por código QR, serial o modelo…"
+        [formControl]="searchControl"
+        data-testid="inventory-search"
+        aria-label="Buscar por código QR, serial o modelo"
+      />
+      <select [formControl]="estadoControl" data-testid="inventory-estado-filter" aria-label="Filtrar por estado">
+        <option value="">Todos los estados</option>
+        @for (estado of estados; track estado) {
+          <option [value]="estado">{{ estado }}</option>
+        }
+      </select>
+    </div>
+
+    <button type="button" class="btn-primary" (click)="openRegisterModal()" data-testid="btn-registrar-unidad">
+      + Registrar Nueva Unidad
+    </button>
+  </div>
+
+  @if (loading()) {
+    <output>Cargando inventario…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <table class="inventory-table" data-testid="inventory-table">
+      <thead>
+        <tr>
+          <th>Código QR</th>
+          <th>Serial Fabricante</th>
+          <th>Modelo</th>
+          <th>Categoría</th>
+          <th>Estado</th>
+          <th>Ubicación en Bodega</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (unit of items(); track unit.id) {
+          <tr data-testid="inventory-row">
+            <td>
+              <span class="material-symbols-outlined qr-icon" aria-hidden="true">qr_code_2</span>
+            </td>
+            <td>{{ unit.numero_serie }}</td>
+            <td>{{ unit.modelo_nombre }}</td>
+            <td>{{ unit.modelo_categoria }}</td>
+            <td>
+              <span class="badge" [class]="estadoBadgeClass(unit.estado_visualizacion)">
+                {{ unit.estado_visualizacion }}
+              </span>
+            </td>
+            <td>{{ unit.ubicacion_bodega || '—' }}</td>
+            <td class="actions">
+              <button type="button" (click)="verQr(unit)" data-testid="btn-ver-qr">Ver QR</button>
+              <button type="button" (click)="verHistorial(unit)" data-testid="btn-historial">Historial</button>
+              <button type="button" (click)="cambiarEstado(unit)" data-testid="btn-cambiar-estado">
+                Cambiar Estado
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7">No se encontraron unidades con esos filtros.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (totalPages > 1) {
+      <nav class="pagination" aria-label="Paginación de inventario">
+        <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">Anterior</button>
+        <span>Página {{ page() }} de {{ totalPages }}</span>
+        <button type="button" [disabled]="page() >= totalPages" (click)="goToPage(page() + 1)">Siguiente</button>
+      </nav>
+    }
+  }
+</section>
+
+@if (showRegisterModal()) {
+  <app-register-unit-modal
+    (closed)="showRegisterModal.set(false)"
+    (created)="onUnitRegistered()"
+  ></app-register-unit-modal>
+}
+
+@if (detailModal(); as detail) {
+  <app-unit-detail-modal
+    [unitId]="detail.unitId"
+    [mode]="detail.mode"
+    (closed)="detailModal.set(null)"
+  ></app-unit-detail-modal>
+}
+
+@if (statusChangeUnit(); as unit) {
+  <app-status-change-modal
+    [unit]="unit"
+    (closed)="statusChangeUnit.set(null)"
+    (updated)="onStatusUpdated()"
+  ></app-status-change-modal>
+}

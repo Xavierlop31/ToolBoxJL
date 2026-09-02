@@ -1,0 +1,87 @@
+:host {
+  display: block;
+  font-family: var(--tbjl-font-family, sans-serif);
+}
+
+h1 {
+  margin: 0 0 24px 0;
+  font-size: 28px;
+  font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+  font-weight: 700;
+  color: var(--tbjl-color-neutral-900, #161c21);
+}
+
+output {
+  display: block;
+  margin: 1em 0;
+  color: var(--tbjl-color-neutral-500, #757588);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin: 0 0 28px 0;
+}
+
+.metric-card {
+  background: var(--tbjl-color-card, #ffffff);
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  padding: 22px;
+  box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
+
+  dt {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tbjl-color-neutral-500, #757588);
+  }
+
+  dd {
+    margin: 10px 0 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--tbjl-color-neutral-900, #161c21);
+  }
+}
+
+.metric-operativas dd {
+  color: #1a7a35;
+}
+
+.metric-alquiler dd {
+  color: var(--tbjl-color-primary-500, #141cdb);
+}
+
+.metric-mantenimiento dd {
+  color: #a2610a;
+}
+
+.inventory-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--tbjl-color-border, #dce3ea);
+
+  button {
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--tbjl-color-neutral-700, #454556);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--tbjl-color-primary-500, #141cdb);
+    }
+
+    &.active {
+      color: var(--tbjl-color-primary-500, #141cdb);
+      border-bottom-color: var(--tbjl-color-primary-500, #141cdb);
+    }
+  }
+}

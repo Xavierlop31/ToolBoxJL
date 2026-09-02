@@ -1,0 +1,82 @@
+<div
+  class="modal-backdrop"
+  role="button"
+  tabindex="0"
+  aria-label="Cerrar modal"
+  (click)="close()"
+  (keydown.enter)="close()"
+  (keydown.space)="close()"
+>
+  <div
+    class="modal-panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="mode === 'qr' ? 'Código QR de la unidad' : 'Historial de la unidad'"
+    tabindex="-1"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <h2>{{ mode === 'qr' ? 'Código QR' : 'Historial de la Unidad' }}</h2>
+
+    @if (loading()) {
+      <output>Cargando…</output>
+    }
+
+    @if (errorMessage()) {
+      <p class="form-error" role="alert">{{ errorMessage() }}</p>
+    }
+
+    @if (mode === 'qr' && unit(); as u) {
+      <div class="qr-view" data-testid="unit-qr-view">
+        <img [src]="u.qr_code_url" alt="Código QR de la unidad" class="qr-image" />
+        <p class="qr-serial">{{ u.numero_serie }}</p>
+      </div>
+    }
+
+    @if (mode === 'historial' && !loading() && !errorMessage()) {
+      <ol class="unit-history" data-testid="unit-history-view">
+        @for (evento of history(); track evento.id) {
+          <li class="history-entry" data-testid="history-entry">
+            <div class="history-entry-header">
+              <span class="history-transition">
+                {{ evento.estado_anterior ?? 'Alta inicial' }} → <strong>{{ evento.estado_nuevo }}</strong>
+              </span>
+              <time>{{ evento.created_at | date: 'medium' }}</time>
+            </div>
+            <p class="history-autor">Registrado por {{ evento.autor_id }}</p>
+
+            @if (evento.tipo_mantenimiento || evento.falla_reportada || evento.tecnico_asignado || evento.costo_estimado || evento.fecha_prevista_fin) {
+              <dl class="history-detail">
+                @if (evento.tipo_mantenimiento) {
+                  <div><dt>Tipo</dt><dd>{{ evento.tipo_mantenimiento }}</dd></div>
+                }
+                @if (evento.falla_reportada) {
+                  <div><dt>Falla reportada</dt><dd>{{ evento.falla_reportada }}</dd></div>
+                }
+                @if (evento.tecnico_asignado) {
+                  <div><dt>Técnico asignado</dt><dd>{{ evento.tecnico_asignado }}</dd></div>
+                }
+                @if (evento.costo_estimado) {
+                  <div><dt>Costo estimado</dt><dd>{{ evento.costo_estimado }} COP</dd></div>
+                }
+                @if (evento.fecha_prevista_fin) {
+                  <div><dt>Fecha prevista de fin</dt><dd>{{ evento.fecha_prevista_fin }}</dd></div>
+                }
+              </dl>
+            }
+
+            @if (evento.motivo_baja) {
+              <p class="history-motivo-baja"><strong>Motivo de baja:</strong> {{ evento.motivo_baja }}</p>
+            }
+          </li>
+        } @empty {
+          <li>Esta unidad todavía no tiene eventos registrados en su hoja de vida.</li>
+        }
+      </ol>
+    }
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" (click)="close()">Cerrar</button>
+    </div>
+  </div>
+</div>
