@@ -32,6 +32,7 @@ import {
 } from "../application/consultar-disponibilidad.use-case";
 import { ListarMantenimientoUseCase } from "../application/listar-mantenimiento.use-case";
 import { ListarUnidadesUseCase } from "../application/listar-unidades.use-case";
+import { ObtenerHistorialUnidadUseCase } from "../application/obtener-historial-unidad.use-case";
 import { ObtenerMetricasInventarioUseCase } from "../application/obtener-metricas-inventario.use-case";
 import { ObtenerUnidadUseCase } from "../application/obtener-unidad.use-case";
 import { RegistrarModeloUseCase } from "../application/registrar-modelo.use-case";
@@ -62,6 +63,14 @@ import { ListarUnidadesQueryDto } from "./dto/listar-unidades.query.dto";
  * Inventario QR — `almacenista`/`admin`) y `PATCH
  * /inventory/units/{id}/status` amplía sus `x-roles` para incluir `admin`
  * (antes solo `almacenista`/`repartidor`) — ver openapi.yaml.
+ *
+ * Gap detectado por el frontend durante este mismo sprint (PR #171,
+ * openapi.yaml commit `498963e`): `GET /inventory/units/{id}` describía en
+ * su `description` una "hoja de vida resumida" que nunca se declaró en el
+ * schema `ToolUnit` — se corrigió la descripción y se agregó el endpoint
+ * dedicado `GET /inventory/units/{id}/history` para el botón "Historial" de
+ * HU-13.1. De paso, `GET /inventory/units/{id}` suma `admin` a sus
+ * `x-roles` (antes solo `almacenista`/`repartidor`).
  */
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Controller()
@@ -75,6 +84,7 @@ export class InventoryController {
     private readonly listarUnidades: ListarUnidadesUseCase,
     private readonly obtenerMetricasInventario: ObtenerMetricasInventarioUseCase,
     private readonly listarMantenimiento: ListarMantenimientoUseCase,
+    private readonly obtenerHistorialUnidad: ObtenerHistorialUnidadUseCase,
   ) {}
 
   @Roles("admin")
@@ -124,13 +134,29 @@ export class InventoryController {
     return this.listarMantenimiento.ejecutar();
   }
 
-  @Roles("almacenista", "repartidor")
+  @Roles("almacenista", "repartidor", "admin")
   @Get("inventory/units/:id")
   async obtenerUnidadPorId(
     @Param("id", new ParseUUIDPipe()) id: string,
   ): Promise<ToolUnit> {
     try {
       return await this.obtenerUnidad.ejecutar(id);
+    } catch (error) {
+      if (error instanceof UnidadNoEncontradaError) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  /** `GET /inventory/units/{id}/history` (HU-13.1, botón "Historial"). */
+  @Roles("almacenista", "admin")
+  @Get("inventory/units/:id/history")
+  async historialUnidad(
+    @Param("id", new ParseUUIDPipe()) id: string,
+  ): Promise<ToolUnitStatusLogEntry[]> {
+    try {
+      return await this.obtenerHistorialUnidad.ejecutar(id);
     } catch (error) {
       if (error instanceof UnidadNoEncontradaError) {
         throw new NotFoundException(error.message);
