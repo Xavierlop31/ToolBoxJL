@@ -12,6 +12,10 @@ function aDominio(v: PrismaVehicle): Vehicle {
     capacidad_m3: v.capacidadM3,
     zonas: v.zonas,
     repartidor_id: v.repartidorId,
+    // Sprint 14 (HU-13.4) — `?? null` por robustez ante filas creadas antes
+    // de que la columna existiera en la base real (ver migración
+    // 20260902000000_sprint14_inventario_qr).
+    placa: v.placa ?? null,
   };
 }
 

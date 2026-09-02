@@ -107,12 +107,20 @@ model ToolModel {
 /// Unidad física serializada de un modelo — RF-1.2. `id` es el mismo UUID
 /// codificado en el QR físico impreso (el QR en sí no se persiste acá, se
 /// genera on-demand — ver InventoryModule/infrastructure/qr).
+///
+/// `fechaAdquisicion`/`costoCompra`/`ubicacionBodega` (Sprint 14, HU-13.2):
+/// nullable — unidades creadas antes de este campo no lo tienen, aunque
+/// `POST /inventory/units` los exige a partir de este sprint (validación en
+/// `CrearUnidadDto`, no acá en el schema).
 model ToolUnit {
   id          String       @id @default(uuid()) @db.Uuid
   modeloId    String       @map("modelo_id") @db.Uuid
   numeroSerie String       @unique @map("numero_serie")
   estado      EstadoUnidad @default(Nuevo)
   fechaIngreso DateTime    @default(now()) @map("fecha_ingreso") @db.Date
+  fechaAdquisicion DateTime? @map("fecha_adquisicion") @db.Date
+  costoCompra      Int?      @map("costo_compra")
+  ubicacionBodega  String?   @map("ubicacion_bodega")
 
   modelo    ToolModel           @relation(fields: [modeloId], references: [id])
   historial ToolUnitStatusLog[]
@@ -123,9 +131,25 @@ model ToolUnit {
   @@index([modeloId])
 }
 
+/// Tipo de orden de taller (Sprint 14, HU-13.3) — solo aplica cuando
+/// `ToolUnitStatusLog.estadoNuevo = EnMantenimiento`.
+enum TipoMantenimiento {
+  Preventivo
+  Correctivo
+
+  @@map("tipo_mantenimiento")
+}
+
 /// Hoja de vida de una unidad — RF-1.3. Tabla append-only (sin UPDATE/DELETE
 /// una vez insertada la entrada), igual que el patrón de
 /// docs/DESIGN.md §4.2 para `tool_unit_status_log`/`inspection_checklists`.
+///
+/// Los 6 campos de mantenimiento (Sprint 14, HU-13.3) son opcionales:
+/// `tipoMantenimiento`/`fallaReportada`/`tecnicoAsignado`/`costoEstimado`/
+/// `fechaPrevistaFin` solo se esperan pobladas cuando `estadoNuevo` es
+/// `EnMantenimiento`; `motivoBaja` cuando `estadoNuevo` es `DadoDeBaja` — el
+/// backend no lo valida cruzado a propósito (ver openapi.yaml, descripción
+/// de `PATCH /inventory/units/{id}/status`).
 model ToolUnitStatusLog {
   id             String        @id @default(uuid()) @db.Uuid
   unidadId       String        @map("unidad_id") @db.Uuid
@@ -137,6 +161,13 @@ model ToolUnitStatusLog {
   /// este schema (fuera de alcance de Sprint 1 — ver comentario de cabecera).
   autorId   String   @map("autor_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
+
+  tipoMantenimiento TipoMantenimiento? @map("tipo_mantenimiento")
+  fallaReportada    String?            @map("falla_reportada")
+  tecnicoAsignado   String?            @map("tecnico_asignado")
+  costoEstimado     Int?               @map("costo_estimado")
+  fechaPrevistaFin  DateTime?          @map("fecha_prevista_fin") @db.Date
+  motivoBaja        String?            @map("motivo_baja")
 
   unidad ToolUnit @relation(fields: [unidadId], references: [id])
 
@@ -280,6 +311,10 @@ model Vehicle {
   /// este schema (mismo criterio que `ToolUnitStatusLog.autorId`).
   repartidorId String?  @map("repartidor_id") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at")
+  /// Sprint 14 (HU-13.4). Nullable — vehículos creados antes de este campo
+  /// no lo tienen; sin endpoint de escritura en este sprint (ver
+  /// `packages/shared-types/src/vehicle.ts`, doc-comment de `Vehicle.placa`).
+  placa String? @map("placa")
 
   shipments Shipment[]
   routes    Route[]
@@ -474,4 +509,40 @@ model Zone {
 
   @@map("zones")
   @@index([ciudad])
+}
+
+// ============================================================================
+// Sprint 14 (Épica 13, HU-13.4 — panel admin de Inventario QR, "Rutas del
+// Día"): PRIMER caso de uso que necesita LEER `public.users` desde código
+// Node (nombre de repartidor/cliente para GET /logistics/routes-today).
+// Hasta acá `public.users` (creada por la migración
+// 20260823235900_supabase_users_bootstrap, ver su comentario de cabecera)
+// solo la leían las políticas RLS en SQL crudo — AuthModule verifica JWTs
+// directo contra el JWKS de Supabase, nunca consulta `users` vía Prisma. Este
+// modelo NO agrega una migración nueva (la tabla ya existe, creada por el
+// bootstrap) — es un mirror de SOLO LECTURA: ninguna implementación de
+// `UserRepository` (apps/api/src/modules/users) expone `crear`/`actualizar`,
+// la única fuente de escritura sigue siendo el trigger `handle_new_user`.
+// ============================================================================
+
+enum RolUsuario {
+  admin
+  gerente
+  almacenista
+  repartidor
+  cliente
+
+  @@map("rol_usuario")
+}
+
+/// Mirror de solo lectura de `public.users` — ver comentario de la sección
+/// de arriba. Columnas idénticas a las de la migración bootstrap.
+model User {
+  id       String     @id @db.Uuid
+  email    String
+  fullName String?    @map("full_name")
+  telefono String?
+  rol      RolUsuario @default(cliente)
+
+  @@map("users")
 }

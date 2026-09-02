@@ -13,9 +13,12 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type {
+  InventoryMetrics,
+  ListarUnidadesResultado,
   ToolModel,
   ToolUnit,
   ToolUnitStatusLogEntry,
+  UnidadMantenimiento,
   UsuarioAutenticado,
 } from "@toolboxjl/shared-types";
 import { Roles } from "../../auth/interface/decorators/roles.decorator";
@@ -27,6 +30,9 @@ import {
   ConsultarDisponibilidadUseCase,
   type DisponibilidadModelo,
 } from "../application/consultar-disponibilidad.use-case";
+import { ListarMantenimientoUseCase } from "../application/listar-mantenimiento.use-case";
+import { ListarUnidadesUseCase } from "../application/listar-unidades.use-case";
+import { ObtenerMetricasInventarioUseCase } from "../application/obtener-metricas-inventario.use-case";
 import { ObtenerUnidadUseCase } from "../application/obtener-unidad.use-case";
 import { RegistrarModeloUseCase } from "../application/registrar-modelo.use-case";
 import { RegistrarUnidadUseCase } from "../application/registrar-unidad.use-case";
@@ -36,6 +42,7 @@ import { ActualizarEstadoDto } from "./dto/actualizar-estado.dto";
 import { CheckAvailabilityQueryDto } from "./dto/check-availability.query.dto";
 import { CrearModeloDto } from "./dto/crear-modelo.dto";
 import { CrearUnidadDto } from "./dto/crear-unidad.dto";
+import { ListarUnidadesQueryDto } from "./dto/listar-unidades.query.dto";
 
 /**
  * `/inventory/*` — todos protegidos por JWT de Supabase (`SupabaseAuthGuard`)
@@ -49,6 +56,12 @@ import { CrearUnidadDto } from "./dto/crear-unidad.dto";
  * `ROLES` en `@toolboxjl/shared-types`), así que se suma acá. `agente-3`
  * (Sprint 9) todavía no existe como JWT de servicio — no se agrega hasta
  * ese sprint, mismo criterio que se aplicó acá para `agente-2` hasta ahora.
+ *
+ * Sprint 14 (HU-13.1/HU-13.2/HU-13.3): `GET /inventory/units`,
+ * `GET /inventory/metrics`, `GET /inventory/maintenance` (panel admin de
+ * Inventario QR — `almacenista`/`admin`) y `PATCH
+ * /inventory/units/{id}/status` amplía sus `x-roles` para incluir `admin`
+ * (antes solo `almacenista`/`repartidor`) — ver openapi.yaml.
  */
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Controller()
@@ -59,6 +72,9 @@ export class InventoryController {
     private readonly obtenerUnidad: ObtenerUnidadUseCase,
     private readonly actualizarEstadoUnidad: ActualizarEstadoUnidadUseCase,
     private readonly consultarDisponibilidad: ConsultarDisponibilidadUseCase,
+    private readonly listarUnidades: ListarUnidadesUseCase,
+    private readonly obtenerMetricasInventario: ObtenerMetricasInventarioUseCase,
+    private readonly listarMantenimiento: ListarMantenimientoUseCase,
   ) {}
 
   @Roles("admin")
@@ -83,6 +99,31 @@ export class InventoryController {
     }
   }
 
+  /**
+   * Declarado ANTES de `inventory/units/:id` (misma convención que
+   * `GET /orders` vs `GET /orders/:id`, Sprint 12): aunque no hay ambigüedad
+   * real de matching, se mantiene el path literal registrado primero.
+   */
+  @Roles("almacenista", "admin")
+  @Get("inventory/units")
+  async listar(
+    @Query() query: ListarUnidadesQueryDto,
+  ): Promise<ListarUnidadesResultado> {
+    return this.listarUnidades.ejecutar(query);
+  }
+
+  @Roles("almacenista", "admin")
+  @Get("inventory/metrics")
+  async metricas(): Promise<InventoryMetrics> {
+    return this.obtenerMetricasInventario.ejecutar();
+  }
+
+  @Roles("almacenista", "admin")
+  @Get("inventory/maintenance")
+  async mantenimiento(): Promise<UnidadMantenimiento[]> {
+    return this.listarMantenimiento.ejecutar();
+  }
+
   @Roles("almacenista", "repartidor")
   @Get("inventory/units/:id")
   async obtenerUnidadPorId(
@@ -98,7 +139,7 @@ export class InventoryController {
     }
   }
 
-  @Roles("almacenista", "repartidor")
+  @Roles("almacenista", "repartidor", "admin")
   @Patch("inventory/units/:id/status")
   async actualizarEstado(
     @Param("id", new ParseUUIDPipe()) id: string,
@@ -111,6 +152,14 @@ export class InventoryController {
         dto.estado_nuevo,
         dto.fotos_urls ?? [],
         usuario.id,
+        {
+          tipoMantenimiento: dto.tipo_mantenimiento,
+          fallaReportada: dto.falla_reportada,
+          tecnicoAsignado: dto.tecnico_asignado,
+          costoEstimado: dto.costo_estimado,
+          fechaPrevistaFin: dto.fecha_prevista_fin,
+          motivoBaja: dto.motivo_baja,
+        },
       );
     } catch (error) {
       if (error instanceof UnidadNoEncontradaError) {

@@ -16,6 +16,11 @@ function aDominio(u: PrismaToolUnit): UnidadPersistida {
     numero_serie: u.numeroSerie,
     estado: estadoADominio(u.estado),
     fecha_ingreso: u.fechaIngreso.toISOString().slice(0, 10),
+    fecha_adquisicion: u.fechaAdquisicion
+      ? u.fechaAdquisicion.toISOString().slice(0, 10)
+      : null,
+    costo_compra: u.costoCompra,
+    ubicacion_bodega: u.ubicacionBodega,
   };
 }
 
@@ -32,6 +37,11 @@ export class PrismaToolUnitRepository implements ToolUnitRepository {
       data: {
         modeloId: input.modeloId,
         numeroSerie: input.numeroSerie,
+        fechaAdquisicion: input.fechaAdquisicion
+          ? new Date(input.fechaAdquisicion)
+          : undefined,
+        costoCompra: input.costoCompra ?? undefined,
+        ubicacionBodega: input.ubicacionBodega ?? undefined,
       },
     });
     return aDominio(creado);
@@ -56,6 +66,13 @@ export class PrismaToolUnitRepository implements ToolUnitRepository {
   async listarPorModelo(modeloId: string): Promise<UnidadPersistida[]> {
     const unidades = await this.prisma.toolUnit.findMany({
       where: { modeloId },
+    });
+    return unidades.map(aDominio);
+  }
+
+  async listarTodos(): Promise<UnidadPersistida[]> {
+    const unidades = await this.prisma.toolUnit.findMany({
+      orderBy: { fechaIngreso: "desc" },
     });
     return unidades.map(aDominio);
   }

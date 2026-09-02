@@ -1,3 +1,5 @@
+import type { EstadoEnvio, TipoEnvio } from "./shipment";
+
 /**
  * Ruta diaria de reparto/recogida — docs/DESIGN.md §4.1, entidad `ROUTES`;
  * contrato de API: openapi.yaml `#/components/schemas/Route` (Sprint 4,
@@ -23,4 +25,48 @@ export interface RouteInput {
   vehiculo_id: string;
   fecha: string;
   paradas: string[];
+}
+
+/**
+ * `GET /logistics/routes-today` (Sprint 14, HU-13.4) — pestaña "Rutas del
+ * Día" del panel de inventario. Ver `RutasHoyUseCase`
+ * (apps/api/src/modules/logistics) para el detalle de cómo se calcula cada
+ * campo, en particular `hora_estimada_llegada` (estimación naive, NO
+ * telemetría real — ver openapi.yaml, descripción del endpoint) y
+ * `estado_ruta`.
+ */
+export interface HerramientaParadaRutaHoy {
+  modelo_nombre: string;
+  numero_serie: string;
+}
+
+export interface ParadaRutaHoy {
+  shipment_id: string;
+  order_id: string;
+  tipo: TipoEnvio;
+  estado_envio: EstadoEnvio;
+  direccion: string;
+  cliente_nombre: string;
+  /** Formato `"HH:mm"` — ver doc-comment de arriba sobre por qué es una estimación. */
+  hora_estimada_llegada: string;
+  herramientas: HerramientaParadaRutaHoy[];
+}
+
+export type EstadoRutaHoy = "Pendiente" | "En Progreso" | "Completada";
+
+export interface RepartidorRutaHoy {
+  repartidor_id: string;
+  nombre: string;
+  vehiculo_id: string;
+  placa: string | null;
+  total_paradas: number;
+  paradas_completadas: number;
+  /** 0-100. */
+  porcentaje_avance: number;
+  estado_ruta: EstadoRutaHoy;
+  paradas: ParadaRutaHoy[];
+}
+
+export interface RutasHoyResponse {
+  repartidores: RepartidorRutaHoy[];
 }

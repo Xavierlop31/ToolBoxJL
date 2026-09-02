@@ -147,6 +147,21 @@ export class PrismaOrderRepository implements OrderRepository {
     return aDominio(actualizado);
   }
 
+  async listarUnidadesEnAlquilerActivo(): Promise<string[]> {
+    const ordenesActivas = await this.prisma.order.findMany({
+      where: { estado: { in: ["confirmada", "en_curso"] } },
+      include: { items: true },
+    });
+
+    const unidadesIds: string[] = [];
+    for (const orden of ordenesActivas) {
+      for (const item of orden.items) {
+        unidadesIds.push(item.unidadId);
+      }
+    }
+    return unidadesIds;
+  }
+
   async listarPorCliente(
     clienteId: string,
     filtro: { estado?: EstadoOrden; page: number; pageSize: number },

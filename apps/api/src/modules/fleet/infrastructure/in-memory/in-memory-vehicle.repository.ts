@@ -21,6 +21,11 @@ export class InMemoryVehicleRepository implements VehicleRepository {
       capacidad_m3: input.capacidad_m3,
       zonas: input.zonas ?? [],
       repartidor_id: input.repartidor_id ?? null,
+      // Sprint 14 (HU-13.4): sin endpoint de escritura — siempre `null` al
+      // crear vía `VehicleInput` (ver doc-comment de `Vehicle.placa`).
+      // Los steps/tests que necesiten un vehículo CON placa lo asignan
+      // directo sobre el objeto devuelto, no vía este método.
+      placa: null,
     };
     this.vehiculos.set(vehiculo.id, vehiculo);
     return vehiculo;

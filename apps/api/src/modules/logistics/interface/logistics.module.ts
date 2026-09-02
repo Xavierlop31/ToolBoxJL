@@ -1,10 +1,13 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../../auth/interface/auth.module";
+import { CatalogInventoryModule } from "../../catalog-inventory/interface/catalog-inventory.module";
 import { FleetModule } from "../../fleet/interface/fleet.module";
 import { OrdersModule } from "../../orders/interface/orders.module";
+import { UsersModule } from "../../users/interface/users.module";
 import { AsignarRutasUseCase } from "../application/asignar-rutas.use-case";
 import { ListarEnviosUseCase } from "../application/listar-envios.use-case";
 import { ListarPedidosPendientesUseCase } from "../application/listar-pedidos-pendientes.use-case";
+import { RutasHoyUseCase } from "../application/rutas-hoy.use-case";
 import { VerMiRutaUseCase } from "../application/ver-mi-ruta.use-case";
 import { ROUTE_REPOSITORY, SHIPMENT_REPOSITORY } from "../infrastructure/logistics.tokens";
 import { PrismaRouteRepository } from "../infrastructure/prisma/prisma-route.repository";
@@ -32,9 +35,17 @@ import { LogisticsController } from "./logistics.controller";
  * Wiring de producción por defecto: implementaciones Prisma (requieren
  * `DATABASE_URL`). Los tests/BDD arman su propio `TestingModule` con las
  * implementaciones in-memory, mismo criterio que el resto de los módulos.
+ *
+ * Sprint 14 (HU-13.4): importa además `CatalogInventoryModule`
+ * (`TOOL_UNIT_REPOSITORY`/`TOOL_MODEL_REPOSITORY`, para resolver
+ * modelo/serial de las herramientas de cada parada de
+ * `GET /logistics/routes-today`) y `UsersModule` (`USER_REPOSITORY`, para
+ * nombre de repartidor/cliente) — mismo criterio de import directo (no
+ * transitivo) que `InspectionsModule`, que ya combina estos mismos módulos
+ * sin ciclo (ninguno de los dos importa `LogisticsModule`).
  */
 @Module({
-  imports: [AuthModule, FleetModule, OrdersModule],
+  imports: [AuthModule, FleetModule, OrdersModule, CatalogInventoryModule, UsersModule],
   controllers: [LogisticsController],
   providers: [
     PrismaService,
@@ -44,6 +55,7 @@ import { LogisticsController } from "./logistics.controller";
     AsignarRutasUseCase,
     ListarEnviosUseCase,
     VerMiRutaUseCase,
+    RutasHoyUseCase,
   ],
   exports: [
     SHIPMENT_REPOSITORY,
@@ -52,6 +64,7 @@ import { LogisticsController } from "./logistics.controller";
     AsignarRutasUseCase,
     ListarEnviosUseCase,
     VerMiRutaUseCase,
+    RutasHoyUseCase,
   ],
 })
 export class LogisticsModule {}
