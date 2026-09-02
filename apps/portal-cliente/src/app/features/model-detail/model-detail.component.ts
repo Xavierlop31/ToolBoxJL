@@ -182,6 +182,14 @@ export class ModelDetailComponent implements OnInit {
       return;
     }
 
+    // Auth-wall (HU-11.1 parte 2): mismo criterio que getQuote()/addItem() —
+    // sin sesión, guardamos el intento y mandamos a login en vez de dejar
+    // pasar la consulta.
+    if (!this.auth.isAuthenticated()) {
+      this.redirigirALoginConIntento(model.id);
+      return;
+    }
+
     this.availabilityLoading.set(true);
     this.availabilityError.set(null);
     this.unidadesDisponibles.set(null);

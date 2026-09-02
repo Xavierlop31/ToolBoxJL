@@ -4,7 +4,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { ModelDetailComponent } from './model-detail.component';
 import { environment } from '../../../environments/environment';
@@ -174,6 +174,44 @@ describe('ModelDetailComponent', () => {
       expect(component.availabilityError()).toBe(
         'Por favor selecciona un rango de fechas válido.',
       );
+      httpMock.expectNone(`${environment.apiUrl}/inventory/check-availability`);
+    });
+
+    it('auth-wall (HU-11.1): sin sesión, guarda el intento y redirige a login en vez de consultar', async () => {
+      // A diferencia del resto de los tests de este archivo (sesión mockeada
+      // como autenticada en configureTestBed()), este necesita el caso
+      // contrario -- se reconfigura el módulo de testing con su propio
+      // AuthService antes de crear el componente, mismo patrón que el test
+      // "sin id en la ruta" de ngOnInit.
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ModelDetailComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { paramMap: convertToParamMap({ id: modelId }) } },
+          },
+          { provide: AuthService, useValue: { isAuthenticated: () => false } },
+        ],
+      });
+      await TestBed.compileComponents();
+      fixture = TestBed.createComponent(ModelDetailComponent);
+      httpMock = TestBed.inject(HttpTestingController);
+
+      loadModel();
+      fillValidRentalForm();
+
+      const router = TestBed.inject(Router);
+      const navigateSpy = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+
+      fixture.componentInstance.checkAvailability();
+
+      expect(navigateSpy).toHaveBeenCalledWith(
+        jasmine.stringMatching(/^\/login\?returnUrl=/),
+      );
+      expect(fixture.componentInstance.availabilityLoading()).toBe(false);
       httpMock.expectNone(`${environment.apiUrl}/inventory/check-availability`);
     });
 
