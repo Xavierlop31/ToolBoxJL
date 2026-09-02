@@ -24,6 +24,47 @@
           </select>
         </div>
 
+        @if (form.controls.estadoNuevo.value === 'En Mantenimiento') {
+          <div class="maintenance-fields" data-testid="maintenance-fields">
+            <div class="field">
+              <label for="tipoMantenimiento">Tipo</label>
+              <select id="tipoMantenimiento" formControlName="tipoMantenimiento">
+                <option value="" disabled>Selecciona tipo</option>
+                @for (tipo of tiposMantenimiento; track tipo) {
+                  <option [value]="tipo">{{ tipo }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="fallaReportada">Falla reportada</label>
+              <textarea id="fallaReportada" formControlName="fallaReportada" rows="2"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="tecnicoAsignado">Técnico asignado</label>
+              <input id="tecnicoAsignado" type="text" formControlName="tecnicoAsignado" />
+            </div>
+
+            <div class="field">
+              <label for="costoEstimado">Costo estimado (COP)</label>
+              <input id="costoEstimado" type="number" min="0" formControlName="costoEstimado" />
+            </div>
+
+            <div class="field">
+              <label for="fechaPrevistaFin">Fecha prevista de finalización</label>
+              <input id="fechaPrevistaFin" type="date" formControlName="fechaPrevistaFin" />
+            </div>
+          </div>
+        }
+
+        @if (form.controls.estadoNuevo.value === 'Dado de Baja') {
+          <div class="field" data-testid="baja-fields">
+            <label for="motivoBaja">Motivo de la baja (acta de descarte)</label>
+            <textarea id="motivoBaja" formControlName="motivoBaja" rows="3"></textarea>
+          </div>
+        }
+
         <div class="field">
           <label for="fotos">Fotos de evidencia (opcional)</label>
           <input
@@ -42,6 +83,10 @@
           {{ submitting() ? 'Guardando…' : 'Registrar cambio de estado' }}
         </button>
       </form>
+
+      @if (validationError()) {
+        <p class="form-error" role="alert">{{ validationError() }}</p>
+      }
 
       @if (submitError()) {
         <p class="form-error" role="alert">{{ submitError() }}</p>

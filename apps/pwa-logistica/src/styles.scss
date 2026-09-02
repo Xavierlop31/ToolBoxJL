@@ -55,3 +55,33 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
 }
 
+/**
+ * Impresión de la vista previa de QR (HU-13.2, Sprint 14) — mismo patrón que
+ * `apps/panel-admin/src/styles.scss`. Global (no scoped al componente)
+ * porque `@media print` sobre `body` no aplica dentro del encapsulamiento
+ * por defecto de Angular. `RegisterUnitComponent` marca su vista previa con
+ * `.tbjl-print-area` y el resto de sus controles con `.no-print`.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .tbjl-print-area,
+  .tbjl-print-area * {
+    visibility: visible;
+  }
+
+  .tbjl-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border: none;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
