@@ -127,7 +127,13 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
   }
 
   onUnitRegistered(): void {
-    this.showRegisterModal.set(false);
+    // El modal NO se cierra acá: `RegisterUnitModalComponent` sigue montado
+    // mostrando su propia vista previa imprimible del QR (HU-13.2) hasta
+    // que el usuario haga clic en "Cerrar"/"Imprimir" (evento `closed`,
+    // ver el binding en el template). Cerrarlo acá lo desmontaría del DOM
+    // en el mismo ciclo de detección de cambios, antes de que la vista
+    // previa llegue a pintarse — bug real encontrado vía BDD (HU-13.2,
+    // escenario "Registro exitoso y generación de QR imprimible").
     this.page.set(1);
     this.load();
     this.dataChanged.emit();

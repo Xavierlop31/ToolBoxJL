@@ -92,17 +92,30 @@ describe('GeneralTabComponent', () => {
     });
   });
 
-  it('HU-13.2: abre y cierra el modal de registro, y refresca la tabla al registrar', () => {
+  it('HU-13.2: abre el modal de registro y lo cierra explícitamente vía (closed)', () => {
     fixture.detectChanges();
-    inventorySpy.listUnits.calls.reset();
 
     component.openRegisterModal();
     expect(component.showRegisterModal()).toBe(true);
 
-    component.onUnitRegistered();
+    component.showRegisterModal.set(false);
     expect(component.showRegisterModal()).toBe(false);
-    expect(inventorySpy.listUnits).toHaveBeenCalled();
   });
+
+  it(
+    'HU-13.2: NO cierra el modal al registrar la unidad — sigue montado mostrando la ' +
+      'vista previa imprimible del QR hasta que el usuario lo cierra explícitamente',
+    () => {
+      fixture.detectChanges();
+      inventorySpy.listUnits.calls.reset();
+
+      component.openRegisterModal();
+      component.onUnitRegistered();
+
+      expect(component.showRegisterModal()).toBe(true);
+      expect(inventorySpy.listUnits).toHaveBeenCalled();
+    },
+  );
 
   it('HU-13.1: abre el modal de "Ver QR" con el id de la unidad', () => {
     fixture.detectChanges();
