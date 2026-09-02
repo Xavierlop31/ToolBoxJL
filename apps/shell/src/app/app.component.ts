@@ -79,6 +79,13 @@ import { AuthService } from './core/auth/auth.service';
       align-items: center;
       gap: 16px;
     }
+    .btn-cart-icon {
+      padding: 8px;
+      border-radius: 9999px;
+    }
+    .btn-cart-icon .material-symbols-outlined {
+      font-size: 22px;
+    }
     .user-badge {
       background: rgba(255, 255, 255, 0.15);
       padding: 4px 10px;

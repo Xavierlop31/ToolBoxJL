@@ -79,7 +79,10 @@ export class ModelDetailComponent implements OnInit {
   // "Agregar al Carrito" (HU-12.2, alcance mínimo — Sprint 12)
   readonly addToCartLoading = signal(false);
   readonly addToCartError = signal<string | null>(null);
-  readonly toastMessage = signal<string | null>(null);
+  // Pedido del Arquitecto: tras agregar, preguntar si ir al carrito o
+  // seguir viendo herramientas (no se auto-descarta como el toast previo —
+  // queda visible hasta que la persona elige una de las dos acciones).
+  readonly mostrarConfirmacionCarrito = signal(false);
 
   readonly form = this.formBuilder.nonNullable.group({
     tipo: ['alquiler', Validators.required],
@@ -336,7 +339,7 @@ export class ModelDetailComponent implements OnInit {
     this.cartService.addItem(model.id, 1, dias).subscribe({
       next: () => {
         this.addToCartLoading.set(false);
-        this.mostrarToast('Se agregó al carrito.');
+        this.mostrarConfirmacionCarrito.set(true);
       },
       error: (err) => {
         this.addToCartLoading.set(false);
@@ -347,17 +350,23 @@ export class ModelDetailComponent implements OnInit {
     });
   }
 
+  /** "Ir al Carrito" del diálogo de confirmación tras agregar un ítem. */
+  irAlCarrito(): void {
+    this.mostrarConfirmacionCarrito.set(false);
+    void this.router.navigateByUrl('/carrito');
+  }
+
+  /** "Seguir viendo herramientas": descarta el diálogo, se queda en la ficha. */
+  seguirViendoHerramientas(): void {
+    this.mostrarConfirmacionCarrito.set(false);
+  }
+
   private calcularDias(fechaInicio: string, fechaFin: string): number | undefined {
     if (!fechaInicio || !fechaFin) return undefined;
     const inicio = new Date(fechaInicio).getTime();
     const fin = new Date(fechaFin).getTime();
     if (Number.isNaN(inicio) || Number.isNaN(fin) || fin <= inicio) return undefined;
     return Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
-  }
-
-  private mostrarToast(mensaje: string): void {
-    this.toastMessage.set(mensaje);
-    setTimeout(() => this.toastMessage.set(null), 3000);
   }
 
   private redirigirALoginConIntento(modeloId: string): void {

@@ -4,7 +4,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { ModelDetailComponent } from './model-detail.component';
 import { environment } from '../../../environments/environment';
@@ -500,6 +500,62 @@ describe('ModelDetailComponent', () => {
 
       expect(component.paymentError()).toBe('No pudimos procesar el pago. Intenta de nuevo.');
       expect(component.paymentLoading()).toBe(false);
+    });
+  });
+
+  describe('addItem', () => {
+    it('agrega el ítem y muestra el diálogo de confirmación (ir al carrito / seguir viendo)', () => {
+      loadModel();
+      const component = fixture.componentInstance;
+
+      component.addItem();
+      const req = httpMock.expectOne(`${environment.apiUrl}/cart/add-item`);
+      req.flush({ items: [], total: 0 });
+
+      expect(component.addToCartLoading()).toBe(false);
+      expect(component.mostrarConfirmacionCarrito()).toBe(true);
+    });
+
+    it('setea un error si falla y no muestra el diálogo de confirmación', () => {
+      loadModel();
+      const component = fixture.componentInstance;
+
+      component.addItem();
+      const req = httpMock.expectOne(`${environment.apiUrl}/cart/add-item`);
+      req.flush('error', { status: 500, statusText: 'Server Error' });
+
+      expect(component.addToCartError()).toBe('No pudimos agregar el producto al carrito.');
+      expect(component.mostrarConfirmacionCarrito()).toBe(false);
+    });
+
+    it('irAlCarrito: cierra el diálogo y navega a /carrito', async () => {
+      loadModel();
+      const component = fixture.componentInstance;
+      component.addItem();
+      httpMock.expectOne(`${environment.apiUrl}/cart/add-item`).flush({ items: [], total: 0 });
+
+      const router = TestBed.inject(Router);
+      const navigateSpy = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+
+      component.irAlCarrito();
+
+      expect(component.mostrarConfirmacionCarrito()).toBe(false);
+      expect(navigateSpy).toHaveBeenCalledWith('/carrito');
+    });
+
+    it('seguirViendoHerramientas: cierra el diálogo sin navegar', () => {
+      loadModel();
+      const component = fixture.componentInstance;
+      component.addItem();
+      httpMock.expectOne(`${environment.apiUrl}/cart/add-item`).flush({ items: [], total: 0 });
+
+      const router = TestBed.inject(Router);
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+
+      component.seguirViendoHerramientas();
+
+      expect(component.mostrarConfirmacionCarrito()).toBe(false);
+      expect(navigateSpy).not.toHaveBeenCalled();
     });
   });
 });

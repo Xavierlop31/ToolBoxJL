@@ -26,6 +26,17 @@
         </nav>
       </div>
       <div class="user-group">
+        @if (auth.isCliente()) {
+          <a
+            routerLink="/carrito"
+            routerLinkActive="active"
+            class="nav-link btn-cart-icon"
+            data-testid="cart-header-link"
+            title="Ver mi carrito"
+          >
+            <span class="material-symbols-outlined">shopping_cart</span>
+          </a>
+        }
         <span class="user-badge">{{ auth.userRoleDisplay() }}</span>
         <button type="button" class="btn-logout" (click)="signOut()" title="Cerrar sesión">
           <span class="material-symbols-outlined">logout</span>
