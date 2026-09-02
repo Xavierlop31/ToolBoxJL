@@ -1,79 +1,69 @@
+// Referencia Stitch: "Inicio de Sesión - Rediseño Industrial"
+// (5e2670034e384f1a804fe9778a40c4a0, docs/08_PRD_Fase3..., HU-11.2).
+// Panel de formulario a la izquierda (1/3), panel visual decorativo a la
+// derecha (2/3) — al revés del primer borrador de este componente (Sprint 0),
+// corregido el 2026-09-02 tras comparar contra el export real de Stitch.
 .auth-screen {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   background: var(--tbjl-color-background, #f5faff);
   font-family: var(--tbjl-font-family, sans-serif);
 
   @media (min-width: 960px) {
-    grid-template-columns: 1.1fr 1fr;
+    flex-direction: row;
   }
 }
 
-.auth-branding {
+.auth-form-panel {
   display: flex;
+  flex: 1;
   flex-direction: column;
   justify-content: center;
-  gap: var(--tbjl-space-4, 1rem);
   padding: var(--tbjl-space-8, 2rem) var(--tbjl-space-4, 1rem);
-  background: linear-gradient(
-    135deg,
-    var(--tbjl-color-primary-600, #0003a8),
-    var(--tbjl-color-primary-500, #141cdb)
-  );
-  color: #ffffff;
-
-  @media (min-width: 960px) {
-    padding: var(--tbjl-space-8, 2rem) calc(var(--tbjl-space-8, 2rem) * 2);
-  }
-}
-
-.brand-badge {
-  align-self: flex-start;
-  padding: var(--tbjl-space-1, 0.25rem) var(--tbjl-space-3, 0.75rem);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 999px;
-  font-size: var(--tbjl-font-size-xs, 0.75rem);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.brand-title {
-  margin: 0;
-  font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
-  font-size: var(--tbjl-font-size-2xl, 1.5rem);
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.brand-copy {
-  margin: 0;
-  max-width: 32ch;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: var(--tbjl-font-size-sm, 0.875rem);
-}
-
-.auth-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
   background: var(--tbjl-color-card, #fff);
-  padding: var(--tbjl-space-8, 2rem) var(--tbjl-space-4, 1rem);
+  position: relative;
+  z-index: 1;
 
   @media (min-width: 960px) {
-    padding: var(--tbjl-space-8, 2rem);
+    flex: 0 0 33.333%;
+    max-width: 33.333%;
+    padding: var(--tbjl-space-8, 2rem) var(--tbjl-space-6, 1.5rem);
+    box-shadow: var(--tbjl-shadow-lg, 0 12px 24px -4px rgba(17, 24, 39, 0.14));
+  }
+}
+
+.auth-form-inner {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: var(--tbjl-space-2, 0.5rem);
+  margin-bottom: var(--tbjl-space-8, 2rem);
+  color: var(--tbjl-color-primary-700, #0b0e3d);
+
+  .logo-icon {
+    font-size: 28px;
+  }
+
+  .logo-text {
+    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+    font-size: var(--tbjl-font-size-xl, 1.25rem);
   }
 }
 
 h1 {
   margin: 0 0 var(--tbjl-space-1, 0.25rem);
-  font-size: var(--tbjl-font-size-2xl, 1.5rem);
+  font-size: var(--tbjl-font-size-3xl, 1.875rem);
   font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
-  font-weight: 700;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
   color: var(--tbjl-color-neutral-900, #161c21);
 }
 
@@ -90,22 +80,25 @@ h1 {
   gap: var(--tbjl-space-1, 0.25rem);
 
   label {
-    font-size: var(--tbjl-font-size-sm, 0.875rem);
+    font-size: var(--tbjl-font-size-xs, 0.75rem);
     font-weight: 600;
+    letter-spacing: 0.03em;
     color: var(--tbjl-color-neutral-700, #454556);
   }
 
   input {
-    padding: var(--tbjl-space-3, 0.75rem);
+    height: 56px;
+    padding: 0 var(--tbjl-space-4, 1rem);
     border: 1px solid var(--tbjl-color-border, #dce3ea);
-    border-radius: var(--tbjl-radius-md, 0.5rem);
+    border-radius: var(--tbjl-radius-sm, 0.25rem);
     font-size: var(--tbjl-font-size-base, 1rem);
-    background-color: #ffffff;
+    background-color: var(--tbjl-color-neutral-0, #ffffff);
     color: var(--tbjl-color-neutral-900, #161c21);
 
     &:focus-visible {
-      outline: 2px solid var(--tbjl-color-primary-500, #141cdb);
-      outline-offset: 1px;
+      outline: none;
+      border-color: var(--tbjl-color-primary-500, #141cdb);
+      box-shadow: 0 0 0 1px var(--tbjl-color-primary-500, #141cdb);
     }
 
     &[aria-invalid='true'] {
@@ -135,18 +128,24 @@ h1 {
 
 .btn-primary {
   width: 100%;
-  padding: var(--tbjl-space-3, 0.75rem);
-  background: var(--tbjl-color-primary-500, #141cdb);
+  height: 56px;
+  background: var(--tbjl-color-secondary-500, #e70012); // Brand Red
   color: #ffffff;
   border: none;
-  border-radius: var(--tbjl-radius-md, 0.5rem);
-  font-size: var(--tbjl-font-size-base, 1rem);
+  border-radius: var(--tbjl-radius-sm, 0.25rem);
+  font-size: var(--tbjl-font-size-sm, 0.875rem);
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: var(--tbjl-color-primary-600, #0003a8);
+    background: var(--tbjl-color-secondary-600, #bc000c);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
   }
 
   &:disabled {
@@ -162,6 +161,8 @@ h1 {
   margin: var(--tbjl-space-6, 1.5rem) 0;
   color: var(--tbjl-color-neutral-500, #757588);
   font-size: var(--tbjl-font-size-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 
   hr {
     flex: 1;
@@ -174,12 +175,16 @@ h1 {
 
 .btn-google {
   width: 100%;
-  padding: var(--tbjl-space-3, 0.75rem);
-  background: var(--tbjl-color-card, #ffffff);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tbjl-space-2, 0.5rem);
+  background: var(--tbjl-color-neutral-0, #ffffff);
   color: var(--tbjl-color-neutral-900, #161c21);
   border: 1px solid var(--tbjl-color-border, #dce3ea);
-  border-radius: var(--tbjl-radius-md, 0.5rem);
-  font-size: var(--tbjl-font-size-base, 1rem);
+  border-radius: var(--tbjl-radius-sm, 0.25rem);
+  font-size: var(--tbjl-font-size-sm, 0.875rem);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -252,4 +257,62 @@ h1 {
     opacity: 0.6;
     cursor: not-allowed;
   }
+}
+
+// Panel decorativo (2/3, oculto en mobile) — ver la nota en el .html sobre
+// por qué es un gradiente y no la foto real del mockup de Stitch.
+.auth-visual-panel {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(11, 14, 61, 0.55) 0%,
+      rgba(11, 14, 61, 0.85) 100%
+    ),
+    radial-gradient(
+      circle at 30% 20%,
+      var(--tbjl-color-primary-300, #3943f2) 0%,
+      var(--tbjl-color-primary-700, #0b0e3d) 55%
+    );
+
+  @media (min-width: 960px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+  }
+}
+
+.auth-visual-overlay {
+  padding: var(--tbjl-space-8, 2rem);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 14, 61, 0.4);
+  backdrop-filter: blur(4px);
+  text-align: center;
+  color: #ffffff;
+}
+
+.visual-brand {
+  margin: 0 0 var(--tbjl-space-2, 0.5rem);
+  font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+  font-size: var(--tbjl-font-size-3xl, 1.875rem);
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.visual-tagline {
+  margin: 0;
+  font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+  font-size: var(--tbjl-font-size-lg, 1.125rem);
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  opacity: 0.9;
 }
