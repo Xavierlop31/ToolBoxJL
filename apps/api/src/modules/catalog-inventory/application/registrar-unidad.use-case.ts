@@ -40,6 +40,9 @@ export class RegistrarUnidadUseCase {
     const unidad = await this.unidades.crear({
       modeloId: input.modelo_id,
       numeroSerie: input.numero_serie,
+      fechaAdquisicion: input.fecha_adquisicion,
+      costoCompra: input.costo_compra,
+      ubicacionBodega: input.ubicacion_bodega,
     });
 
     const qrCodeUrl = await this.qr.generar(unidad.id);

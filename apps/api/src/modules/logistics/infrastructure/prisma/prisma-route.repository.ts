@@ -42,4 +42,11 @@ export class PrismaRouteRepository implements RouteRepository {
     });
     return encontrada ? aDominio(encontrada) : null;
   }
+
+  async listarPorFecha(fecha: string): Promise<Route[]> {
+    const encontradas = await this.prisma.route.findMany({
+      where: { fecha: new Date(fecha) },
+    });
+    return encontradas.map(aDominio);
+  }
 }

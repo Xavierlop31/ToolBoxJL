@@ -12,6 +12,10 @@ export type UnidadPersistida = Omit<ToolUnit, "qr_code_url">;
 export interface NuevaUnidadInput {
   modeloId: string;
   numeroSerie: string;
+  /** Sprint 14 (HU-13.2) — ver doc-comment de `ToolUnitInput` sobre por qué son opcionales acá. */
+  fechaAdquisicion?: string | null;
+  costoCompra?: number | null;
+  ubicacionBodega?: string | null;
 }
 
 /**
@@ -28,4 +32,17 @@ export interface ToolUnitRepository {
   ): Promise<UnidadPersistida>;
   /** Todas las unidades de un modelo — usado por RF-1.4 (check-availability). */
   listarPorModelo(modeloId: string): Promise<UnidadPersistida[]>;
+  /**
+   * Sprint 14 (HU-13.1/HU-13.3) — TODAS las unidades, sin filtrar. El
+   * filtrado por texto libre/estado de visualización y la paginación de
+   * `GET /inventory/units` ocurren en `ListarUnidadesUseCase` (capa de
+   * aplicación), no acá: ese cálculo cruza con `OrderRepository`
+   * (bounded context distinto — mismo criterio que
+   * `ConsultarDisponibilidadUseCase`), algo que este puerto no puede
+   * resolver por sí solo. Aceptable a la escala de este proyecto (ver
+   * doc-comment de `ListarUnidadesUseCase`); si la flota creciera mucho, el
+   * filtrado de texto/estado físico debería bajar acá (como
+   * `ToolModelRepository.buscarPaginado`).
+   */
+  listarTodos(): Promise<UnidadPersistida[]>;
 }

@@ -22,6 +22,9 @@ export class InMemoryToolUnitRepository implements ToolUnitRepository {
       numero_serie: input.numeroSerie,
       estado: "Nuevo",
       fecha_ingreso: new Date().toISOString().slice(0, 10),
+      fecha_adquisicion: input.fechaAdquisicion ?? null,
+      costo_compra: input.costoCompra ?? null,
+      ubicacion_bodega: input.ubicacionBodega ?? null,
     };
     this.unidades.set(unidad.id, unidad);
     return unidad;
@@ -46,5 +49,9 @@ export class InMemoryToolUnitRepository implements ToolUnitRepository {
 
   async listarPorModelo(modeloId: string): Promise<UnidadPersistida[]> {
     return [...this.unidades.values()].filter((u) => u.modelo_id === modeloId);
+  }
+
+  async listarTodos(): Promise<UnidadPersistida[]> {
+    return [...this.unidades.values()];
   }
 }

@@ -7,6 +7,7 @@ import type {
   Rol,
   ToolModel,
   ToolUnit,
+  ToolUnitInput,
   ToolUnitStatusLogEntry,
   Order,
   Vehicle,
@@ -20,6 +21,7 @@ import type {
 import { ActualizarEstadoUnidadUseCase } from "../../../src/modules/catalog-inventory/application/actualizar-estado-unidad.use-case";
 import { BuscarCatalogoUseCase } from "../../../src/modules/catalog-inventory/application/buscar-catalogo.use-case";
 import { ConsultarDisponibilidadUseCase, type DisponibilidadModelo } from "../../../src/modules/catalog-inventory/application/consultar-disponibilidad.use-case";
+import { ListarMantenimientoUseCase } from "../../../src/modules/catalog-inventory/application/listar-mantenimiento.use-case";
 import { ObtenerModeloPorIdUseCase } from "../../../src/modules/catalog-inventory/application/obtener-modelo-por-id.use-case";
 import { ObtenerUnidadUseCase } from "../../../src/modules/catalog-inventory/application/obtener-unidad.use-case";
 import { RegistrarModeloUseCase } from "../../../src/modules/catalog-inventory/application/registrar-modelo.use-case";
@@ -119,6 +121,9 @@ import {
   type ProductividadRespuesta,
 } from "../../../src/modules/analytics/application/consultar-productividad-repartidores.use-case";
 
+import { USER_REPOSITORY } from "../../../src/modules/users/infrastructure/users.tokens";
+import { InMemoryUserRepository } from "../../../src/modules/users/infrastructure/in-memory/in-memory-user.repository";
+
 import { CART_REPOSITORY } from "../../../src/modules/cart/infrastructure/cart.tokens";
 import { InMemoryCartRepository } from "../../../src/modules/cart/infrastructure/in-memory/in-memory-cart.repository";
 import { ObtenerCarritoUseCase } from "../../../src/modules/cart/application/obtener-carrito.use-case";
@@ -130,8 +135,10 @@ import { EliminarItemCarritoUseCase } from "../../../src/modules/cart/applicatio
  * World de Cucumber para los escenarios de `01_catalogo_inventario.feature`,
  * `02_cotizacion_alquiler_venta.feature`, `03_pagos_garantia.feature`,
  * `04_logistica_flota.feature`, `05_devoluciones_inspeccion_mora.feature`,
- * `06_autenticacion_seguridad.feature` y `07_kpis_analitica.feature`
- * (los 3 escenarios: `@Fase1` HU-7.1 y `@Fase2` HU-7.2/HU-7.3, Sprint 10).
+ * `06_autenticacion_seguridad.feature`, `07_kpis_analitica.feature`
+ * (los 3 escenarios: `@Fase1` HU-7.1 y `@Fase2` HU-7.2/HU-7.3, Sprint 10) y,
+ * desde Sprint 14, los 3 escenarios `@HU-13.2`/`@HU-13.3` de
+ * `13_gestion_inventario_qr.feature` (ver `inventario-qr.steps.ts`).
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -143,6 +150,10 @@ export class ToolboxWorld extends CucumberWorld {
   obtenerUnidad!: ObtenerUnidadUseCase;
   actualizarEstado!: ActualizarEstadoUnidadUseCase;
   consultarDisponibilidad!: ConsultarDisponibilidadUseCase;
+  /** Sprint 14 (HU-13.3, Issues #147-#150) — GET /inventory/maintenance. */
+  listarMantenimiento!: ListarMantenimientoUseCase;
+  /** Sprint 14 — puerto de solo lectura de `public.users`, sembrado directo en los steps que lo necesiten. */
+  userRepository!: InMemoryUserRepository;
 
   cotizarOrden!: CotizarOrdenUseCase;
   crearOrden!: CrearOrdenUseCase;
@@ -204,6 +215,18 @@ export class ToolboxWorld extends CucumberWorld {
   ultimaUnidad?: ToolUnit;
   ultimosLogs: ToolUnitStatusLogEntry[] = [];
   ultimaDisponibilidad?: DisponibilidadModelo;
+
+  /**
+   * Sprint 14 (HU-13.2, `inventario-qr.steps.ts`) — payload armado en el
+   * `Given` ("completo los campos obligatorios...") y enviado recién en el
+   * `When` ("hago clic en 'Guardar y Generar QR'"), igual que un formulario
+   * real del panel admin que no se envía hasta el submit.
+   */
+  formularioRegistroUnidad?: ToolUnitInput;
+  /** Sprint 14 (HU-13.3, "Retorno a estado operativo o baja definitiva") — 2 unidades independientes, una por cada transición del escenario. */
+  unidadAReintegrar?: ToolUnit;
+  unidadADarDeBaja?: ToolUnit;
+  entradaBaja?: ToolUnitStatusLogEntry;
 
   ultimaCotizacion?: QuoteResult;
   ultimaOrden?: Order;
@@ -280,6 +303,7 @@ export class ToolboxWorld extends CucumberWorld {
         { provide: UTILIZATION_REPOSITORY, useClass: InMemoryUtilizationRepository },
         { provide: DELIVERY_PRODUCTIVITY_REPOSITORY, useClass: InMemoryDeliveryProductivityRepository },
         { provide: CART_REPOSITORY, useClass: InMemoryCartRepository },
+        { provide: USER_REPOSITORY, useClass: InMemoryUserRepository },
         RegistrarModeloUseCase,
         BuscarCatalogoUseCase,
         ObtenerModeloPorIdUseCase,
@@ -287,6 +311,7 @@ export class ToolboxWorld extends CucumberWorld {
         ObtenerUnidadUseCase,
         ActualizarEstadoUnidadUseCase,
         ConsultarDisponibilidadUseCase,
+        ListarMantenimientoUseCase,
         CotizarOrdenUseCase,
         CrearOrdenUseCase,
         ObtenerOrdenUseCase,
@@ -323,6 +348,8 @@ export class ToolboxWorld extends CucumberWorld {
     this.consultarDisponibilidad = this.moduleRef.get(
       ConsultarDisponibilidadUseCase,
     );
+    this.listarMantenimiento = this.moduleRef.get(ListarMantenimientoUseCase);
+    this.userRepository = this.moduleRef.get(USER_REPOSITORY);
 
     this.cotizarOrden = this.moduleRef.get(CotizarOrdenUseCase);
     this.crearOrden = this.moduleRef.get(CrearOrdenUseCase);

@@ -106,6 +106,18 @@ export class InMemoryOrderRepository implements OrderRepository {
     return actualizada;
   }
 
+  async listarUnidadesEnAlquilerActivo(): Promise<string[]> {
+    const unidadesIds: string[] = [];
+    for (const orden of this.ordenes.values()) {
+      if (["confirmada", "en_curso"].includes(orden.estado)) {
+        for (const item of orden.items) {
+          unidadesIds.push(item.unidad_id);
+        }
+      }
+    }
+    return unidadesIds;
+  }
+
   async listarPorCliente(
     clienteId: string,
     filtro: { estado?: EstadoOrden; page: number; pageSize: number },

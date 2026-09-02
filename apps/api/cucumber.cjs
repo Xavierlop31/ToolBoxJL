@@ -36,7 +36,20 @@ module.exports = {
       // nueva verificable vía Cucumber) — quedan fuera de este archivo de
       // paths por completo al no listarse líneas de ellos.
       "../../features/12_catalogo_avanzado_carrito.feature:69",
-      "../../features/12_catalogo_avanzado_carrito.feature:76"
+      "../../features/12_catalogo_avanzado_carrito.feature:76",
+      // `13_gestion_inventario_qr.feature` (Sprint 14, Fase 3, Épica 13,
+      // Issues #147-#150): mismo criterio de selección por NÚMERO DE LÍNEA
+      // que `12_catalogo_avanzado_carrito.feature` arriba — de los 9
+      // escenarios del archivo, solo 3 tienen step definitions reales acá
+      // (ver el header de `inventario-qr.steps.ts` para el detalle
+      // completo de por qué los otros 6 quedan fuera, no alcanza con leer
+      // este comentario). `:30` = "Registro exitoso y generación de QR
+      // imprimible" (HU-13.2), `:45` = "Asignación de una unidad a
+      // mantenimiento" (HU-13.3), `:53` = "Retorno a estado operativo o
+      // baja definitiva" (HU-13.3).
+      "../../features/13_gestion_inventario_qr.feature:30",
+      "../../features/13_gestion_inventario_qr.feature:45",
+      "../../features/13_gestion_inventario_qr.feature:53"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],
