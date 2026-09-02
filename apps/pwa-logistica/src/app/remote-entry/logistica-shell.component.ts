@@ -4,7 +4,13 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 /**
  * Shell layout para PWA Logística (remotes montados vía Native Federation).
  * Provee la barra de navegación operativa para que almacenistas y repartidores
- * puedan alternar entre Escaneo QR, Hoja de Vida / Inventario y Mi Ruta del Día.
+ * puedan alternar entre Escaneo QR, Unidades, Registrar Unidad, Hoja de Vida
+ * y Mi Ruta del Día.
+ *
+ * "Unidades" y "Registrar Unidad" son el espejo reducido de HU-13.1/HU-13.2
+ * (Sprint 14, Fase 3, Épica 13, Issues #147/#148) para el rol almacenista —
+ * el guard `/admin` de `apps/shell` no deja pasar ese rol, así que este
+ * remote expone su propia versión reducida (sin KPIs) en vez de ampliarlo.
  */
 @Component({
   selector: 'app-logistica-shell',
@@ -24,6 +30,19 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
             <a routerLink="/logistica/escanear" routerLinkActive="active" class="subnav-tab">
               <span class="material-symbols-outlined">qr_code_scanner</span>
               <span>Escanear QR</span>
+            </a>
+            <a
+              routerLink="/logistica/unidades"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="subnav-tab"
+            >
+              <span class="material-symbols-outlined">format_list_bulleted</span>
+              <span>Unidades</span>
+            </a>
+            <a routerLink="/logistica/registrar-unidad" routerLinkActive="active" class="subnav-tab">
+              <span class="material-symbols-outlined">add_circle</span>
+              <span>Registrar Unidad</span>
             </a>
             <a routerLink="/logistica/mi-ruta" routerLinkActive="active" class="subnav-tab">
               <span class="material-symbols-outlined">route</span>

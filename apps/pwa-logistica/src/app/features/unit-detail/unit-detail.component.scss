@@ -13,6 +13,12 @@
   }
 }
 
+.maintenance-fields {
+  border-left: 3px solid var(--tbjl-color-primary-500, #141cdb);
+  padding-left: 14px;
+  margin-bottom: 4px;
+}
+
 .field {
   display: flex;
   flex-direction: column;

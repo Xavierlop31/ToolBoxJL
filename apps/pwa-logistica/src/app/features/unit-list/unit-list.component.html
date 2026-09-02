@@ -1,0 +1,51 @@
+<main class="unit-list">
+  <div class="page-header">
+    <h1>Unidades</h1>
+    <a routerLink="/logistica/registrar-unidad" class="btn-primary" data-testid="btn-registrar-unidad">
+      + Registrar Nueva Unidad
+    </a>
+  </div>
+
+  <input
+    type="search"
+    placeholder="Buscar por código QR, serial o modelo…"
+    [formControl]="searchControl"
+    data-testid="unit-search"
+    aria-label="Buscar por código QR, serial o modelo"
+  />
+
+  @if (loading()) {
+    <output>Cargando unidades…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <ul class="unit-rows" data-testid="unit-list">
+      @for (unit of items(); track unit.id) {
+        <li class="unit-row" data-testid="unit-row">
+          <a [routerLink]="['/logistica/unidades', unit.id]" class="unit-link">
+            <span class="material-symbols-outlined qr-icon" aria-hidden="true">qr_code_2</span>
+            <span class="unit-info">
+              <strong>{{ unit.numero_serie }}</strong>
+              <span class="unit-modelo">{{ unit.modelo_nombre }} — {{ unit.modelo_categoria }}</span>
+            </span>
+            <span class="badge">{{ unit.estado_visualizacion }}</span>
+          </a>
+        </li>
+      } @empty {
+        <li class="empty-state">No se encontraron unidades con esos filtros.</li>
+      }
+    </ul>
+
+    @if (totalPages > 1) {
+      <nav class="pagination" aria-label="Paginación de unidades">
+        <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">Anterior</button>
+        <span>Página {{ page() }} de {{ totalPages }}</span>
+        <button type="button" [disabled]="page() >= totalPages" (click)="goToPage(page() + 1)">Siguiente</button>
+      </nav>
+    }
+  }
+</main>

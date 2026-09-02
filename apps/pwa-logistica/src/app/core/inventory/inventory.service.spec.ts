@@ -70,4 +70,73 @@ describe('InventoryService', () => {
       created_at: new Date().toISOString(),
     });
   });
+
+  it('HU-13.2: registra el alta de una unidad física + QR', () => {
+    const input = {
+      modelo_id: mockUnit.modelo_id,
+      numero_serie: 'SN-0002',
+      fecha_adquisicion: '2026-01-15',
+      costo_compra: 500000,
+      ubicacion_bodega: 'Estante A3',
+    };
+
+    service.createUnit(input).subscribe((unit) => {
+      expect(unit.numero_serie).toBe('SN-0002');
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/inventory/units`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(input);
+    req.flush({
+      ...mockUnit,
+      numero_serie: 'SN-0002',
+      qr_code_url: 'data:image/png;base64,abc123',
+    });
+  });
+
+  it('HU-13.1: lista unidades con búsqueda por texto y paginación', () => {
+    service.listUnits({ q: 'taladro', page: 2, pageSize: 20 }).subscribe((result) => {
+      expect(result.total).toBe(1);
+      expect(result.items[0].modelo_nombre).toBe('Taladro Percutor');
+    });
+
+    const req = httpMock.expectOne(
+      (r) => r.url === `${environment.apiUrl}/inventory/units`,
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('q')).toBe('taladro');
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('pageSize')).toBe('20');
+    req.flush({
+      items: [
+        {
+          ...mockUnit,
+          modelo_nombre: 'Taladro Percutor',
+          modelo_categoria: 'Eléctrica',
+          estado_visualizacion: 'Operativo',
+        },
+      ],
+      total: 1,
+      page: 2,
+      pageSize: 20,
+    });
+  });
+
+  it('HU-13.2: lista modelos del catálogo para el selector de alta de unidad', () => {
+    service.listModelOptions().subscribe((models) => {
+      expect(models.length).toBe(1);
+      expect(models[0].nombre).toBe('Taladro Percutor');
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/catalog/search`);
+    expect(req.request.method).toBe('GET');
+    req.flush([
+      {
+        id: mockUnit.modelo_id,
+        nombre: 'Taladro Percutor',
+        marca: 'Bosch',
+        categoria: 'Eléctrica',
+      },
+    ]);
+  });
 });

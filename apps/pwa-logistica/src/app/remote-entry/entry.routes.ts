@@ -12,9 +12,12 @@ import { LogisticaShellComponent } from './logistica-shell.component';
  * Cubren RF-1.2 (el QR es escaneable desde la PWA) y RF-1.3 (cambio de
  * estado de una unidad) — features/01_catalogo_inventario.feature —,
  * desde Sprint 5, RF-4.2 (checklist de inspección al recibir una
- * devolución) — features/05_devoluciones_inspeccion_mora.feature — y,
+ * devolución) — features/05_devoluciones_inspeccion_mora.feature —,
  * desde Sprint 7, HU-8.2 (Repartidor ve su ruta del día ya optimizada) —
- * features/08_agente_ruteo.feature.
+ * features/08_agente_ruteo.feature — y, desde Sprint 14 (Fase 3, Épica 13,
+ * Issues #147/#148), HU-13.2 (alta de unidad + QR) y HU-13.1 reducido
+ * (lista/búsqueda simple de unidades, sin KPIs) —
+ * features/13_gestion_inventario_qr.feature.
  */
 export const remoteRoutes: Routes = [
   {
@@ -29,6 +32,22 @@ export const remoteRoutes: Routes = [
             (m) => m.QrScannerComponent,
           ),
         title: 'Escanear QR — ToolBox JL',
+      },
+      {
+        path: 'unidades',
+        loadComponent: () =>
+          import('../features/unit-list/unit-list.component').then(
+            (m) => m.UnitListComponent,
+          ),
+        title: 'Unidades — ToolBox JL',
+      },
+      {
+        path: 'registrar-unidad',
+        loadComponent: () =>
+          import('../features/register-unit/register-unit.component').then(
+            (m) => m.RegisterUnitComponent,
+          ),
+        title: 'Registrar Unidad — ToolBox JL',
       },
       {
         path: 'unidades/:id',

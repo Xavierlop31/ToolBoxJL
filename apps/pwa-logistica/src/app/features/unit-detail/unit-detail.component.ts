@@ -8,8 +8,11 @@ import { OfflineSyncService } from '../../core/offline/offline-sync.service';
 import {
   ESTADOS_UNIDAD,
   EstadoUnidad,
+  TIPOS_MANTENIMIENTO,
+  TipoMantenimiento,
   ToolUnit,
   ToolUnitStatusLogEntry,
+  UpdateUnitStatusInput,
 } from '../../core/models/inventory.models';
 
 /**
@@ -23,6 +26,16 @@ import {
  * `URL.createObjectURL(file)` como "url" por archivo seleccionado; cuando
  * Backend defina un endpoint real de subida (Supabase Storage), se
  * reemplaza acá sin tocar el resto del flujo.
+ *
+ * Sprint 14 (Fase 3, Épica 13, Issue #148 — trabajo adicional del mismo
+ * sprint, no cierra HU-13.3): cuando el estado destino es "En Mantenimiento"
+ * o "Dado de Baja", exige los campos de taller/baja como obligatorios en la
+ * UI (el backend, `PATCH /inventory/units/{id}/status`, solo exige
+ * `estado_nuevo`) — mismo criterio de validación condicional que
+ * `apps/panel-admin` (`StatusChangeModalComponent`, PR #169). La cola
+ * offline (`OfflineQueueService`/`OfflineSyncService`) los soporta sin
+ * cambios: `QueuedStatusChange.body` es `UpdateUnitStatusInput`, que ya
+ * incluye estos campos, y viaja tal cual a `PATCH .../status` al reconectar.
  */
 @Component({
   selector: 'app-unit-detail',
@@ -39,6 +52,7 @@ export class UnitDetailComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
 
   readonly estados = ESTADOS_UNIDAD;
+  readonly tiposMantenimiento = TIPOS_MANTENIMIENTO;
 
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -46,6 +60,7 @@ export class UnitDetailComponent implements OnInit {
 
   readonly submitting = signal(false);
   readonly submitError = signal<string | null>(null);
+  readonly validationError = signal<string | null>(null);
   readonly lastLogEntry = signal<ToolUnitStatusLogEntry | null>(null);
   readonly queuedOffline = signal(false);
   readonly selectedPhotoCount = signal(0);
@@ -55,6 +70,12 @@ export class UnitDetailComponent implements OnInit {
 
   readonly form = this.formBuilder.nonNullable.group({
     estadoNuevo: ['Operativo' as EstadoUnidad, Validators.required],
+    tipoMantenimiento: '' as TipoMantenimiento | '',
+    fallaReportada: '',
+    tecnicoAsignado: '',
+    costoEstimado: null as number | null,
+    fechaPrevistaFin: '',
+    motivoBaja: '',
   });
 
   ngOnInit(): void {
@@ -92,14 +113,45 @@ export class UnitDetailComponent implements OnInit {
       return;
     }
 
-    this.submitting.set(true);
+    this.validationError.set(null);
     this.submitError.set(null);
     this.queuedOffline.set(false);
 
-    const body = {
-      estado_nuevo: this.form.getRawValue().estadoNuevo,
-      ...(this.photoUrls.length > 0 ? { fotos_urls: this.photoUrls } : {}),
-    };
+    const raw = this.form.getRawValue();
+    const estadoNuevo = raw.estadoNuevo;
+    const body: UpdateUnitStatusInput = { estado_nuevo: estadoNuevo };
+
+    if (estadoNuevo === 'En Mantenimiento') {
+      if (
+        !raw.tipoMantenimiento ||
+        !raw.fallaReportada ||
+        !raw.tecnicoAsignado ||
+        raw.costoEstimado === null ||
+        !raw.fechaPrevistaFin
+      ) {
+        this.validationError.set(
+          'Completa Tipo, Falla reportada, Técnico asignado, Costo estimado y Fecha prevista de fin.',
+        );
+        return;
+      }
+      body.tipo_mantenimiento = raw.tipoMantenimiento;
+      body.falla_reportada = raw.fallaReportada;
+      body.tecnico_asignado = raw.tecnicoAsignado;
+      body.costo_estimado = raw.costoEstimado;
+      body.fecha_prevista_fin = raw.fechaPrevistaFin;
+    } else if (estadoNuevo === 'Dado de Baja') {
+      if (!raw.motivoBaja) {
+        this.validationError.set('Indica el motivo de la baja.');
+        return;
+      }
+      body.motivo_baja = raw.motivoBaja;
+    }
+
+    if (this.photoUrls.length > 0) {
+      body.fotos_urls = this.photoUrls;
+    }
+
+    this.submitting.set(true);
 
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       await this.enqueueOffline(body);
@@ -120,10 +172,7 @@ export class UnitDetailComponent implements OnInit {
     });
   }
 
-  private async enqueueOffline(body: {
-    estado_nuevo: EstadoUnidad;
-    fotos_urls?: string[];
-  }): Promise<void> {
+  private async enqueueOffline(body: UpdateUnitStatusInput): Promise<void> {
     await this.offlineQueue.enqueue({
       unidadId: this.unitId,
       body,
