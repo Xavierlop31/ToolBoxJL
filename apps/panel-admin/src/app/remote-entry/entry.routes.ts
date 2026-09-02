@@ -12,8 +12,12 @@ import { AdminShellComponent } from './admin-shell.component';
  * Cubren RF-3.1 (Issue #11 — alta de vehículos de la flota), RF-3.3
  * (Issue #12 — panel de seguimiento de envíos en tiempo real), HU-7.1
  * (Issue #19 — dashboard de ingresos totales desglosados), HU-7.2 (Issue
- * #20 — ROI por herramienta) y HU-7.3 (Issue #21 — utilización de
- * inventario y productividad de repartidores).
+ * #20 — ROI por herramienta), HU-7.3 (Issue #21 — utilización de
+ * inventario y productividad de repartidores) y HU-13.1 a HU-13.4 (Issues
+ * #147-#150, Sprint 14 — panel de Gestión de Inventario QR). El PRD llama
+ * "/logistica/inventario" a este último panel; acá se monta como
+ * `inventario` bajo `/admin`, mismo patrón plano que el resto de las
+ * pestañas de este remote.
  */
 export const remoteRoutes: Routes = [
   {
@@ -60,6 +64,14 @@ export const remoteRoutes: Routes = [
             (m) => m.VehicleRegistrationComponent,
           ),
         title: 'Registrar vehículo — ToolBox JL',
+      },
+      {
+        path: 'inventario',
+        loadComponent: () =>
+          import('../features/inventory-panel/inventory-panel.component').then(
+            (m) => m.InventoryPanelComponent,
+          ),
+        title: 'Inventario QR — ToolBox JL',
       },
     ],
   },

@@ -36,3 +36,45 @@ export const ESTADO_ENVIO_LABEL: Record<EstadoEnvio, string> = {
   en_ruta_recogida: 'En Ruta de Recogida',
   retornado: 'Retornado',
 };
+
+/**
+ * Tipos de `GET /logistics/routes-today` (HU-13.4, Sprint 14, Fase 3) —
+ * pestaña "Rutas del Día" del panel de Inventario QR. openapi.yaml líneas
+ * 945-1003. `hora_estimada_llegada` es una estimación naive del backend, no
+ * telemetría GPS en tiempo real (ver descripción del endpoint).
+ */
+export const ESTADOS_RUTA = ['Pendiente', 'En Progreso', 'Completada'] as const;
+
+export type EstadoRuta = (typeof ESTADOS_RUTA)[number];
+
+export interface HerramientaParada {
+  modelo_nombre: string;
+  numero_serie: string;
+}
+
+export interface ParadaRuta {
+  shipment_id: string;
+  order_id: string;
+  tipo: TipoEnvio;
+  estado_envio: EstadoEnvio;
+  direccion: string;
+  cliente_nombre: string;
+  hora_estimada_llegada: string;
+  herramientas: HerramientaParada[];
+}
+
+export interface RepartidorRuta {
+  repartidor_id: string;
+  nombre: string;
+  vehiculo_id: string;
+  placa: string | null;
+  total_paradas: number;
+  paradas_completadas: number;
+  porcentaje_avance: number;
+  estado_ruta: EstadoRuta;
+  paradas: ParadaRuta[];
+}
+
+export interface RoutesToday {
+  repartidores: RepartidorRuta[];
+}

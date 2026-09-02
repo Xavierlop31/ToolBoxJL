@@ -1,0 +1,80 @@
+<div
+  class="modal-backdrop"
+  role="button"
+  tabindex="0"
+  aria-label="Cerrar modal"
+  (click)="close()"
+  (keydown.enter)="close()"
+  (keydown.space)="close()"
+>
+  <div
+    class="modal-panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="mode === 'qr' ? 'Código QR de la unidad' : 'Historial de la unidad'"
+    tabindex="-1"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <h2>{{ mode === 'qr' ? 'Código QR' : 'Historial de la Unidad' }}</h2>
+
+    @if (loading()) {
+      <output>Cargando…</output>
+    }
+
+    @if (errorMessage()) {
+      <p class="form-error" role="alert">{{ errorMessage() }}</p>
+    }
+
+    @if (unit(); as u) {
+      @if (mode === 'qr') {
+        <div class="qr-view" data-testid="unit-qr-view">
+          <img [src]="u.qr_code_url" alt="Código QR de la unidad" class="qr-image" />
+          <p class="qr-serial">{{ u.numero_serie }}</p>
+        </div>
+      } @else {
+        <dl class="unit-history" data-testid="unit-history-view">
+          <div class="history-item">
+            <dt>Estado actual</dt>
+            <dd>{{ u.estado }}</dd>
+          </div>
+          <div class="history-item">
+            <dt>Serial de fabricante</dt>
+            <dd>{{ u.numero_serie }}</dd>
+          </div>
+          <div class="history-item">
+            <dt>Fecha de ingreso</dt>
+            <dd>{{ u.fecha_ingreso }}</dd>
+          </div>
+          @if (u.fecha_adquisicion) {
+            <div class="history-item">
+              <dt>Fecha de adquisición</dt>
+              <dd>{{ u.fecha_adquisicion }}</dd>
+            </div>
+          }
+          @if (u.costo_compra) {
+            <div class="history-item">
+              <dt>Costo de compra</dt>
+              <dd>{{ u.costo_compra | number: '1.0-0' }} COP</dd>
+            </div>
+          }
+          @if (u.ubicacion_bodega) {
+            <div class="history-item">
+              <dt>Ubicación en bodega</dt>
+              <dd>{{ u.ubicacion_bodega }}</dd>
+            </div>
+          }
+        </dl>
+        <p class="history-note">
+          El detalle cronológico de cambios de estado de esta unidad todavía no está
+          expuesto por la API (ver nota en el código de este componente) — se muestra
+          su estado y datos actuales.
+        </p>
+      }
+    }
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" (click)="close()">Cerrar</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,72 @@
+<section class="routes-today-tab">
+  @if (loading()) {
+    <output>Cargando rutas de hoy…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <ul class="repartidores-list" data-testid="repartidores-list">
+      @for (repartidor of repartidores(); track repartidor.repartidor_id) {
+        <li class="repartidor-card" data-testid="repartidor-row">
+          <button
+            type="button"
+            class="repartidor-header"
+            (click)="toggleRepartidor(repartidor.repartidor_id)"
+            [attr.aria-expanded]="expandedRepartidorId() === repartidor.repartidor_id"
+            data-testid="repartidor-toggle"
+          >
+            <div class="repartidor-info">
+              <strong>{{ repartidor.nombre }}</strong>
+              <span>{{ repartidor.placa || 'Sin placa' }}</span>
+            </div>
+
+            <div class="repartidor-progress">
+              <span class="paradas-total">{{ repartidor.total_paradas }} paradas</span>
+              <div class="progress-bar" role="progressbar" [attr.aria-valuenow]="repartidor.porcentaje_avance">
+                <div class="progress-fill" [style.width.%]="repartidor.porcentaje_avance"></div>
+              </div>
+              <span class="progress-pct">{{ repartidor.porcentaje_avance }}%</span>
+            </div>
+
+            <span class="badge" [class]="estadoRutaBadgeClass(repartidor.estado_ruta)">
+              {{ repartidor.estado_ruta }}
+            </span>
+
+            <span class="material-symbols-outlined expand-icon" aria-hidden="true">
+              {{ expandedRepartidorId() === repartidor.repartidor_id ? 'expand_less' : 'expand_more' }}
+            </span>
+          </button>
+
+          @if (expandedRepartidorId() === repartidor.repartidor_id) {
+            <ol class="paradas-list" data-testid="paradas-list">
+              @for (parada of repartidor.paradas; track parada.shipment_id) {
+                <li class="parada-item" [class.parada-recogida]="parada.tipo === 'recogida'">
+                  <div class="parada-header">
+                    <span class="parada-tipo">{{ tipoParadaLabel(parada.tipo) }}</span>
+                    <span class="parada-hora">{{ parada.hora_estimada_llegada }}</span>
+                  </div>
+                  <p class="parada-direccion">{{ parada.direccion }}</p>
+                  <p class="parada-cliente">{{ parada.cliente_nombre }}</p>
+                  @if (parada.herramientas.length) {
+                    <ul class="parada-herramientas">
+                      @for (herramienta of parada.herramientas; track herramienta.numero_serie) {
+                        <li>{{ herramienta.modelo_nombre }} — Serial {{ herramienta.numero_serie }}</li>
+                      }
+                    </ul>
+                  }
+                </li>
+              } @empty {
+                <li>Este repartidor no tiene paradas asignadas hoy.</li>
+              }
+            </ol>
+          }
+        </li>
+      } @empty {
+        <li>No hay rutas generadas para hoy.</li>
+      }
+    </ul>
+  }
+</section>
