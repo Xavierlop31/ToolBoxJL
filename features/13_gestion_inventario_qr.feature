@@ -16,8 +16,7 @@ Característica: Panel Administrativo de Gestión de Inventario QR
   @HU-13.1 @InventarioQR @Admin
   Escenario: Filtros y búsqueda en tabla de unidades físicas
     Dado que estoy en la pestaña "Inventario General"
-    Cuando ingreso un término de búsqueda por código QR, Serial o Modelo
-    O selecciono un filtro por Estado ("Operativo", "En Alquiler", "En Mantenimiento", "Dado de Baja")
+    Cuando ingreso un término de búsqueda por código QR, Serial o Modelo, o selecciono un filtro por Estado ("Operativo", "En Alquiler", "En Mantenimiento", "Dado de Baja")
     Entonces la tabla filtra instantáneamente las unidades físicas correspondientes
     Y muestra por cada fila: Código QR, Serial Fabricante, Modelo, Categoría, Estado con Badge, Ubicación en Bodega y Botones de Acción ("Ver QR", "Historial", "Cambiar Estado").
 
