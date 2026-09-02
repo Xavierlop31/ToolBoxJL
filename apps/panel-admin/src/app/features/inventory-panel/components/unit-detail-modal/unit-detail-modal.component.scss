@@ -15,7 +15,7 @@
   box-shadow: var(--tbjl-shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.2));
   padding: 28px;
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
 }
@@ -64,39 +64,73 @@ output {
 }
 
 .unit-history {
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   margin: 0 0 16px 0;
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-.history-item {
+.history-entry {
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-left: 3px solid var(--tbjl-color-primary-500, #141cdb);
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  padding: 12px 14px;
+  background: var(--tbjl-color-neutral-100, #eef4fb);
+}
+
+.history-entry-header {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--tbjl-color-border, #dce3ea);
+  font-size: 13px;
+
+  time {
+    white-space: nowrap;
+    color: var(--tbjl-color-neutral-500, #757588);
+    font-size: 12px;
+  }
+}
+
+.history-transition {
+  color: var(--tbjl-color-neutral-900, #161c21);
+}
+
+.history-autor {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--tbjl-color-neutral-500, #757588);
+}
+
+.history-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--tbjl-color-border, #dce3ea);
 
   dt {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--tbjl-color-neutral-500, #757588);
   }
 
   dd {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
+    margin: 2px 0 0;
+    font-size: 13px;
     color: var(--tbjl-color-neutral-900, #161c21);
-    text-align: right;
   }
 }
 
-.history-note {
-  font-size: 12px;
-  color: var(--tbjl-color-neutral-500, #757588);
-  font-style: italic;
-  margin: 0 0 16px 0;
+.history-motivo-baja {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--tbjl-color-error, #ba1a1a);
 }
 
 .modal-actions {

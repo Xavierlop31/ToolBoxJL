@@ -1,33 +1,30 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 
 import { InventoryService } from '../../../../core/inventory/inventory.service';
-import { ToolUnit } from '../../../../core/models/inventory.models';
+import { ToolUnit, ToolUnitStatusLogEntry } from '../../../../core/models/inventory.models';
 
 export type UnitDetailModalMode = 'qr' | 'historial';
 
 /**
  * Modal compartido de "Ver QR" y "Historial" (HU-13.1, Issue #147, botones
- * de acción de la tabla de "Inventario General"). Ambos modos llaman a
- * `GET /inventory/units/{id}` (openapi.yaml líneas 487-504) porque el
- * listado de `GET /inventory/units` no trae `qr_code_url` por fila.
+ * de acción de la tabla de "Inventario General").
  *
- * AMBIGÜEDAD DE CONTRATO (reportada al Tech Lead, no resuelta por
- * adivinanza): openapi.yaml describe ese GET como devolviendo "la hoja de
- * vida resumida" de la unidad, pero el schema `ToolUnit` no incluye ningún
- * array de eventos — no existe en el contrato un endpoint que devuelva la
- * lista completa de `ToolUnitStatusLogEntry` de una unidad (el único lugar
- * donde aparece una entrada de hoja de vida es
- * `ultimo_evento_mantenimiento` de `GET /inventory/maintenance`, y solo
- * para unidades actualmente en mantenimiento/baja). El modo "historial" de
- * este componente muestra por eso el estado y los datos actuales de la
- * unidad (estado, fechas, ubicación, costo) en vez de un log cronológico de
- * cambios — es la mejor aproximación posible sin inventar un endpoint.
+ * Modo `'qr'`: `GET /inventory/units/{id}` (openapi.yaml líneas 487-508)
+ * porque el listado de `GET /inventory/units` no trae `qr_code_url` por
+ * fila.
+ *
+ * Modo `'historial'`: `GET /inventory/units/{id}/history` (openapi.yaml
+ * líneas 511-535) — endpoint agregado en Sprint 14 tras detectar que no
+ * existía ninguno para listar la hoja de vida completa de una unidad
+ * (`ToolUnitStatusLogEntry[]`, orden cronológico descendente); antes de
+ * eso, este modo mostraba solo el estado/datos actuales de la unidad como
+ * aproximación (gap ya cerrado, ver PR #170/#171).
  */
 @Component({
   selector: 'app-unit-detail-modal',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DatePipe],
   templateUrl: './unit-detail-modal.component.html',
   styleUrl: './unit-detail-modal.component.scss',
 })
@@ -42,8 +39,17 @@ export class UnitDetailModalComponent implements OnInit {
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly unit = signal<ToolUnit | null>(null);
+  readonly history = signal<ToolUnitStatusLogEntry[]>([]);
 
   ngOnInit(): void {
+    if (this.mode === 'historial') {
+      this.loadHistory();
+    } else {
+      this.loadUnit();
+    }
+  }
+
+  private loadUnit(): void {
     this.inventory.getUnitById(this.unitId).subscribe({
       next: (unit) => {
         this.unit.set(unit);
@@ -51,6 +57,19 @@ export class UnitDetailModalComponent implements OnInit {
       },
       error: () => {
         this.errorMessage.set('No pudimos cargar la información de esta unidad.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  private loadHistory(): void {
+    this.inventory.getUnitHistory(this.unitId).subscribe({
+      next: (history) => {
+        this.history.set(history);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.errorMessage.set('No pudimos cargar el historial de esta unidad.');
         this.loading.set(false);
       },
     });

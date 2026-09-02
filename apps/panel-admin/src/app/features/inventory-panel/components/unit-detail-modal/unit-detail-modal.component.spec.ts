@@ -3,7 +3,7 @@ import { of, throwError } from 'rxjs';
 
 import { UnitDetailModalComponent } from './unit-detail-modal.component';
 import { InventoryService } from '../../../../core/inventory/inventory.service';
-import { ToolUnit } from '../../../../core/models/inventory.models';
+import { ToolUnit, ToolUnitStatusLogEntry } from '../../../../core/models/inventory.models';
 
 describe('UnitDetailModalComponent', () => {
   let fixture: ComponentFixture<UnitDetailModalComponent>;
@@ -22,8 +22,34 @@ describe('UnitDetailModalComponent', () => {
     ubicacion_bodega: 'Estante A3',
   };
 
+  const mockHistory: ToolUnitStatusLogEntry[] = [
+    {
+      id: 'log2',
+      unidad_id: 'u1',
+      estado_anterior: 'En Mantenimiento',
+      estado_nuevo: 'Operativo',
+      fotos_urls: [],
+      autor_id: 'a1',
+      created_at: '2026-09-02T09:00:00Z',
+    },
+    {
+      id: 'log1',
+      unidad_id: 'u1',
+      estado_anterior: 'Nuevo',
+      estado_nuevo: 'En Mantenimiento',
+      fotos_urls: [],
+      autor_id: 'a1',
+      created_at: '2026-09-01T10:00:00Z',
+      tipo_mantenimiento: 'Correctivo',
+      falla_reportada: 'No enciende',
+      tecnico_asignado: 'Pedro',
+      costo_estimado: 100_000,
+      fecha_prevista_fin: '2026-09-10',
+    },
+  ];
+
   beforeEach(() => {
-    inventorySpy = jasmine.createSpyObj('InventoryService', ['getUnitById']);
+    inventorySpy = jasmine.createSpyObj('InventoryService', ['getUnitById', 'getUnitHistory']);
 
     TestBed.configureTestingModule({
       imports: [UnitDetailModalComponent],
@@ -35,28 +61,33 @@ describe('UnitDetailModalComponent', () => {
     component.unitId = 'u1';
   });
 
-  it('HU-13.1: consulta GET /inventory/units/{id} para obtener el qr_code_url puntual', () => {
+  it('HU-13.1: modo "qr" consulta GET /inventory/units/{id} para obtener el qr_code_url puntual', () => {
     inventorySpy.getUnitById.and.returnValue(of(mockUnit));
     component.mode = 'qr';
 
     fixture.detectChanges();
 
     expect(inventorySpy.getUnitById).toHaveBeenCalledWith('u1');
+    expect(inventorySpy.getUnitHistory).not.toHaveBeenCalled();
     expect(component.unit()).toEqual(mockUnit);
     expect(component.loading()).toBe(false);
   });
 
-  it('HU-13.1: en modo historial, muestra el estado y datos actuales de la unidad', () => {
-    inventorySpy.getUnitById.and.returnValue(of(mockUnit));
+  it('HU-13.1: modo "historial" consulta GET /inventory/units/{id}/history y muestra la hoja de vida completa', () => {
+    inventorySpy.getUnitHistory.and.returnValue(of(mockHistory));
     component.mode = 'historial';
 
     fixture.detectChanges();
 
-    expect(component.unit()).toEqual(mockUnit);
+    expect(inventorySpy.getUnitHistory).toHaveBeenCalledWith('u1');
+    expect(inventorySpy.getUnitById).not.toHaveBeenCalled();
+    expect(component.history()).toEqual(mockHistory);
+    expect(component.loading()).toBe(false);
   });
 
-  it('setea un mensaje de error si falla la carga', () => {
+  it('setea un mensaje de error si falla la carga en modo "qr"', () => {
     inventorySpy.getUnitById.and.returnValue(throwError(() => new Error('network error')));
+    component.mode = 'qr';
 
     fixture.detectChanges();
 
@@ -64,8 +95,19 @@ describe('UnitDetailModalComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
+  it('setea un mensaje de error si falla la carga en modo "historial"', () => {
+    inventorySpy.getUnitHistory.and.returnValue(throwError(() => new Error('network error')));
+    component.mode = 'historial';
+
+    fixture.detectChanges();
+
+    expect(component.errorMessage()).toBe('No pudimos cargar el historial de esta unidad.');
+    expect(component.loading()).toBe(false);
+  });
+
   it('emite closed al cerrar', () => {
     inventorySpy.getUnitById.and.returnValue(of(mockUnit));
+    component.mode = 'qr';
     fixture.detectChanges();
     const closedSpy = jasmine.createSpy('closed');
     component.closed.subscribe(closedSpy);

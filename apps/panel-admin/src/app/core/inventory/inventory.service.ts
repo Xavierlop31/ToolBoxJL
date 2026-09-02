@@ -52,10 +52,24 @@ export class InventoryService {
   /**
    * `GET /inventory/units/{id}` — ficha completa de una unidad, incluido su
    * `qr_code_url`. `GET /inventory/units` (listado) no trae ese campo por
-   * fila, por eso "Ver QR" dispara esta llamada puntual.
+   * fila, por eso "Ver QR" dispara esta llamada puntual. NO incluye la hoja
+   * de vida completa — para eso, `getUnitHistory`.
    */
   getUnitById(id: string): Observable<ToolUnit> {
     return this.http.get<ToolUnit>(`${this.baseUrl}/inventory/units/${id}`);
+  }
+
+  /**
+   * `GET /inventory/units/{id}/history` (HU-13.1, botón "Historial") —
+   * hoja de vida completa de la unidad (`tool_unit_status_log`), orden
+   * cronológico descendente (más reciente primero). Endpoint agregado en
+   * Sprint 14 tras detectar que no existía ninguno para listar la hoja de
+   * vida completa (openapi.yaml líneas 511-535).
+   */
+  getUnitHistory(id: string): Observable<ToolUnitStatusLogEntry[]> {
+    return this.http.get<ToolUnitStatusLogEntry[]>(
+      `${this.baseUrl}/inventory/units/${id}/history`,
+    );
   }
 
   /** `POST /inventory/units` (HU-13.2) — alta de unidad física + QR. */

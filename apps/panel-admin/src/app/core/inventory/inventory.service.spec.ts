@@ -103,6 +103,39 @@ describe('InventoryService', () => {
     req.flush(mockUnit);
   });
 
+  it('HU-13.1: obtiene la hoja de vida completa de una unidad (para "Historial")', () => {
+    const mockHistory: ToolUnitStatusLogEntry[] = [
+      {
+        id: 'log2',
+        unidad_id: 'u1',
+        estado_anterior: 'En Mantenimiento',
+        estado_nuevo: 'Operativo',
+        fotos_urls: [],
+        autor_id: 'a1',
+        created_at: '2026-09-02T09:00:00Z',
+      },
+      {
+        id: 'log1',
+        unidad_id: 'u1',
+        estado_anterior: 'Nuevo',
+        estado_nuevo: 'En Mantenimiento',
+        fotos_urls: [],
+        autor_id: 'a1',
+        created_at: '2026-09-01T10:00:00Z',
+        tipo_mantenimiento: 'Correctivo',
+        falla_reportada: 'No enciende',
+      },
+    ];
+
+    service.getUnitHistory('u1').subscribe((history) => {
+      expect(history).toEqual(mockHistory);
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/inventory/units/u1/history`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockHistory);
+  });
+
   it('HU-13.2: registra una unidad física y genera su QR', () => {
     const input: CreateToolUnitInput = {
       modelo_id: 'm1',
