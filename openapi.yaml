@@ -339,8 +339,15 @@ paths:
   /inventory/units:
     post:
       operationId: createToolUnit
-      summary: Alta de unidad física + generación de QR (RF-1.2)
-      description: Registra una unidad física serializada de un modelo existente y genera su código QR único.
+      summary: Alta de unidad física + generación de QR (RF-1.2, HU-13.2)
+      description: >
+        Registra una unidad física serializada de un modelo existente y
+        genera su código QR único (vectorial, ver `qr_code_url`). `numero_serie`
+        es el serial del fabricante — HU-13.2 lo muestra junto al QR en la
+        vista previa imprimible como el código legible por humanos (no se
+        genera un identificador propio adicional tipo "TBJL-DEM-0089": el
+        ejemplo del PRD se satisface con el `numero_serie` que ingresa el
+        almacenista).
       tags: [Catálogo e Inventario]
       x-roles: [almacenista, admin]
       requestBody:
@@ -349,10 +356,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [modelo_id, numero_serie]
+              required: [modelo_id, numero_serie, fecha_adquisicion, costo_compra, ubicacion_bodega]
               properties:
                 modelo_id: { type: string, format: uuid }
                 numero_serie: { type: string }
+                fecha_adquisicion: { type: string, format: date }
+                costo_compra: { type: integer, description: "COP" }
+                ubicacion_bodega: { type: string, description: "Ej. 'Estante A3'" }
       responses:
         "201":
           description: Unidad física creada, con su UUID y QR generados.
@@ -360,6 +370,117 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ToolUnit" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    get:
+      operationId: listToolUnits
+      summary: Panel administrativo de inventario — tabla filtrable (HU-13.1)
+      description: >
+        Listado paginado de unidades físicas para el panel
+        `/logistica/inventario` de `apps/panel-admin`, expandido con
+        `modelo_nombre`/`modelo_categoria` (evita que el frontend haga N+1 a
+        `GET /catalog/models/{id}` por fila). `estado` en la respuesta es un
+        estado DE VISUALIZACIÓN, distinto de `ToolUnit.estado` persistido:
+        una unidad con `ToolUnit.estado = Operativo` que tiene un
+        `OrderItem` vigente en una Order `confirmada`/`en_curso` se muestra
+        acá como `En Alquiler` — ese cruce con Órdenes es el único lugar
+        donde existe el concepto "En Alquiler" (no es un valor del enum
+        persistido de `ToolUnit.estado`, ver ese schema).
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda libre por código QR (UUID), Serial o nombre de Modelo.
+          schema: { type: string }
+        - name: estado
+          in: query
+          description: Filtra por el estado DE VISUALIZACIÓN (ver descripción del endpoint), no el enum persistido.
+          schema:
+            type: string
+            enum: [Operativo, En Alquiler, En Mantenimiento, Dado de Baja]
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: Página de unidades físicas filtradas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, page, pageSize]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/ToolUnit"
+                        - type: object
+                          properties:
+                            modelo_nombre: { type: string }
+                            modelo_categoria: { type: string }
+                            estado_visualizacion:
+                              type: string
+                              enum: [Operativo, En Alquiler, En Mantenimiento, Dado de Baja]
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inventory/metrics:
+    get:
+      operationId: getInventoryMetrics
+      summary: Tarjetas de KPIs del panel de inventario (HU-13.1)
+      description: Los 4 conteos de las tarjetas superiores de `/logistica/inventario`. Mismo cruce con Órdenes que `GET /inventory/units` para "en_alquiler".
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      responses:
+        "200":
+          description: Conteos agregados de la flota de unidades físicas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total_unidades, operativas, en_alquiler, en_mantenimiento_o_baja]
+                properties:
+                  total_unidades: { type: integer }
+                  operativas: { type: integer }
+                  en_alquiler: { type: integer }
+                  en_mantenimiento_o_baja: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inventory/maintenance:
+    get:
+      operationId: listMaintenanceUnits
+      summary: Pestaña "Mantenimiento & Taller" (HU-13.3)
+      description: >
+        Unidades actualmente `En Mantenimiento` o `Dado de Baja`, con los
+        datos de taller de su entrada más reciente en la hoja de vida
+        (`ToolUnitStatusLogEntry` — ver los campos nuevos de mantenimiento
+        en ese schema, poblados por `PATCH /inventory/units/{id}/status`).
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      responses:
+        "200":
+          description: Unidades en taller o dadas de baja, con su último evento de mantenimiento.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: "#/components/schemas/ToolUnit"
+                    - type: object
+                      properties:
+                        modelo_nombre: { type: string }
+                        ultimo_evento_mantenimiento: { $ref: "#/components/schemas/ToolUnitStatusLogEntry" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -385,10 +506,22 @@ paths:
   /inventory/units/{id}/status:
     patch:
       operationId: updateToolUnitStatus
-      summary: Cambio de estado de una unidad + registro en hoja de vida (RF-1.3)
-      description: Actualiza el estado de desgaste de una unidad física y crea la entrada correspondiente en su hoja de vida (tool_unit_status_log).
+      summary: Cambio de estado de una unidad + registro en hoja de vida (RF-1.3, HU-13.3)
+      description: >
+        Actualiza el estado de desgaste de una unidad física y crea la
+        entrada correspondiente en su hoja de vida (tool_unit_status_log).
+        `x-roles` amplía a `admin` sobre el contrato original (RF-1.3) para
+        cubrir HU-13.3 ("Asignación de una unidad a mantenimiento" /
+        "Reintegrar a Servicio" / "Declarar Baja Definitiva" desde el panel
+        admin) — el flujo de repartidor/almacenista original sigue igual.
+        Los campos de mantenimiento (`tipo_mantenimiento`,
+        `falla_reportada`, etc.) solo aplican cuando `estado_nuevo` es
+        `En Mantenimiento`; `motivo_baja` solo aplica cuando `estado_nuevo`
+        es `Dado de Baja` — el backend no los exige por tipo (quedarían
+        `null` en la hoja de vida si se omiten), la UI del panel admin es
+        quien los pide como obligatorios en cada caso.
       tags: [Catálogo e Inventario]
-      x-roles: [almacenista, repartidor]
+      x-roles: [almacenista, repartidor, admin]
       parameters:
         - $ref: "#/components/parameters/idPath"
       requestBody:
@@ -405,6 +538,14 @@ paths:
                 fotos_urls:
                   type: array
                   items: { type: string, format: uri }
+                tipo_mantenimiento:
+                  type: string
+                  enum: [Preventivo, Correctivo]
+                falla_reportada: { type: string }
+                tecnico_asignado: { type: string }
+                costo_estimado: { type: integer, description: "COP" }
+                fecha_prevista_fin: { type: string, format: date }
+                motivo_baja: { type: string }
       responses:
         "200":
           description: Estado actualizado; entrada de hoja de vida creada.
@@ -798,6 +939,66 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Shipment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /logistics/routes-today:
+    get:
+      operationId: getRoutesToday
+      summary: Pestaña "Rutas del Día" del panel de inventario (HU-13.4)
+      description: >
+        Agrupa las Route de hoy por repartidor, expandidas con
+        nombre/vehículo/placa y el detalle de cada parada (cliente,
+        dirección, herramientas con sus seriales). `hora_estimada_llegada`
+        es una ESTIMACIÓN naive (hora de inicio de jornada 08:00 +
+        45 min × posición de la parada en la secuencia de `Route.paradas`),
+        no telemetría GPS en tiempo real — no existe tracking de vehículos
+        en este sprint; documentado así porque el PRD pide la columna pero
+        no hay fuente de datos real para calcularla con precisión.
+      tags: [Logística]
+      x-roles: [admin, gerente]
+      responses:
+        "200":
+          description: Rutas de hoy agrupadas por repartidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repartidores:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        repartidor_id: { type: string, format: uuid }
+                        nombre: { type: string }
+                        vehiculo_id: { type: string, format: uuid }
+                        placa: { type: string, nullable: true }
+                        total_paradas: { type: integer }
+                        paradas_completadas: { type: integer }
+                        porcentaje_avance: { type: number, description: "0-100" }
+                        estado_ruta: { type: string, enum: [Pendiente, En Progreso, Completada] }
+                        paradas:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              shipment_id: { type: string, format: uuid }
+                              order_id: { type: string, format: uuid }
+                              tipo: { type: string, enum: [entrega, recogida] }
+                              estado_envio:
+                                type: string
+                                enum: [pendiente_asignacion, en_ruta_entrega, entregado, en_ruta_recogida, retornado]
+                              direccion: { type: string }
+                              cliente_nombre: { type: string }
+                              hora_estimada_llegada: { type: string, description: "HH:mm — estimación, ver descripción del endpoint." }
+                              herramientas:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    modelo_nombre: { type: string }
+                                    numero_serie: { type: string }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -1214,6 +1415,19 @@ components:
           enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
         fecha_ingreso: { type: string, format: date }
         qr_code_url: { type: string, format: uri }
+        fecha_adquisicion:
+          type: string
+          format: date
+          nullable: true
+          description: "Sprint 14 (HU-13.2). Nullable — unidades creadas antes de este campo no lo tienen."
+        costo_compra:
+          type: integer
+          nullable: true
+          description: "COP. Sprint 14 (HU-13.2)."
+        ubicacion_bodega:
+          type: string
+          nullable: true
+          description: "Sprint 14 (HU-13.2), ej. 'Estante A3'."
 
     ToolUnitStatusLogEntry:
       type: object
@@ -1231,6 +1445,19 @@ components:
           items: { type: string, format: uri }
         autor_id: { type: string, format: uuid }
         created_at: { type: string, format: date-time }
+        tipo_mantenimiento:
+          type: string
+          nullable: true
+          enum: [Preventivo, Correctivo]
+          description: "Sprint 14 (HU-13.3). Solo poblado cuando estado_nuevo = En Mantenimiento."
+        falla_reportada: { type: string, nullable: true, description: "Sprint 14 (HU-13.3)." }
+        tecnico_asignado: { type: string, nullable: true, description: "Sprint 14 (HU-13.3)." }
+        costo_estimado: { type: integer, nullable: true, description: "COP. Sprint 14 (HU-13.3)." }
+        fecha_prevista_fin: { type: string, format: date, nullable: true, description: "Sprint 14 (HU-13.3)." }
+        motivo_baja:
+          type: string
+          nullable: true
+          description: "Sprint 14 (HU-13.3). Solo poblado cuando estado_nuevo = Dado de Baja."
 
     User:
       type: object
@@ -1331,6 +1558,10 @@ components:
           type: array
           items: { type: string, format: uuid }
         repartidor_id: { type: string, format: uuid, nullable: true }
+        placa:
+          type: string
+          nullable: true
+          description: "Sprint 14 (HU-13.4). Nullable — vehículos creados antes de este campo no lo tienen."
 
     VehicleInput:
       allOf:
