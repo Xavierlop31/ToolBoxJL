@@ -182,14 +182,12 @@ export class ModelDetailComponent implements OnInit {
       return;
     }
 
-    // Auth-wall (HU-11.1 parte 2): mismo criterio que getQuote()/addItem() —
-    // sin sesión, guardamos el intento y mandamos a login en vez de dejar
-    // pasar la consulta.
-    if (!this.auth.isAuthenticated()) {
-      this.redirigirALoginConIntento(model.id);
-      return;
-    }
-
+    // Sin auth-wall a propósito: RF-1.4 (Fase 1, features/01_catalogo_
+    // inventario.feature) exige que un Cliente "navegando el catálogo"
+    // (sin sesión) pueda consultar disponibilidad — a diferencia de
+    // getQuote()/addItem() (HU-11.1, Fase 3), cuyo propio escenario Gherkin
+    // solo lista "Alquilar Ahora"/"Comprar Herramienta"/"Agregar al
+    // Carrito" como acciones bloqueadas por el auth-wall.
     this.availabilityLoading.set(true);
     this.availabilityError.set(null);
     this.unidadesDisponibles.set(null);
