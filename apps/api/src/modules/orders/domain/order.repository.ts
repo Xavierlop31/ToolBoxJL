@@ -75,4 +75,12 @@ export interface OrderRepository {
     clienteId: string,
     filtro: { estado?: EstadoOrden; page: number; pageSize: number },
   ): Promise<{ items: Order[]; total: number }>;
+  /**
+   * Sprint 14 (HU-13.1/HU-13.4) — ids de `ToolUnit` con un `OrderItem`
+   * vigente en una Orden `confirmada`/`en_curso` (cualquier `tipo`, no solo
+   * `alquiler` — así lo describe openapi.yaml para el estado de
+   * visualización "En Alquiler" de `GET /inventory/units`/
+   * `GET /inventory/metrics`, sin distinguir `tipo` explícitamente).
+   */
+  listarUnidadesEnAlquilerActivo(): Promise<string[]>;
 }

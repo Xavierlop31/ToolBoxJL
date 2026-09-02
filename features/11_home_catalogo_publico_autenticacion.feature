@@ -34,9 +34,9 @@ Característica: Experiencia de Entrada, Home & Autenticación
   @HU-11.2 @Auth @LoginIndustrial
   Escenario: Visualización del panel dividido de inicio de sesión
     Dado que accedo a la ruta "/login" del Shell Host
-    Entonces visualizo en el panel izquierdo la ilustración de marca "Potencia Industrial y Trazabilidad sin Pausas" con badge "ToolBox JL Suite"
-    Y visualizo en el panel derecho el formulario de autenticación ya existente (correo/contraseña + Google OAuth), restyleado al diseño Industrial Racing
-    Y el botón primario tiene el estilo Brand Blue ("#141CDB").
+    Entonces visualizo en el panel izquierdo el formulario de autenticación ya existente (correo/contraseña + Google OAuth), restyleado al diseño Industrial Racing
+    Y visualizo en el panel derecho (oculto en mobile) la ilustración de marca "Potencia sin pausas" de ToolBox JL
+    Y el botón primario tiene el estilo Brand Red ("#E70012").
 
   @HU-11.2 @AccesoRapido
   Escenario: Acceso rápido mediante botones de roles en modo demo

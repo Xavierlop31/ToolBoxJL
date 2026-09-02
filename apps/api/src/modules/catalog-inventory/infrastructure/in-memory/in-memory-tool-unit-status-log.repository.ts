@@ -29,6 +29,12 @@ export class InMemoryToolUnitStatusLogRepository
       fotos_urls: input.fotosUrls,
       autor_id: input.autorId,
       created_at: new Date().toISOString(),
+      tipo_mantenimiento: input.tipoMantenimiento ?? null,
+      falla_reportada: input.fallaReportada ?? null,
+      tecnico_asignado: input.tecnicoAsignado ?? null,
+      costo_estimado: input.costoEstimado ?? null,
+      fecha_prevista_fin: input.fechaPrevistaFin ?? null,
+      motivo_baja: input.motivoBaja ?? null,
     };
     this.entradas.push(entrada);
     return entrada;

@@ -31,4 +31,8 @@ export class InMemoryRouteRepository implements RouteRepository {
     }
     return null;
   }
+
+  async listarPorFecha(fecha: string): Promise<Route[]> {
+    return [...this.rutas.values()].filter((ruta) => ruta.fecha === fecha);
+  }
 }

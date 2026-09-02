@@ -60,6 +60,17 @@ import { ZonesModule } from "./modules/zones/interface/zones.module";
  * GET /orders ("Mis Pedidos Activos") y ToolModel.precio_venta (cambios en
  * los módulos existentes CatalogInventoryModule/OrdersModule, sin módulo
  * nuevo propio para esos dos).
+ * Sprint 14 (Fase 3, Épica 13, Issues #147-#150 / HU-13.1 a 13.4): panel
+ * administrativo de Gestión de Inventario QR (`apps/panel-admin`) —
+ * `GET /inventory/units`/`GET /inventory/metrics`/`GET /inventory/maintenance`
+ * y campos nuevos de `POST /inventory/units`/`PATCH
+ * /inventory/units/{id}/status` (cambios en CatalogInventoryModule, sin
+ * módulo nuevo propio) + `GET /logistics/routes-today` (LogisticsModule,
+ * que a partir de este sprint importa además CatalogInventoryModule y el
+ * nuevo `UsersModule` — primer módulo que lee `public.users` desde código
+ * Node, ver `users/domain/user.repository.ts`). `UsersModule` no se lista
+ * acá como import directo de `AppModule` porque no expone controller propio
+ * — solo lo consume `LogisticsModule` internamente.
  */
 @Module({
   imports: [

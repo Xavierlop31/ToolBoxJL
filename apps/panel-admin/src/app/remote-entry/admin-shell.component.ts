@@ -4,7 +4,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 /**
  * Shell layout para el Panel de Administración (remotes montados vía Native Federation).
  * Provee la barra de navegación interna (Subnav / Tabs) para alternar rápidamente
- * entre los dashboards de KPIs, Analítica de Ingresos, ROI, Envíos, Utilización y Alta de Vehículos.
+ * entre los dashboards de KPIs, Analítica de Ingresos, ROI, Envíos, Utilización, Alta de
+ * Vehículos y Gestión de Inventario QR (Sprint 14, HU-13.1 a HU-13.4).
  */
 @Component({
   selector: 'app-admin-shell',
@@ -40,6 +41,10 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
             <a routerLink="/admin/vehiculos/nuevo" routerLinkActive="active" class="subnav-tab">
               <span class="material-symbols-outlined">directions_car</span>
               <span>Alta Vehículo</span>
+            </a>
+            <a routerLink="/admin/inventario" routerLinkActive="active" class="subnav-tab">
+              <span class="material-symbols-outlined">qr_code_2</span>
+              <span>Inventario QR</span>
             </a>
           </div>
         </div>

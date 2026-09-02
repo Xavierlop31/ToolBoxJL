@@ -9,7 +9,12 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
-import type { Route, Shipment, UsuarioAutenticado } from "@toolboxjl/shared-types";
+import type {
+  Route,
+  RutasHoyResponse,
+  Shipment,
+  UsuarioAutenticado,
+} from "@toolboxjl/shared-types";
 import { Roles } from "../../auth/interface/decorators/roles.decorator";
 import { UsuarioActual } from "../../auth/interface/decorators/usuario-actual.decorator";
 import { RolesGuard } from "../../auth/interface/guards/roles.guard";
@@ -18,6 +23,7 @@ import { VehiculoNoEncontradoError } from "../../fleet/domain/errors/vehiculo-no
 import { AsignarRutasUseCase } from "../application/asignar-rutas.use-case";
 import { ListarEnviosUseCase } from "../application/listar-envios.use-case";
 import { ListarPedidosPendientesUseCase } from "../application/listar-pedidos-pendientes.use-case";
+import { RutasHoyUseCase } from "../application/rutas-hoy.use-case";
 import { VerMiRutaUseCase, type RutaRepartidor } from "../application/ver-mi-ruta.use-case";
 import { RepartidorSinVehiculoError } from "../domain/errors/repartidor-sin-vehiculo.error";
 import { RutaNoPublicadaHoyError } from "../domain/errors/ruta-no-publicada-hoy.error";
@@ -42,6 +48,7 @@ export class LogisticsController {
     private readonly asignarRutas: AsignarRutasUseCase,
     private readonly listarEnvios: ListarEnviosUseCase,
     private readonly verMiRuta: VerMiRutaUseCase,
+    private readonly rutasHoy: RutasHoyUseCase,
   ) {}
 
   @Roles("agente-1", "admin")
@@ -85,5 +92,12 @@ export class LogisticsController {
       }
       throw error;
     }
+  }
+
+  /** `GET /logistics/routes-today` (HU-13.4, Sprint 14) — panel admin de Inventario QR. */
+  @Roles("admin", "gerente")
+  @Get("logistics/routes-today")
+  async rutasDeHoy(): Promise<RutasHoyResponse> {
+    return this.rutasHoy.ejecutar();
   }
 }

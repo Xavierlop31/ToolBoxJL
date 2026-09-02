@@ -196,8 +196,18 @@
           <p class="form-error" role="alert">{{ addToCartError() }}</p>
         }
 
-        @if (toastMessage(); as toast) {
-          <output class="toast-confirmacion" role="status">{{ toast }}</output>
+        @if (mostrarConfirmacionCarrito()) {
+          <div class="cart-confirm" data-testid="cart-confirm" role="alertdialog">
+            <p>Se agregó al carrito. ¿Querés ir a verlo o seguir viendo herramientas?</p>
+            <div class="cart-confirm-actions">
+              <button type="button" class="btn-primary" data-testid="cart-confirm-go" (click)="irAlCarrito()">
+                Ir al Carrito
+              </button>
+              <button type="button" class="btn-secondary" data-testid="cart-confirm-stay" (click)="seguirViendoHerramientas()">
+                Seguir viendo herramientas
+              </button>
+            </div>
+          </div>
         }
 
         <!-- Desglose de Cotización -->
@@ -213,11 +223,6 @@
               }
             </ul>
             <div class="quote-totals">
-              <p>Tarifa Base: <span>{{ quote.tarifa_base }} COP</span></p>
-              <p>Recargo Logístico: <span>{{ quote.recargo_logistico }} COP</span></p>
-              @if (quote.deposito_garantia > 0) {
-                <p>Depósito de Garantía: <span>{{ quote.deposito_garantia }} COP</span></p>
-              }
               <p class="total-pay">Total a Pagar: <span data-testid="quote-total">{{ quote.total }} COP</span></p>
             </div>
 

@@ -1,4 +1,8 @@
-import type { EstadoUnidad, ToolUnitStatusLogEntry } from "@toolboxjl/shared-types";
+import type {
+  EstadoUnidad,
+  TipoMantenimiento,
+  ToolUnitStatusLogEntry,
+} from "@toolboxjl/shared-types";
 
 export interface NuevaEntradaHojaDeVidaInput {
   unidadId: string;
@@ -6,6 +10,13 @@ export interface NuevaEntradaHojaDeVidaInput {
   estadoNuevo: EstadoUnidad;
   fotosUrls: string[];
   autorId: string;
+  /** Sprint 14 (HU-13.3) — ver doc-comment de `ToolUnitStatusLogEntry` sobre cuándo aplica cada uno. */
+  tipoMantenimiento?: TipoMantenimiento | null;
+  fallaReportada?: string | null;
+  tecnicoAsignado?: string | null;
+  costoEstimado?: number | null;
+  fechaPrevistaFin?: string | null;
+  motivoBaja?: string | null;
 }
 
 /**

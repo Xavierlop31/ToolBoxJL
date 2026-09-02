@@ -12,6 +12,19 @@
  */
 export type TipoVehiculo = "moto" | "camioneta" | "camion";
 
+/**
+ * `placa` (Sprint 14, HU-13.4): nullable — vehículos creados antes de este
+ * campo no lo tienen. *** GAP DE ALCANCE DOCUMENTADO ***: openapi.yaml
+ * modela `VehicleInput` como `allOf: [Vehicle]`, así que técnicamente
+ * permite mandar `placa` en `POST /fleet/vehicles`, pero ese endpoint
+ * (FleetModule, Sprint 4) queda FUERA de alcance de este sprint — ni
+ * `VehicleInput` (ver abajo) ni `CrearVehiculoDto`/`RegistrarVehiculoUseCase`
+ * se tocan acá. Un cliente que mande `placa` en ese POST hoy recibe 400
+ * (`forbidNonWhitelisted: true` en el `ValidationPipe` global, ver
+ * `apps/api/src/main.ts`) porque el DTO no la declara. Este campo solo se
+ * puebla hoy vía una migración/seed manual contra la base real; se lee (no
+ * se escribe) en `GET /logistics/routes-today`.
+ */
 export interface Vehicle {
   id: string;
   tipo: TipoVehiculo;
@@ -19,6 +32,7 @@ export interface Vehicle {
   capacidad_m3: number;
   zonas: string[];
   repartidor_id: string | null;
+  placa: string | null;
 }
 
 /**
@@ -26,7 +40,8 @@ export interface Vehicle {
  * modela `VehicleInput` como `allOf: [Vehicle]` con
  * `required: [tipo, capacidad_kg, capacidad_m3]` — acá se define sin `id`
  * (lo genera el repositorio, mismo criterio que `ToolModelInput`/
- * `OrderInput`) y con `zonas`/`repartidor_id` opcionales.
+ * `OrderInput`) y con `zonas`/`repartidor_id` opcionales. `placa` NO se
+ * incluye acá a propósito (ver el doc-comment de `Vehicle.placa` arriba).
  */
 export interface VehicleInput {
   tipo: TipoVehiculo;

@@ -1,0 +1,67 @@
+<main class="register-unit">
+  @if (!createdUnit()) {
+    <h1>Registrar Nueva Unidad</h1>
+    <p class="page-subtitle">Alta de una unidad física y generación de su código QR.</p>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="register-unit-form">
+      <div class="field">
+        <label for="modeloId">Modelo de Herramienta</label>
+        <select id="modeloId" formControlName="modelo_id">
+          <option value="" disabled>
+            {{ loadingModels() ? 'Cargando modelos…' : 'Selecciona un modelo' }}
+          </option>
+          @for (modelo of models(); track modelo.id) {
+            <option [value]="modelo.id">{{ modelo.nombre }} — {{ modelo.marca }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="numeroSerie">Número de Serie del Fabricante</label>
+        <input id="numeroSerie" type="text" formControlName="numero_serie" placeholder="Ej. TBJL-DEM-0089" />
+      </div>
+
+      <div class="field">
+        <label for="fechaAdquisicion">Fecha de Adquisición</label>
+        <input id="fechaAdquisicion" type="date" formControlName="fecha_adquisicion" />
+      </div>
+
+      <div class="field">
+        <label for="costoCompra">Costo de Compra (COP)</label>
+        <input id="costoCompra" type="number" min="1" formControlName="costo_compra" />
+      </div>
+
+      <div class="field">
+        <label for="ubicacionBodega">Ubicación en Bodega (Estante/Fila)</label>
+        <input id="ubicacionBodega" type="text" formControlName="ubicacion_bodega" placeholder="Ej. Estante A3" />
+      </div>
+
+      @if (submitError()) {
+        <p class="form-error" role="alert">{{ submitError() }}</p>
+      }
+
+      <div class="page-actions">
+        <a routerLink="/logistica/unidades" class="btn-secondary">Cancelar</a>
+        <button type="submit" class="btn-primary" [disabled]="submitting()">
+          {{ submitting() ? 'Guardando…' : 'Guardar y Generar QR' }}
+        </button>
+      </div>
+    </form>
+  } @else {
+    <div class="qr-preview tbjl-print-area" data-testid="qr-preview">
+      <div class="qr-preview-brand">
+        <span class="material-symbols-outlined">handyman</span>
+        <span>ToolBox JL</span>
+      </div>
+      <img [src]="createdUnit()!.qr_code_url" alt="Código QR de la unidad" class="qr-image" />
+      <p class="qr-serial" data-testid="qr-serial">{{ createdUnit()!.numero_serie }}</p>
+      <p class="qr-modelo">{{ nombreModelo(createdUnit()!.modelo_id) }}</p>
+    </div>
+
+    <div class="page-actions no-print">
+      <a routerLink="/logistica/unidades" class="btn-secondary">Ir a Unidades</a>
+      <button type="button" class="btn-secondary" (click)="registrarOtra()">Registrar Otra</button>
+      <button type="button" class="btn-primary" (click)="imprimir()">Imprimir</button>
+    </div>
+  }
+</main>

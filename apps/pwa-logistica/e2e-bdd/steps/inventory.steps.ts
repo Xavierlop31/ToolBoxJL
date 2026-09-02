@@ -98,6 +98,27 @@ When(
     );
 
     await page.getByLabel('Nuevo estado').selectOption(dadoDeBaja);
+
+    // Sprint 14 (Fase 3, Épica 13, Issue #148): `UnitDetailComponent` ahora
+    // exige campos adicionales como obligatorios en la UI según el estado
+    // destino — el backend (`PATCH /inventory/units/{id}/status`) sigue
+    // exigiendo solo `estado_nuevo`, pero el `submit()` corta temprano con
+    // `validationError` si faltan. Este step genérico solo termina
+    // seleccionando el ÚLTIMO placeholder de la lista ("Dado de Baja"), así
+    // que hoy solo ese branch se ejerce, pero se cubren ambos casos por si
+    // el step llega a usarse con "En Mantenimiento" en el futuro.
+    if (dadoDeBaja === 'Dado de Baja') {
+      await page
+        .getByLabel('Motivo de la baja (acta de descarte)')
+        .fill('Motivo de prueba (BDD)');
+    } else if (dadoDeBaja === 'En Mantenimiento') {
+      await page.getByLabel('Tipo').selectOption('Preventivo');
+      await page.getByLabel('Falla reportada').fill('Falla de prueba (BDD)');
+      await page.getByLabel('Técnico asignado').fill('Técnico de prueba (BDD)');
+      await page.getByLabel('Costo estimado (COP)').fill('50000');
+      await page.getByLabel('Fecha prevista de finalización').fill('2026-12-31');
+    }
+
     await page.getByRole('button', { name: 'Registrar cambio de estado' }).click();
   },
 );
