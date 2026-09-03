@@ -31,3 +31,19 @@ export function mesActualUtc(ahora: Date = new Date()): RangoPeriodo {
 export function diasEnRango(desde: Date, hasta: Date): number {
   return Math.max(0, Math.round((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)));
 }
+
+/**
+ * Mes calendario ANTERIOR en UTC, `[desde, hasta)` — hermana de
+ * `mesActualUtc` (mismo criterio de límites `[desde, hasta)`, mismo
+ * parámetro opcional `ahora` para tests/BDD). Sprint 15 (Issue #153,
+ * HU-15.1): `GET /analytics/dashboard-kpis` la usa para calcular
+ * `variacion_ingresos_pct` (ingresos del mes calendario actual vs. el mes
+ * calendario anterior completo, no "los últimos 30 días").
+ */
+export function mesAnteriorUtc(ahora: Date = new Date()): RangoPeriodo {
+  const anio = ahora.getUTCFullYear();
+  const mes = ahora.getUTCMonth(); // 0-11
+  const desde = new Date(Date.UTC(anio, mes - 1, 1));
+  const hasta = new Date(Date.UTC(anio, mes, 1));
+  return { desde, hasta };
+}

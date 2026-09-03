@@ -120,6 +120,10 @@ import {
   ConsultarProductividadRepartidoresUseCase,
   type ProductividadRespuesta,
 } from "../../../src/modules/analytics/application/consultar-productividad-repartidores.use-case";
+import {
+  ObtenerDashboardKpisUseCase,
+  type DashboardKpisRespuesta,
+} from "../../../src/modules/analytics/application/obtener-dashboard-kpis.use-case";
 
 import { USER_REPOSITORY } from "../../../src/modules/users/infrastructure/users.tokens";
 import { InMemoryUserRepository } from "../../../src/modules/users/infrastructure/in-memory/in-memory-user.repository";
@@ -138,7 +142,10 @@ import { EliminarItemCarritoUseCase } from "../../../src/modules/cart/applicatio
  * `06_autenticacion_seguridad.feature`, `07_kpis_analitica.feature`
  * (los 3 escenarios: `@Fase1` HU-7.1 y `@Fase2` HU-7.2/HU-7.3, Sprint 10) y,
  * desde Sprint 14, los 3 escenarios `@HU-13.2`/`@HU-13.3` de
- * `13_gestion_inventario_qr.feature` (ver `inventario-qr.steps.ts`).
+ * `13_gestion_inventario_qr.feature` (ver `inventario-qr.steps.ts`). Desde
+ * Sprint 15, el escenario `@HU-15.1` "Panel de Alertas Críticas del
+ * Negocio" de `15_dashboard_kpis_gerencial.feature` (ver
+ * `dashboard-kpis-gerencial.steps.ts`).
  */
 export class ToolboxWorld extends CucumberWorld {
   moduleRef!: TestingModule;
@@ -195,6 +202,10 @@ export class ToolboxWorld extends CucumberWorld {
   ultimoRoi?: RoiPorModelo[];
   ultimaUtilizacion?: UtilizacionRespuesta;
   ultimaProductividad?: ProductividadRespuesta[];
+
+  /** Sprint 15 (Issue #153, HU-15.1) — GET /analytics/dashboard-kpis. */
+  obtenerDashboardKpis!: ObtenerDashboardKpisUseCase;
+  ultimoDashboardKpis?: DashboardKpisRespuesta;
 
   obtenerCarrito!: ObtenerCarritoUseCase;
   agregarItemCarrito!: AgregarItemCarritoUseCase;
@@ -332,6 +343,7 @@ export class ToolboxWorld extends CucumberWorld {
         ConsultarRoiUseCase,
         ConsultarUtilizacionUseCase,
         ConsultarProductividadRepartidoresUseCase,
+        ObtenerDashboardKpisUseCase,
         ObtenerCarritoUseCase,
         AgregarItemCarritoUseCase,
         ActualizarCantidadCarritoUseCase,
@@ -391,6 +403,7 @@ export class ToolboxWorld extends CucumberWorld {
     this.roiRepository = this.moduleRef.get(ROI_REPOSITORY);
     this.utilizationRepository = this.moduleRef.get(UTILIZATION_REPOSITORY);
     this.deliveryProductivityRepository = this.moduleRef.get(DELIVERY_PRODUCTIVITY_REPOSITORY);
+    this.obtenerDashboardKpis = this.moduleRef.get(ObtenerDashboardKpisUseCase);
 
     this.obtenerCarrito = this.moduleRef.get(ObtenerCarritoUseCase);
     this.agregarItemCarrito = this.moduleRef.get(AgregarItemCarritoUseCase);

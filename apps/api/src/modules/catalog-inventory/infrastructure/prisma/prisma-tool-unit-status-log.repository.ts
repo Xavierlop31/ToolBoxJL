@@ -5,6 +5,7 @@ import type {
   NuevaEntradaHojaDeVidaInput,
   ToolUnitStatusLogRepository,
 } from "../../domain/tool-unit-status-log.repository";
+import type { RangoPeriodo } from "../../../analytics/domain/revenue.repository";
 import { PrismaService } from "./prisma.service";
 import { estadoADominio, estadoAPrisma } from "./estado-unidad.mapper";
 
@@ -70,5 +71,23 @@ export class PrismaToolUnitStatusLogRepository
       orderBy: { createdAt: "asc" },
     });
     return logs.map(aDominio);
+  }
+
+  async contarTransicionesAMantenimiento(
+    rango: RangoPeriodo,
+  ): Promise<{ unidadId: string; cantidad: number }[]> {
+    const logs = await this.prisma.toolUnitStatusLog.findMany({
+      where: {
+        estadoNuevo: estadoAPrisma("En Mantenimiento"),
+        createdAt: { gte: rango.desde, lt: rango.hasta },
+      },
+      select: { unidadId: true },
+    });
+
+    const conteo = new Map<string, number>();
+    for (const log of logs) {
+      conteo.set(log.unidadId, (conteo.get(log.unidadId) ?? 0) + 1);
+    }
+    return [...conteo.entries()].map(([unidadId, cantidad]) => ({ unidadId, cantidad }));
   }
 }

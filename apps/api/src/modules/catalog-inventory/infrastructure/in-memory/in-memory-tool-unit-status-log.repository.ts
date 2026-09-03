@@ -5,6 +5,7 @@ import type {
   NuevaEntradaHojaDeVidaInput,
   ToolUnitStatusLogRepository,
 } from "../../domain/tool-unit-status-log.repository";
+import type { RangoPeriodo } from "../../../analytics/domain/revenue.repository";
 
 /**
  * Implementación en memoria de `ToolUnitStatusLogRepository` — usada SOLO
@@ -42,5 +43,22 @@ export class InMemoryToolUnitStatusLogRepository
 
   async listarPorUnidad(unidadId: string): Promise<ToolUnitStatusLogEntry[]> {
     return this.entradas.filter((e) => e.unidad_id === unidadId);
+  }
+
+  async contarTransicionesAMantenimiento(
+    rango: RangoPeriodo,
+  ): Promise<{ unidadId: string; cantidad: number }[]> {
+    const conteo = new Map<string, number>();
+    for (const entrada of this.entradas) {
+      if (entrada.estado_nuevo !== "En Mantenimiento") {
+        continue;
+      }
+      const fecha = new Date(entrada.created_at);
+      if (fecha < rango.desde || fecha >= rango.hasta) {
+        continue;
+      }
+      conteo.set(entrada.unidad_id, (conteo.get(entrada.unidad_id) ?? 0) + 1);
+    }
+    return [...conteo.entries()].map(([unidadId, cantidad]) => ({ unidadId, cantidad }));
   }
 }

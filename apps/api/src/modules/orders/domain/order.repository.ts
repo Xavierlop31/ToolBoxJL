@@ -83,4 +83,17 @@ export interface OrderRepository {
    * `GET /inventory/metrics`, sin distinguir `tipo` explícitamente).
    */
   listarUnidadesEnAlquilerActivo(): Promise<string[]>;
+  /**
+   * Sprint 15 (Issue #153, HU-15.1) — órdenes vencidas hace AL MENOS
+   * `diasMinimos` días (`ahora - fecha_fin >= diasMinimos` días), SIN
+   * importar si ya se emitió el cobro de mora — a diferencia de
+   * `listarVencidasSinMora` (que sí filtra por "sin mora emitida todavía",
+   * ver su doc-comment). Mismo criterio de estado:
+   * `confirmada`/`en_curso` con `fecha_fin` no nula en el pasado. Usado por
+   * `ObtenerDashboardKpisUseCase` (AnalyticsModule) para el disparador de
+   * alerta `mora_cliente` (`GET /analytics/dashboard-kpis`), que necesita
+   * TODAS las órdenes en mora real del negocio, no solo las pendientes de
+   * cobrar.
+   */
+  listarConAtrasoMinimo(diasMinimos: number, ahora: Date): Promise<Order[]>;
 }
