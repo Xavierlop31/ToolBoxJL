@@ -118,6 +118,17 @@ export class InMemoryOrderRepository implements OrderRepository {
     return unidadesIds;
   }
 
+  async listarConAtrasoMinimo(diasMinimos: number, ahora: Date): Promise<Order[]> {
+    const msPorDia = 1000 * 60 * 60 * 24;
+    const umbral = ahora.getTime() - diasMinimos * msPorDia;
+    return [...this.ordenes.values()].filter(
+      (orden) =>
+        ["confirmada", "en_curso"].includes(orden.estado) &&
+        !!orden.fecha_fin &&
+        new Date(orden.fecha_fin).getTime() <= umbral,
+    );
+  }
+
   async listarPorCliente(
     clienteId: string,
     filtro: { estado?: EstadoOrden; page: number; pageSize: number },

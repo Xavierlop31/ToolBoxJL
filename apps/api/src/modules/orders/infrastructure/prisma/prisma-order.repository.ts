@@ -162,6 +162,19 @@ export class PrismaOrderRepository implements OrderRepository {
     return unidadesIds;
   }
 
+  async listarConAtrasoMinimo(diasMinimos: number, ahora: Date): Promise<Order[]> {
+    const msPorDia = 1000 * 60 * 60 * 24;
+    const umbral = new Date(ahora.getTime() - diasMinimos * msPorDia);
+    const encontradas = await this.prisma.order.findMany({
+      where: {
+        estado: { in: ["confirmada", "en_curso"] },
+        fechaFin: { lte: umbral },
+      },
+      include: { items: true },
+    });
+    return encontradas.map(aDominio);
+  }
+
   async listarPorCliente(
     clienteId: string,
     filtro: { estado?: EstadoOrden; page: number; pageSize: number },

@@ -71,4 +71,74 @@ describe('InMemoryToolUnitStatusLogRepository', () => {
 
     expect(entradas).toEqual([]);
   });
+
+  describe('contarTransicionesAMantenimiento', () => {
+    // `crear()` sella `created_at = new Date().toISOString()` (reloj real,
+    // no controlable) — mismo criterio que el resto de este archivo, así
+    // que el rango de estos tests se arma alrededor de "ahora" en vez de
+    // fijar una fecha exacta (Sprint 15, Issue #153).
+    const rangoAmplio = {
+      desde: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      hasta: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
+    const rangoFueraDeAlcance = {
+      desde: new Date('2000-01-01T00:00:00.000Z'),
+      hasta: new Date('2000-02-01T00:00:00.000Z'),
+    };
+
+    it('cuenta las transiciones a "En Mantenimiento" por unidad dentro del rango', async () => {
+      await repo.crear({
+        unidadId: 'unidad-1',
+        estadoAnterior: 'Operativo',
+        estadoNuevo: 'En Mantenimiento',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+      await repo.crear({
+        unidadId: 'unidad-1',
+        estadoAnterior: 'Operativo',
+        estadoNuevo: 'Operativo',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+      await repo.crear({
+        unidadId: 'unidad-1',
+        estadoAnterior: 'Operativo',
+        estadoNuevo: 'En Mantenimiento',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+      await repo.crear({
+        unidadId: 'unidad-2',
+        estadoAnterior: 'Operativo',
+        estadoNuevo: 'En Mantenimiento',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+
+      const resultado = await repo.contarTransicionesAMantenimiento(rangoAmplio);
+
+      expect(resultado).toEqual(
+        expect.arrayContaining([
+          { unidadId: 'unidad-1', cantidad: 2 },
+          { unidadId: 'unidad-2', cantidad: 1 },
+        ]),
+      );
+      expect(resultado).toHaveLength(2);
+    });
+
+    it('ignora transiciones fuera del rango de fechas', async () => {
+      await repo.crear({
+        unidadId: 'unidad-1',
+        estadoAnterior: 'Operativo',
+        estadoNuevo: 'En Mantenimiento',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+
+      const resultado = await repo.contarTransicionesAMantenimiento(rangoFueraDeAlcance);
+
+      expect(resultado).toEqual([]);
+    });
+  });
 });

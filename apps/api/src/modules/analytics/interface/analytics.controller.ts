@@ -12,6 +12,10 @@ import {
   ConsultarProductividadRepartidoresUseCase,
   type ProductividadRespuesta,
 } from "../application/consultar-productividad-repartidores.use-case";
+import {
+  ObtenerDashboardKpisUseCase,
+  type DashboardKpisRespuesta,
+} from "../application/obtener-dashboard-kpis.use-case";
 import { PeriodoInvalidoError } from "../domain/errors/periodo-invalido.error";
 import { ConsultarIngresosQueryDto } from "./dto/consultar-ingresos-query.dto";
 import { ConsultarRoiQueryDto } from "./dto/consultar-roi-query.dto";
@@ -19,9 +23,10 @@ import { ConsultarRoiQueryDto } from "./dto/consultar-roi-query.dto";
 /**
  * `/analytics/revenue` (Issue #19, HU-7.1) + `/analytics/roi`,
  * `/analytics/utilization`, `/analytics/delivery-productivity` (Issues
- * #20/#21, HU-7.2/7.3, Sprint 10). `x-roles: [gerente, admin]` en
- * openapi.yaml para los 4, mismo patrón de guards que el resto de los
- * endpoints protegidos por RBAC.
+ * #20/#21, HU-7.2/7.3, Sprint 10) + `/analytics/dashboard-kpis` (Issue
+ * #153, HU-15.1, Sprint 15). `x-roles: [gerente, admin]` en openapi.yaml
+ * para los 5, mismo patrón de guards que el resto de los endpoints
+ * protegidos por RBAC.
  */
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Controller()
@@ -31,6 +36,7 @@ export class AnalyticsController {
     private readonly consultarRoi: ConsultarRoiUseCase,
     private readonly consultarUtilizacion: ConsultarUtilizacionUseCase,
     private readonly consultarProductividad: ConsultarProductividadRepartidoresUseCase,
+    private readonly obtenerDashboardKpis: ObtenerDashboardKpisUseCase,
   ) {}
 
   @Roles("gerente", "admin")
@@ -62,5 +68,11 @@ export class AnalyticsController {
   @Get("analytics/delivery-productivity")
   async deliveryProductivity(): Promise<ProductividadRespuesta[]> {
     return this.consultarProductividad.ejecutar();
+  }
+
+  @Roles("gerente", "admin")
+  @Get("analytics/dashboard-kpis")
+  async dashboardKpis(): Promise<DashboardKpisRespuesta> {
+    return this.obtenerDashboardKpis.ejecutar();
   }
 }

@@ -49,7 +49,15 @@ module.exports = {
       // baja definitiva" (HU-13.3).
       "../../features/13_gestion_inventario_qr.feature:30",
       "../../features/13_gestion_inventario_qr.feature:45",
-      "../../features/13_gestion_inventario_qr.feature:53"
+      "../../features/13_gestion_inventario_qr.feature:53",
+      // `15_dashboard_kpis_gerencial.feature` (Sprint 15, Fase 3, Épica 15,
+      // Issue #153, HU-15.1): a diferencia de `12_.../13_...` de arriba, se
+      // agrega el archivo COMPLETO (no por número de línea) — sus 2
+      // escenarios están AMBOS conectados en
+      // `dashboard-kpis-gerencial.steps.ts` (ver el header de ese archivo).
+      // Tagueado `@Fase3` (no `@Fase2`), así que ya queda incluido por el
+      // filtro `not @Fase2` de abajo sin necesitar una excepción propia.
+      "../../features/15_dashboard_kpis_gerencial.feature"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],
