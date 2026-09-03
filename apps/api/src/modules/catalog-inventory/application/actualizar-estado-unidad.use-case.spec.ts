@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { ActualizarEstadoUnidadUseCase } from "./actualizar-estado-unidad.use-case";
 import { InMemoryToolUnitRepository } from "../infrastructure/in-memory/in-memory-tool-unit.repository";
 import { InMemoryToolUnitStatusLogRepository } from "../infrastructure/in-memory/in-memory-tool-unit-status-log.repository";
+import { UnidadNoEncontradaError } from "../domain/errors/unidad-no-encontrada.error";
 
 describe("ActualizarEstadoUnidadUseCase", () => {
   async function armar() {
@@ -64,5 +66,13 @@ describe("ActualizarEstadoUnidadUseCase", () => {
     const entrada = await useCase.ejecutar(unidad.id, "Excelente", [], "autor-1");
 
     expect(entrada.estado_nuevo).toBe("Excelente");
+  });
+
+  it("lanza UnidadNoEncontradaError si el id de unidad no existe", async () => {
+    const { useCase } = await armar();
+
+    await expect(useCase.ejecutar(randomUUID(), "Operativo", [], "autor-1")).rejects.toThrow(
+      UnidadNoEncontradaError,
+    );
   });
 });
