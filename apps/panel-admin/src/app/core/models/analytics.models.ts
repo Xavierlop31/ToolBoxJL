@@ -61,3 +61,52 @@ export interface DeliveryProductivity {
   ruta_asignada: number;
   tiempo_promedio_min: number;
 }
+
+export const TIPOS_ALERTA_CRITICA = ['mantenimiento_recurrente', 'mora_cliente'] as const;
+
+export type TipoAlertaCritica = (typeof TIPOS_ALERTA_CRITICA)[number];
+
+export const SEVERIDADES_ALERTA_CRITICA = ['alta', 'media', 'informativa'] as const;
+
+export type SeveridadAlertaCritica = (typeof SEVERIDADES_ALERTA_CRITICA)[number];
+
+export const ACCIONES_SUGERIDAS_ALERTA = [
+  'Revisar Ficha / Dar de Baja',
+  'Ver Contrato / Contactar',
+] as const;
+
+export type AccionSugeridaAlerta = (typeof ACCIONES_SUGERIDAS_ALERTA)[number];
+
+/**
+ * Tarjeta del panel de "Alertas Críticas" (HU-15.1, Sprint 15, Issue #153),
+ * openapi.yaml `AlertaCritica`. Dos disparadores hoy (`mantenimiento_recurrente`
+ * / `mora_cliente`), el valor "informativa" de `severidad` queda reservado
+ * para disparadores futuros — ningún caso hoy lo produce, pero el estilo del
+ * badge debe soportarlo (ver dashboard-kpis.component.scss).
+ */
+export interface AlertaCritica {
+  tipo: TipoAlertaCritica;
+  severidad: SeveridadAlertaCritica;
+  titulo: string;
+  descripcion: string;
+  referencia_id: string;
+  accion_sugerida: AccionSugeridaAlerta;
+}
+
+/**
+ * Tipo local que refleja el schema completo de `GET /analytics/dashboard-kpis`
+ * (HU-15.1, Sprint 15, Issue #153), openapi.yaml líneas 1454-1476. Panel
+ * ejecutivo único (diseño Stitch "Dashboard KPIs - Rediseño Gerencial") que
+ * consolida los 4 KPIs macrofinancieros + el panel de Alertas Críticas en
+ * una sola llamada — `ingresos_totales_mes`/`variacion_ingresos_pct`/
+ * `ocupacion_global_pct`/`moras_recaudadas_mes` son del mes calendario
+ * actual (UTC); `roi_promedio_pct` es acumulado histórico.
+ */
+export interface DashboardKpis {
+  ingresos_totales_mes: number;
+  variacion_ingresos_pct: number;
+  ocupacion_global_pct: number;
+  moras_recaudadas_mes: number;
+  roi_promedio_pct: number;
+  alertas_criticas: AlertaCritica[];
+}

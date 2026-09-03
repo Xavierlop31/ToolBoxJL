@@ -1,9 +1,13 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../../auth/interface/auth.module";
+import { CatalogInventoryModule } from "../../catalog-inventory/interface/catalog-inventory.module";
+import { OrdersModule } from "../../orders/interface/orders.module";
+import { UsersModule } from "../../users/interface/users.module";
 import { ConsultarIngresosUseCase } from "../application/consultar-ingresos.use-case";
 import { ConsultarRoiUseCase } from "../application/consultar-roi.use-case";
 import { ConsultarUtilizacionUseCase } from "../application/consultar-utilizacion.use-case";
 import { ConsultarProductividadRepartidoresUseCase } from "../application/consultar-productividad-repartidores.use-case";
+import { ObtenerDashboardKpisUseCase } from "../application/obtener-dashboard-kpis.use-case";
 import {
   DELIVERY_PRODUCTIVITY_REPOSITORY,
   REVENUE_REPOSITORY,
@@ -27,13 +31,26 @@ import { AnalyticsController } from "./analytics.controller";
  * `utilization.repository.ts`, `delivery-productivity.repository.ts`) para
  * los gaps de datos documentados de cada uno.
  *
+ * Sprint 15 (Issue #153, HU-15.1, Épica 15): `GET /analytics/dashboard-kpis`
+ * (`ObtenerDashboardKpisUseCase`) — panel ejecutivo consolidado. Importa
+ * `CatalogInventoryModule` (`TOOL_UNIT_STATUS_LOG_REPOSITORY`/
+ * `TOOL_UNIT_REPOSITORY`/`TOOL_MODEL_REPOSITORY`, para la alerta
+ * `mantenimiento_recurrente`), `OrdersModule` (`ORDER_REPOSITORY`, para la
+ * alerta `mora_cliente`) y `UsersModule` (`USER_REPOSITORY`, para el nombre
+ * del cliente en esa misma alerta) — sin `forwardRef`: a diferencia del
+ * ciclo genuino entre CatalogInventoryModule↔OrdersModule (ver el
+ * doc-comment de `CatalogInventoryModule`), ninguno de estos 3 módulos
+ * importa AnalyticsModule, mismo criterio de import directo que
+ * `LogisticsModule` (Sprint 14) ya usa para combinar estos mismos 3
+ * módulos sin ciclo.
+ *
  * Wiring de producción por defecto: implementaciones `Prisma*Repository`
  * (requieren `DATABASE_URL`). Los tests/BDD arman su propio `TestingModule`
  * con las implementaciones `InMemory*Repository`, mismo criterio que el
  * resto de los módulos.
  */
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, CatalogInventoryModule, OrdersModule, UsersModule],
   controllers: [AnalyticsController],
   providers: [
     PrismaService,
@@ -45,6 +62,7 @@ import { AnalyticsController } from "./analytics.controller";
     ConsultarRoiUseCase,
     ConsultarUtilizacionUseCase,
     ConsultarProductividadRepartidoresUseCase,
+    ObtenerDashboardKpisUseCase,
   ],
   exports: [
     REVENUE_REPOSITORY,
@@ -55,6 +73,7 @@ import { AnalyticsController } from "./analytics.controller";
     ConsultarRoiUseCase,
     ConsultarUtilizacionUseCase,
     ConsultarProductividadRepartidoresUseCase,
+    ObtenerDashboardKpisUseCase,
   ],
 })
 export class AnalyticsModule {}

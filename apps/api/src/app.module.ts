@@ -71,6 +71,11 @@ import { ZonesModule } from "./modules/zones/interface/zones.module";
  * Node, ver `users/domain/user.repository.ts`). `UsersModule` no se lista
  * acá como import directo de `AppModule` porque no expone controller propio
  * — solo lo consume `LogisticsModule` internamente.
+ * Sprint 15 (Issue #153 / HU-15.1, Épica 15): `GET /analytics/dashboard-kpis`
+ * (dashboard ejecutivo consolidado + panel de Alertas Críticas) — cambio en
+ * AnalyticsModule existente, que a partir de este sprint también importa
+ * CatalogInventoryModule/OrdersModule/UsersModule (mismo criterio que
+ * LogisticsModule en Sprint 14); sin módulo nuevo propio ni cambio acá.
  */
 @Module({
   imports: [
