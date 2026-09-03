@@ -8,6 +8,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AnalyticsService } from './analytics.service';
 import {
+  DashboardKpis,
   DeliveryProductivity,
   RevenueBreakdown,
   RoiItem,
@@ -44,6 +45,24 @@ describe('AnalyticsService', () => {
       tiempo_promedio_min: 12.4,
     },
   ];
+
+  const mockDashboardKpis: DashboardKpis = {
+    ingresos_totales_mes: 12_500_000,
+    variacion_ingresos_pct: 8.4,
+    ocupacion_global_pct: 68.3,
+    moras_recaudadas_mes: 450_000,
+    roi_promedio_pct: 24.1,
+    alertas_criticas: [
+      {
+        tipo: 'mora_cliente',
+        severidad: 'alta',
+        titulo: 'Cliente en mora',
+        descripcion: 'Orden con más de 15 días de atraso.',
+        referencia_id: '33333333-3333-3333-3333-333333333333',
+        accion_sugerida: 'Ver Contrato / Contactar',
+      },
+    ],
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -111,5 +130,15 @@ describe('AnalyticsService', () => {
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockDeliveryProductivity);
+  });
+
+  it('HU-15.1: obtiene los KPIs consolidados del dashboard gerencial', () => {
+    service.getDashboardKpis().subscribe((kpis) => {
+      expect(kpis).toEqual(mockDashboardKpis);
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/analytics/dashboard-kpis`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockDashboardKpis);
   });
 });

@@ -24,6 +24,9 @@ import { defineBddConfig } from 'playwright-bdd';
  *   panel de Gestión de Inventario QR — métricas, filtros/búsqueda de
  *   unidades, alta de unidad + QR imprimible, mantenimiento/bajas y "Rutas
  *   del Día" (features/13_gestion_inventario_qr.feature).
+ * - HU-15.1 (Issue #153, Sprint 15, Fase 3, Épica 15): dashboard ejecutivo
+ *   consolidado — 4 KPIs macrofinancieros y panel de Alertas Críticas
+ *   (features/15_dashboard_kpis_gerencial.feature).
  *
  * RF-3.2 (recargo logístico por peso) es 100% backend (Issue #13, otra
  * rama en paralelo) y no tiene UI — no se incluye acá.
@@ -34,10 +37,11 @@ const testDir = defineBddConfig({
     path.join(__dirname, '../../../features/04_logistica_flota.feature'),
     path.join(__dirname, '../../../features/07_kpis_analitica.feature'),
     path.join(__dirname, '../../../features/13_gestion_inventario_qr.feature'),
+    path.join(__dirname, '../../../features/15_dashboard_kpis_gerencial.feature'),
   ],
   steps: path.join(__dirname, 'steps/*.steps.ts'),
   tags:
-    '@RF-3.1 or @RF-3.3 or @HU-7.1 or @HU-7.2 or @HU-7.3 or @HU-13.1 or @HU-13.2 or @HU-13.3 or @HU-13.4',
+    '@RF-3.1 or @RF-3.3 or @HU-7.1 or @HU-7.2 or @HU-7.3 or @HU-13.1 or @HU-13.2 or @HU-13.3 or @HU-13.4 or @HU-15.1',
 });
 
 export default defineConfig({

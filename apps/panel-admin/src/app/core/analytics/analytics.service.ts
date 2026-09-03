@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  DashboardKpis,
   DeliveryProductivity,
   RevenueBreakdown,
   RoiItem,
@@ -21,6 +22,11 @@ import {
  * - `getUtilization` / `getDeliveryProductivity`: HU-7.3, Issue #21 —
  *   escenario "Gerente consulta utilización de inventario y productividad
  *   de repartidores".
+ * - `getDashboardKpis`: HU-15.1, Sprint 15, Issue #153 —
+ *   features/15_dashboard_kpis_gerencial.feature. Panel ejecutivo único que
+ *   consolida los 4 KPIs macrofinancieros + Alertas Críticas en una sola
+ *   llamada (openapi.yaml líneas 1351-1376), en vez de componer
+ *   `getRevenue`/`getRoi`/`getUtilization`.
  */
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
@@ -54,5 +60,9 @@ export class AnalyticsService {
     return this.http.get<DeliveryProductivity[]>(
       `${this.baseUrl}/analytics/delivery-productivity`,
     );
+  }
+
+  getDashboardKpis(): Observable<DashboardKpis> {
+    return this.http.get<DashboardKpis>(`${this.baseUrl}/analytics/dashboard-kpis`);
   }
 }

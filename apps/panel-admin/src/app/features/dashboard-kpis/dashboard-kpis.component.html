@@ -1,0 +1,97 @@
+<main class="dashboard-kpis">
+  <h1>Dashboard Gerencial</h1>
+
+  @if (loading()) {
+    <output>Cargando dashboard gerencial…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (kpis(); as k) {
+    <section class="kpi-grid" data-testid="dashboard-kpis-grid">
+      <article class="kpi-card" data-testid="kpi-ingresos-mes">
+        <header class="kpi-card-header">
+          <span class="kpi-label">Ingresos Totales del Mes</span>
+          <span class="material-symbols-outlined kpi-icon">payments</span>
+        </header>
+        <p class="kpi-value">{{ formatCop(k.ingresos_totales_mes) }}</p>
+        <p
+          class="kpi-variacion"
+          [class.kpi-variacion-up]="variacionSigno(k.variacion_ingresos_pct) === 'up'"
+          [class.kpi-variacion-down]="variacionSigno(k.variacion_ingresos_pct) === 'down'"
+          data-testid="kpi-ingresos-variacion"
+        >
+          <span class="material-symbols-outlined kpi-variacion-icon">
+            @if (variacionSigno(k.variacion_ingresos_pct) === 'up') {
+              arrow_upward
+            } @else if (variacionSigno(k.variacion_ingresos_pct) === 'down') {
+              arrow_downward
+            } @else {
+              remove
+            }
+          </span>
+          {{ formatPct(k.variacion_ingresos_pct) }} vs. mes anterior
+        </p>
+      </article>
+
+      <article class="kpi-card" data-testid="kpi-ocupacion-flota">
+        <header class="kpi-card-header">
+          <span class="kpi-label">Ocupación Global de Flota</span>
+          <span class="material-symbols-outlined kpi-icon">local_shipping</span>
+        </header>
+        <p class="kpi-value">{{ formatPct(k.ocupacion_global_pct) }}</p>
+      </article>
+
+      <article class="kpi-card" data-testid="kpi-moras-mes">
+        <header class="kpi-card-header">
+          <span class="kpi-label">Total Recaudado por Moras</span>
+          <span class="material-symbols-outlined kpi-icon">account_balance_wallet</span>
+        </header>
+        <p class="kpi-value">{{ formatCop(k.moras_recaudadas_mes) }}</p>
+      </article>
+
+      <article class="kpi-card" data-testid="kpi-roi-promedio">
+        <header class="kpi-card-header">
+          <span class="kpi-label">ROI Promedio</span>
+          <span class="material-symbols-outlined kpi-icon">trending_up</span>
+        </header>
+        <p class="kpi-value">{{ formatPct(k.roi_promedio_pct) }}</p>
+      </article>
+    </section>
+
+    <section class="alertas-criticas" data-testid="alertas-criticas">
+      <h2>Alertas Críticas</h2>
+
+      @if (alertasCriticas().length === 0) {
+        <p class="alertas-empty" data-testid="alertas-criticas-empty">
+          No hay alertas críticas activas.
+        </p>
+      } @else {
+        <ul class="alertas-list">
+          @for (alerta of alertasCriticas(); track alerta.referencia_id) {
+            <li class="alerta-card" data-testid="alerta-critica-row">
+              <div class="alerta-header">
+                <span class="badge-severidad" [class]="severidadBadgeClass(alerta.severidad)">
+                  {{ severidadLabel(alerta.severidad) }}
+                </span>
+                <h3 class="alerta-titulo">{{ alerta.titulo }}</h3>
+              </div>
+              <p class="alerta-descripcion">{{ alerta.descripcion }}</p>
+              <!--
+                Botón solo visual: no hay HU/endpoint que defina a dónde
+                navegar desde acá (ficha de unidad / contrato de orden) —
+                accion_sugerida es texto informativo del backend, no una
+                acción de navegación en el contrato de HU-15.1.
+              -->
+              <button type="button" class="alerta-accion" data-testid="alerta-critica-accion">
+                {{ alerta.accion_sugerida }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</main>
