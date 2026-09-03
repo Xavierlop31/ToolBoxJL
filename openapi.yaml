@@ -1348,6 +1348,33 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /analytics/dashboard-kpis:
+    get:
+      operationId: getDashboardKpis
+      summary: Dashboard ejecutivo consolidado (Fase 3, HU-15.1)
+      description: >
+        Panel gerencial único (diseño Stitch "Dashboard KPIs - Rediseño
+        Gerencial") que consolida los 4 KPIs macrofinancieros y el panel de
+        Alertas Críticas de la operación en una sola llamada, en vez de que
+        el frontend componga `/analytics/revenue` + `/analytics/roi` +
+        `/analytics/utilization` (esos 3 endpoints siguen existiendo para
+        sus propios dashboards de detalle, Sprint 6/10).
+        `ingresos_totales_mes`/`variacion_ingresos_pct`/`ocupacion_global_pct`/
+        `moras_recaudadas_mes` son del MES CALENDARIO ACTUAL (UTC, mismo
+        criterio que `GET /analytics/utilization` — sin query param de
+        periodo); `roi_promedio_pct` es acumulado histórico, igual que
+        `GET /analytics/roi` (Sprint 10).
+      tags: [Analítica]
+      x-roles: [gerente, admin]
+      responses:
+        "200":
+          description: KPIs consolidados + alertas críticas.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DashboardKpis" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1423,6 +1450,54 @@ components:
       allOf:
         - $ref: "#/components/schemas/ToolModel"
       required: [nombre, marca, categoria, tarifa_dia]
+
+    DashboardKpis:
+      type: object
+      description: Respuesta de `GET /analytics/dashboard-kpis` (HU-15.1, Fase 3).
+      properties:
+        ingresos_totales_mes: { type: integer, description: "COP, mes calendario actual" }
+        variacion_ingresos_pct:
+          type: number
+          description: >
+            Variación de ingresos_totales_mes vs. el mes calendario
+            anterior. Puede ser negativo. 0 si el mes anterior no tuvo
+            ingresos (evita división por cero).
+        ocupacion_global_pct: { type: number, description: "= utilizacion_global_pct de GET /analytics/utilization" }
+        moras_recaudadas_mes: { type: integer, description: "COP, mes calendario actual (= cobros_mora de GET /analytics/revenue del mes)" }
+        roi_promedio_pct:
+          type: number
+          description: >
+            Promedio simple de roi_pct entre los modelos con costo_compra
+            cargado (mismo criterio de exclusión que GET /analytics/roi). 0
+            si ningún modelo tiene costo_compra cargado.
+        alertas_criticas:
+          type: array
+          items: { $ref: "#/components/schemas/AlertaCritica" }
+
+    AlertaCritica:
+      type: object
+      description: >
+        Tarjeta del panel de "Alertas Críticas" (HU-15.1). Dos disparadores
+        hoy: `mantenimiento_recurrente` (una unidad con más de 3 ingresos a
+        taller en el mes calendario actual — severidad siempre "alta", es
+        una señal de confiabilidad) y `mora_cliente` (una orden
+        confirmada/en_curso cuya fecha_fin pasó hace más de 5 días —
+        severidad "alta" si el atraso supera 15 días, "media" en caso
+        contrario; umbral fijado por el Tech Lead, no está en el PRD). El
+        valor "informativa" del enum queda reservado para disparadores
+        futuros — ningún caso hoy lo produce.
+      properties:
+        tipo: { type: string, enum: [mantenimiento_recurrente, mora_cliente] }
+        severidad: { type: string, enum: [alta, media, informativa] }
+        titulo: { type: string }
+        descripcion: { type: string }
+        referencia_id:
+          type: string
+          format: uuid
+          description: unidad_id si tipo=mantenimiento_recurrente, order_id si tipo=mora_cliente.
+        accion_sugerida:
+          type: string
+          enum: ["Revisar Ficha / Dar de Baja", "Ver Contrato / Contactar"]
 
     Zona:
       type: object
