@@ -4,6 +4,21 @@ import { InMemoryToolModelRepository } from "../infrastructure/in-memory/in-memo
 import { InMemoryOrderRepository } from "../../orders/infrastructure/in-memory/in-memory-order.repository";
 import { QrCodeGeneratorService } from "../infrastructure/qr/qrcode-generator.service";
 
+/**
+ * Cada `armarEscenario()` genera 3 códigos QR reales (`QrCodeGeneratorService`,
+ * PNG real vía `qrcode`, no un mock) porque `expande modelo_nombre/...` abajo
+ * verifica el formato real de `qr_code_url`. Bajo carga de CI (Turborepo
+ * corriendo varios paquetes en paralelo) esa generación CPU-bound
+ * ocasionalmente supera el timeout default de Jest (5000ms) — confirmado
+ * flaky en Sprint 14 (PR #175) y Sprint 15 (PR #181): la cantidad de tests
+ * que fallan varía entre corridas (1/2/3) y el mismo código ya pasó verde en
+ * el CI scoped a nivel de PR. Timeout más alto acá en vez de mockear
+ * `QrCodeGeneratorService` — mockearlo perdería la cobertura real de que
+ * `qr_code_url` es un PNG válido, que es justamente lo que un test unitario
+ * de este caso de uso debe verificar.
+ */
+jest.setTimeout(20000);
+
 describe("ListarUnidadesUseCase", () => {
   async function armarEscenario() {
     const unidades = new InMemoryToolUnitRepository();
