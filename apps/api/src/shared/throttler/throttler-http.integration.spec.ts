@@ -61,7 +61,7 @@ describe("Rate limiting (429) — integración HTTP", () => {
     const tercera = await fetch(`${baseUrl}/throttle-test`);
     expect(tercera.status).toBe(429);
 
-    const body = await tercera.json();
+    const body = (await tercera.json()) as { statusCode: number; message: unknown };
     expect(body.statusCode).toBe(429);
     expect(String(body.message)).toMatch(/too many requests/i);
   });

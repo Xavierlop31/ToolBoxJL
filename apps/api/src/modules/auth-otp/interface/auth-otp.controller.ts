@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle, seconds } from "@nestjs/throttler";
 import { ROLES_HUMANOS, type UsuarioAutenticado } from "@toolboxjl/shared-types";
 import { Roles } from "../../auth/interface/decorators/roles.decorator";
 import { UsuarioActual } from "../../auth/interface/decorators/usuario-actual.decorator";
@@ -30,6 +31,9 @@ import { VerificarOtpDto } from "./dto/verificar-otp.dto";
  * anotarlo. Deliberadamente `ROLES_HUMANOS`, no `ROLES` (Sprint 7 —
  * `ROLES` ya incluye `"agente-1"`, un rol de servicio que openapi.yaml NO
  * declara para este recurso; ver `packages/shared-types/src/rol.ts`).
+ *
+ * `@Throttle` más estricto que el default global (Issue #187): son los
+ * endpoints más sensibles a fuerza bruta/abuso de envío de OTP por WhatsApp.
  */
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Controller()
@@ -40,6 +44,7 @@ export class AuthOtpController {
   ) {}
 
   @Roles(...ROLES_HUMANOS)
+  @Throttle({ default: { limit: 5, ttl: seconds(60) } })
   @Post("auth/otp/request")
   @HttpCode(201)
   async request(
@@ -60,6 +65,7 @@ export class AuthOtpController {
   }
 
   @Roles(...ROLES_HUMANOS)
+  @Throttle({ default: { limit: 5, ttl: seconds(60) } })
   @Post("auth/otp/verify")
   @HttpCode(200)
   async verify(
