@@ -54,14 +54,14 @@ describe('CatalogSearchComponent', () => {
     expect(fixture.componentInstance.results()).toHaveSize(1);
   });
 
-  it('HU-12.1: pide la primera página con pageSize=6 por defecto', () => {
+  it('HU-12.1: pide la primera página con pageSize=8 por defecto', () => {
     fixture.detectChanges();
 
     const req = httpMock.expectOne(
       (r) => r.url === `${environment.apiUrl}/catalog/search`,
     );
     expect(req.request.params.get('page')).toBe('1');
-    expect(req.request.params.get('pageSize')).toBe('6');
+    expect(req.request.params.get('pageSize')).toBe('8');
     req.flush([], { headers: { 'X-Total-Count': '0' } });
   });
 
@@ -76,7 +76,7 @@ describe('CatalogSearchComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.total()).toBe(13);
-    expect(fixture.componentInstance.totalPages()).toBe(3); // ceil(13/6)
+    expect(fixture.componentInstance.totalPages()).toBe(2); // ceil(13/8)
   });
 
   it('HU-12.1: cambiar de página vuelve a pedir con el page nuevo', () => {
