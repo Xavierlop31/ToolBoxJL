@@ -40,6 +40,6 @@ export class BuscarCatalogoQueryDto {
 
   @IsOptional()
   @Type(() => Number)
-  @IsIn([6, 12, 24])
+  @IsIn([8, 12, 24])
   pageSize?: number;
 }

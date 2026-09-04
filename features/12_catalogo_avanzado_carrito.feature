@@ -11,10 +11,10 @@ Característica: Catálogo Avanzado & Carrito de Compras
 
   @HU-12.1 @Catalogo
   Escenario: Paginación de la grilla de herramientas
-    Dado que existen más de 6 herramientas registradas en el catálogo
+    Dado que existen más de 8 herramientas registradas en el catálogo
     Cuando navego en "/catalogo"
-    Entonces se muestran las primeras 6 herramientas por página
-    Y visualizo la barra de paginación con selector de tamaño (6, 12, 24), página actual y botones "Anterior" y "Siguiente"
+    Entonces se muestran las primeras 8 herramientas por página
+    Y visualizo la barra de paginación con selector de tamaño (8, 12, 24), página actual y botones "Anterior" y "Siguiente"
     Y al cambiar de página la grilla se actualiza dinámicamente.
 
   @HU-12.1 @PedidosActivos
