@@ -6,6 +6,8 @@ interface AdminNavItem {
   path: string;
   label: string;
   icon: string;
+  /** Sufijo estable para `data-testid` (evita depender de `String.replace` en el template). */
+  testId: string;
 }
 
 /**
@@ -55,7 +57,7 @@ interface AdminNavItem {
               <a
                 [routerLink]="item.path"
                 routerLinkActive="active"
-                [attr.data-testid]="'sidenav-' + item.path.split('/').join('-')"
+                [attr.data-testid]="'sidenav-' + item.testId"
               >
                 <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
                 <span>{{ item.label }}</span>
@@ -275,15 +277,25 @@ export class AdminShellComponent implements OnInit, OnDestroy {
 
   /** 9 ítems del sidenav, mismo orden que confirmó el Arquitecto (Issue #184). */
   readonly navItems: AdminNavItem[] = [
-    { path: '/admin/dashboard-kpis', label: 'Dashboard', icon: 'space_dashboard' },
-    { path: '/admin/almacen', label: 'Almacén', icon: 'warehouse' },
-    { path: '/admin/mantenimiento', label: 'Mantenimiento', icon: 'build' },
-    { path: '/admin/rutas', label: 'Rutas', icon: 'route' },
-    { path: '/admin/ingresos', label: 'Ingresos', icon: 'payments' },
-    { path: '/admin/roi', label: 'ROI', icon: 'trending_up' },
-    { path: '/admin/envios', label: 'Envíos', icon: 'local_shipping' },
-    { path: '/admin/utilizacion-productividad', label: 'Utilización', icon: 'monitoring' },
-    { path: '/admin/vehiculos/nuevo', label: 'Alta Vehículo', icon: 'directions_car' },
+    { path: '/admin/dashboard-kpis', label: 'Dashboard', icon: 'space_dashboard', testId: 'dashboard' },
+    { path: '/admin/almacen', label: 'Almacén', icon: 'warehouse', testId: 'almacen' },
+    { path: '/admin/mantenimiento', label: 'Mantenimiento', icon: 'build', testId: 'mantenimiento' },
+    { path: '/admin/rutas', label: 'Rutas', icon: 'route', testId: 'rutas' },
+    { path: '/admin/ingresos', label: 'Ingresos', icon: 'payments', testId: 'ingresos' },
+    { path: '/admin/roi', label: 'ROI', icon: 'trending_up', testId: 'roi' },
+    { path: '/admin/envios', label: 'Envíos', icon: 'local_shipping', testId: 'envios' },
+    {
+      path: '/admin/utilizacion-productividad',
+      label: 'Utilización',
+      icon: 'monitoring',
+      testId: 'utilizacion',
+    },
+    {
+      path: '/admin/vehiculos/nuevo',
+      label: 'Alta Vehículo',
+      icon: 'directions_car',
+      testId: 'alta-vehiculo',
+    },
   ];
 
   readonly activeTitle = signal('Panel de Control');
