@@ -1,14 +1,23 @@
 import { Type } from "class-transformer";
-import { IsDateString, IsIn, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsDateString, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { SanitizarTextoLibre } from "../../../../shared/sanitize.util";
 
-/** GET /catalog/search — filtros aceptados por el contrato openapi.yaml. */
+/**
+ * GET /catalog/search — filtros aceptados por el contrato openapi.yaml.
+ * `q`/`categoria` son texto libre ingresado por un usuario anónimo (Issue
+ * #187): `@MaxLength` + `@SanitizarTextoLibre()`.
+ */
 export class BuscarCatalogoQueryDto {
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  @SanitizarTextoLibre()
   q?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  @SanitizarTextoLibre()
   categoria?: string;
 
   // Aceptados por conformidad con openapi.yaml; ver la nota de
