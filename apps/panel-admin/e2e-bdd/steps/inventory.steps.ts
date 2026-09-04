@@ -13,6 +13,20 @@ const { Given, When, Then } = createBdd();
  * standalone (este runner) no aplica `authGuard`/`adminGuard` (viven en
  * apps/shell), así que no hace falta un step de "Dado que soy Admin
  * autenticado" para este archivo.
+ *
+ * Issue #184 (fidelidad visual contra el mockup Stitch "Gestión Inventario
+ * - Rediseño Admin"): el panel de inventario dejó de ser "/inventario" con
+ * 3 pestañas internas (`InventoryPanelComponent`, eliminado) — ahora son 3
+ * rutas propias del sidenav nuevo: "/almacen" (Inventario General + KPIs
+ * de HU-13.1), "/mantenimiento" (Mantenimiento & Taller, HU-13.3) y
+ * "/rutas" (Rutas del Día, HU-13.4). El texto de los escenarios Gherkin no
+ * cambió (siguen hablando de "pestañas" porque así los redactó el PRD),
+ * pero el glue code de este archivo navega por URL en vez de hacer clic en
+ * un tab. El panel de detalle de "Ver QR"/"Historial" tampoco es un modal
+ * ya (es un panel docked permanente, `UnitDetailPanelComponent`) — ningún
+ * escenario de este feature asertaba contra el modal viejo directamente
+ * (solo contra la visibilidad de los 3 botones de acción en la fila), así
+ * que no hizo falta tocar esos steps.
  */
 const mockMetrics = {
   total_unidades: 42,
@@ -265,7 +279,13 @@ Given(
   async ({ page }) => {
     await mockInventoryMetrics(page);
     await mockInventoryUnits(page);
-    await page.goto('/inventario');
+    // Issue #184: el panel de inventario ya no vive en "/inventario" con 3
+    // pestañas internas — se separó en 3 rutas propias del sidenav nuevo;
+    // "Inventario General" (con las tarjetas de KPIs de HU-13.1) es ahora
+    // "/almacen". "/inventario" sigue existiendo como redirect (ver
+    // entry.routes.ts) para no romper enlaces viejos, pero el smoke test
+    // navega directo a la ruta real.
+    await page.goto('/almacen');
   },
 );
 
@@ -285,7 +305,7 @@ Then(
 Given('que estoy en la pestaña "Inventario General"', async ({ page }) => {
   await mockInventoryMetrics(page);
   await mockInventoryUnits(page);
-  await page.goto('/inventario');
+  await page.goto('/almacen');
   await expect(page.getByTestId('inventory-row')).toHaveCount(2);
 });
 
@@ -322,7 +342,7 @@ Given('que estoy en el panel de Gestión de Inventario QR', async ({ page }) => 
   await mockInventoryMetrics(page);
   await mockInventoryUnits(page);
   await mockCatalogSearch(page);
-  await page.goto('/inventario');
+  await page.goto('/almacen');
   await expect(page.getByTestId('inventory-metrics')).toBeVisible();
 });
 
@@ -345,7 +365,7 @@ Given(
     await mockInventoryMetrics(page);
     await mockInventoryUnits(page);
     await mockCatalogSearch(page);
-    await page.goto('/inventario');
+    await page.goto('/almacen');
 
     await page.click('[data-testid="btn-registrar-unidad"]');
     await expect(page.getByTestId('register-unit-form')).toBeVisible();
@@ -383,11 +403,14 @@ Then(
 // --- HU-13.3: visualización de la pestaña de mantenimiento ---
 // El Given "que estoy en el panel de Gestión de Inventario QR" ya está
 // definido arriba (HU-13.2) y se reutiliza tal cual, mismo criterio que
-// analytics.steps.ts con el Given de shipments.steps.ts.
+// analytics.steps.ts con el Given de shipments.steps.ts. Issue #184:
+// "Mantenimiento & Taller" ya no es una pestaña interna de "/almacen" —
+// es su propia ruta "/mantenimiento" del sidenav nuevo, así que el paso
+// navega en vez de hacer clic en un tab.
 
 When('hago clic en la pestaña "Mantenimiento & Taller"', async ({ page }) => {
   await mockMaintenanceList(page);
-  await page.click('[data-testid="tab-mantenimiento-taller"]');
+  await page.goto('/mantenimiento');
   await expect(page.getByTestId('maintenance-list')).toBeVisible();
 });
 
@@ -409,7 +432,7 @@ Then('las herramientas que han sido dadas de baja con su motivo documentado.', a
 Given('que selecciono una herramienta de la lista', async ({ page }) => {
   await mockInventoryMetrics(page);
   await mockInventoryUnits(page);
-  await page.goto('/inventario');
+  await page.goto('/almacen');
   await page.getByTestId('btn-cambiar-estado').first().click();
   await expect(page.getByTestId('status-change-form')).toBeVisible();
 });
@@ -444,10 +467,10 @@ Then(
 Then('el evento se añade a la hoja de vida de la unidad.', async () => {
   // El backend crea la entrada de tool_unit_status_log en la misma llamada
   // PATCH /inventory/units/{id}/status ya verificada en el step anterior
-  // (mockUpdateStatus) — el contrato no expone en este sprint una vista de
-  // "hoja de vida" completa por separado (ver la nota en
-  // UnitDetailModalComponent), así que no hay una aserción de UI adicional
-  // posible acá.
+  // (mockUpdateStatus). La hoja de vida completa SÍ se puede consultar
+  // (GET /inventory/units/{id}/history, ver UnitDetailPanelComponent), pero
+  // este escenario no navega a esa vista — no hay una aserción de UI
+  // adicional posible acá sin duplicar el smoke test de HU-13.1.
 });
 
 // --- HU-13.3: retorno a estado operativo o baja definitiva ---
@@ -455,11 +478,10 @@ Then('el evento se añade a la hoja de vida de la unidad.', async () => {
 Given(
   'que una herramienta ha finalizado su reparación o presenta daño irreparable',
   async ({ page }) => {
-    await mockInventoryMetrics(page);
-    await mockInventoryUnits(page);
+    // Issue #184: "/mantenimiento" es ahora su propia ruta del sidenav
+    // (antes era la pestaña "Mantenimiento & Taller" dentro de "/inventario").
     await mockMaintenanceList(page);
-    await page.goto('/inventario');
-    await page.click('[data-testid="tab-mantenimiento-taller"]');
+    await page.goto('/mantenimiento');
     await expect(page.getByTestId('maintenance-list')).toBeVisible();
   },
 );
@@ -484,14 +506,13 @@ Then(
 // --- HU-13.4: rutas activas por repartidor ---
 
 Given('que el Agente 1 de Ruteo ha generado las rutas del día', async ({ page }) => {
-  await mockInventoryMetrics(page);
-  await mockInventoryUnits(page);
   await mockRoutesTodayEndpoint(page);
-  await page.goto('/inventario');
 });
 
 When('accedo a la pestaña "Rutas del Día" en el panel de inventario', async ({ page }) => {
-  await page.click('[data-testid="tab-rutas-del-dia"]');
+  // Issue #184: "Rutas del Día" ya no es una pestaña interna — es su
+  // propia ruta "/rutas" del sidenav nuevo.
+  await page.goto('/rutas');
   await expect(page.getByTestId('repartidores-list')).toBeVisible();
 });
 
@@ -508,11 +529,9 @@ Then(
 // --- HU-13.4: detalle de paradas de un repartidor ---
 
 Given('que hago clic en un repartidor de la lista', async ({ page }) => {
-  await mockInventoryMetrics(page);
-  await mockInventoryUnits(page);
   await mockRoutesTodayEndpoint(page);
-  await page.goto('/inventario');
-  await page.click('[data-testid="tab-rutas-del-dia"]');
+  await page.goto('/rutas');
+  await expect(page.getByTestId('repartidores-list')).toBeVisible();
   await page.getByTestId('repartidor-toggle').first().click();
 });
 
