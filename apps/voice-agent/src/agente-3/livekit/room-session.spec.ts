@@ -426,6 +426,61 @@ describe("manejarSesionDeVoz", () => {
     });
   });
 
+  describe("condición de carrera TrackSubscribed vs. setup (fix bug de producción 2026-09-04)", () => {
+    it('no pierde el audio del cliente si "TrackSubscribed" se dispara mientras el saludo todavía se está sintetizando', async () => {
+      rtcNode.__setParticipantesPendientes([{ identity: "cliente-1", metadata: JWT_VALIDO }]);
+
+      // La síntesis del saludo (primera llamada a `sintetizar`) queda
+      // deliberadamente "colgada" — simula la latencia real de red de
+      // ElevenLabs que, en producción, le daba tiempo de sobra a LiveKit
+      // para auto-suscribir al bot a la pista del cliente ANTES de que el
+      // listener de `TrackSubscribed` se registrara (el bug). La segunda
+      // llamada en adelante (síntesis de la respuesta del turno) resuelve
+      // normal.
+      let resolverSintesisSaludo!: (buf: Buffer) => void;
+      const sintesisSaludoPendiente = new Promise<Buffer>((resolve) => {
+        resolverSintesisSaludo = resolve;
+      });
+      const sintetizar = jest
+        .fn()
+        .mockReturnValueOnce(sintesisSaludoPendiente)
+        .mockResolvedValue(Buffer.alloc(20));
+
+      const deps = crearDeps({ textToSpeech: { sintetizar } });
+      (ejecutarTurnoAgente3 as jest.Mock).mockResolvedValue({
+        mensajes: [],
+        respuestaTexto: "Tenemos taladros disponibles.",
+        carritoActualizado: null,
+      });
+
+      const promesaSesion = manejarSesionDeVoz(deps, "sala-race");
+      await flushMicrotasks(); // JWT resuelto, saludo arrancó y quedó pendiente — la sesión TODAVÍA no resolvió.
+
+      const room = rtcNode.__ultimaRoomCreada();
+      const reader = {
+        read: jest
+          .fn()
+          .mockResolvedValueOnce({ value: { data: new Int16Array(100).fill(20000), sampleRate: 16000 }, done: false })
+          .mockResolvedValueOnce({ value: { data: new Int16Array(11200).fill(0), sampleRate: 16000 }, done: false })
+          .mockResolvedValue({ done: true }),
+      };
+      rtcNode.__setProximoReader(reader);
+      const track = Object.create(RemoteAudioTrack.prototype) as InstanceType<typeof RemoteAudioTrack>;
+      // Con el bug, este listener todavía no existiría acá (se registraba
+      // recién después de que el saludo terminara) y este evento se perdería
+      // para siempre.
+      room.emit(RoomEvent.TrackSubscribed, track);
+      await flushMicrotasks();
+
+      resolverSintesisSaludo(Buffer.alloc(20));
+      await promesaSesion;
+      await flushMicrotasks();
+
+      expect(deps.speechToText.transcribir).toHaveBeenCalledTimes(1);
+      expect(ejecutarTurnoAgente3).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("chips de tool-calling en vivo (HU-14.2) — propagación de emitirEvento", () => {
     it("le pasa a ejecutarTurnoAgente3 una función emitirEvento que publica por el canal de datos de la sala", async () => {
       rtcNode.__setParticipantesPendientes([{ identity: "cliente-1", metadata: JWT_VALIDO }]);
