@@ -89,3 +89,6 @@ https://tool-box-jl-shell.vercel.app
 ToolBoxJL-Dev
 https://toolboxjl-dev.railway.app
 https://tool-box-jl-shell-staging.vercel.app
+
+## Calidad de Código
+https://sonarcloud.io/summary/overall?id=Xavierlop31_ToolBoxJL&branch=main
