@@ -1,142 +1,321 @@
-import { Component } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Subject, filter, takeUntil } from 'rxjs';
+
+interface AdminNavItem {
+  path: string;
+  label: string;
+  icon: string;
+}
 
 /**
- * Shell layout para el Panel de Administración (remotes montados vía Native Federation).
- * Provee la barra de navegación interna (Subnav / Tabs) para alternar rápidamente
- * entre el Dashboard Gerencial (Sprint 15, HU-15.1), Analítica de Ingresos, ROI, Envíos,
- * Utilización, Alta de Vehículos y Gestión de Inventario QR (Sprint 14, HU-13.1 a HU-13.4).
+ * Shell layout de TODO `apps/panel-admin` (Issue #184, fidelidad visual
+ * contra el mockup Stitch "Gestión Inventario - Rediseño Admin") —
+ * reemplaza el subnav horizontal de pestañas por un `SideNavBar` oscuro
+ * fijo de 256px, igual que el mockup HTML/Tailwind que compartió el
+ * Arquitecto (`bg-deep-navy`, ítem activo con `bg-primary-container`).
+ *
+ * Los 9 ítems cubren TODAS las secciones reales del remote — el mockup de
+ * Stitch original solo mostraba 4-5 (más "Auditoría", que se omite acá por
+ * no tener HU/endpoint que lo respalde todavía). "Almacén"/"Mantenimiento"/
+ * "Rutas" reemplazan a las 3 pestañas que antes vivían dentro de
+ * `/admin/inventario` (`InventoryPanelComponent`, ahora eliminado) — ver
+ * `entry.routes.ts`.
+ *
+ * El `<h1>` del `TopAppBar` refleja la sección activa derivándola de la URL
+ * (no hay Input/servicio adicional: es la forma más simple dado que este
+ * shell YA es el único punto que conoce las 9 rutas). Las páginas que ya
+ * existían de sprints previos (Dashboard, Ingresos, ROI, Envíos,
+ * Utilización, Alta Vehículo) conservan también su propio `<h1>` interno
+ * (fuera del alcance de este fix tocar esos 6 componentes) — la duplicación
+ * visual resultante es un costo aceptado, documentado acá en vez de
+ * preguntado, para no expandir el diff a componentes no mencionados en el
+ * brief de la tarea.
  */
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="admin-layout">
-      <!-- Sub-Navigation Header -->
-      <nav class="admin-subnav" aria-label="Subnavegación Panel Gerencial">
-        <div class="admin-subnav-container">
-          <div class="subnav-title">
-            <span class="material-symbols-outlined subnav-icon">analytics</span>
-            <span>Panel Gerencial</span>
+    <div class="admin-shell">
+      <nav class="admin-sidenav" aria-label="Navegación del Panel de Administración">
+        <div class="sidenav-brand">
+          <div class="sidenav-avatar">
+            <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
           </div>
-
-          <div class="subnav-tabs">
-            <a routerLink="/admin/dashboard-kpis" routerLinkActive="active" class="subnav-tab">
-              <span class="material-symbols-outlined">space_dashboard</span>
-              <span>Dashboard Gerencial</span>
-            </a>
-            <a routerLink="/admin/ingresos" routerLinkActive="active" class="subnav-tab">
-              <span class="material-symbols-outlined">payments</span>
-              <span>Ingresos & KPIs</span>
-            </a>
-            <a routerLink="/admin/roi" routerLinkActive="active" class="subnav-tab">
-              <span class="material-symbols-outlined">trending_up</span>
-              <span>ROI Herramientas</span>
-            </a>
-            <a routerLink="/admin/envios" routerLinkActive="active" class="subnav-tab">
-              <span class="material-symbols-outlined">local_shipping</span>
-              <span>Envíos en Vivo</span>
-            </a>
-            <a routerLink="/admin/utilizacion-productividad" routerLinkActive="active" class="subnav-tab">
-              <span class="material-symbols-outlined">monitoring</span>
-              <span>Utilización & Flota</span>
-            </a>
-            <a routerLink="/admin/vehiculos/nuevo" routerLinkActive="active" class="subnav-tab">
-              <span class="material-symbols-outlined">directions_car</span>
-              <span>Alta Vehículo</span>
-            </a>
-            <a routerLink="/admin/inventario" routerLinkActive="active" class="subnav-tab">
-              <span class="material-symbols-outlined">qr_code_2</span>
-              <span>Inventario QR</span>
-            </a>
+          <div>
+            <h2>Panel de Control</h2>
+            <p>Administrador v4.2</p>
           </div>
         </div>
+
+        <ul class="sidenav-items">
+          @for (item of navItems; track item.path) {
+            <li>
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="active"
+                [attr.data-testid]="'sidenav-' + item.path.split('/').join('-')"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+              </a>
+            </li>
+          }
+        </ul>
       </nav>
 
-      <!-- Sub-Route Content -->
-      <main class="admin-content">
-        <router-outlet></router-outlet>
+      <main class="admin-main">
+        <header class="admin-topbar">
+          <h1>{{ activeTitle() }}</h1>
+          <div class="topbar-actions">
+            <input
+              type="search"
+              class="topbar-search"
+              placeholder="Buscar unidad…"
+              aria-label="Buscar unidad"
+            />
+            <button type="button" class="topbar-icon-btn" aria-label="Notificaciones">
+              <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="admin-content">
+          <router-outlet></router-outlet>
+        </div>
       </main>
     </div>
   `,
   styles: `
-    .admin-layout {
+    .admin-shell {
+      display: flex;
       min-height: calc(100vh - 64px);
       background-color: var(--tbjl-color-background, #f5faff);
       font-family: var(--tbjl-font-family, sans-serif);
     }
-    .admin-subnav {
-      background: #ffffff;
-      border-bottom: 1px solid var(--tbjl-color-border, #dce3ea);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      position: sticky;
-      top: 64px;
-      z-index: 40;
+
+    /* --- SideNavBar oscuro fijo (mockup Stitch: bg-deep-navy, w-64) --- */
+    .admin-sidenav {
+      display: none;
+
+      @media (min-width: 768px) {
+        display: flex;
+        flex-direction: column;
+        width: 256px;
+        min-width: 256px;
+        position: fixed;
+        left: 0;
+        top: 64px;
+        bottom: 0;
+        background: var(--tbjl-color-primary-700, #0b0e3d);
+        z-index: 40;
+        padding: 16px 0;
+        overflow-y: auto;
+      }
     }
-    .admin-subnav-container {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 0 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 54px;
-    }
-    .subnav-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--tbjl-color-primary-700, #0b0e3d);
-      letter-spacing: 0.02em;
-    }
-    .subnav-icon {
-      font-size: 20px;
-      color: var(--tbjl-color-primary-500, #141cdb);
-    }
-    .subnav-tabs {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-    }
-    .subnav-tab {
+
+    .sidenav-brand {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--tbjl-color-neutral-700, #454556);
-      text-decoration: none;
-      border-radius: 6px;
-      transition: all 0.2s ease;
-      white-space: nowrap;
+      gap: 12px;
+      padding: 0 24px 24px;
+    }
+
+    .sidenav-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background: var(--tbjl-color-primary-500, #141cdb);
+      flex-shrink: 0;
 
       .material-symbols-outlined {
-        font-size: 18px;
-      }
-
-      &:hover {
-        background: var(--tbjl-color-neutral-100, #eef4fb);
-        color: var(--tbjl-color-primary-500, #141cdb);
-      }
-
-      &.active {
-        background: var(--tbjl-color-primary-500, #141cdb);
         color: #ffffff;
+        font-size: 22px;
+      }
+    }
+
+    .sidenav-brand h2 {
+      margin: 0;
+      font-size: 14px;
+      font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .sidenav-brand p {
+      margin: 2px 0 0;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.65);
+    }
+
+    .sidenav-items {
+      list-style: none;
+      margin: 0;
+      padding: 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: var(--tbjl-radius-md, 0.5rem);
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.75);
+        text-decoration: none;
+        transition: background-color 0.15s ease, color 0.15s ease;
 
         .material-symbols-outlined {
+          font-size: 20px;
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.08);
           color: #ffffff;
+        }
+
+        &.active {
+          background: var(--tbjl-color-primary-500, #141cdb);
+          color: #ffffff;
+          font-weight: 700;
         }
       }
     }
+
+    /* --- Área principal + TopAppBar --- */
+    .admin-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+
+      @media (min-width: 768px) {
+        margin-left: 256px;
+      }
+    }
+
+    .admin-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: 64px;
+      padding: 0 24px;
+      background: var(--tbjl-color-card, #ffffff);
+      border-bottom: 1px solid var(--tbjl-color-border, #dce3ea);
+      position: sticky;
+      top: 64px;
+      z-index: 30;
+    }
+
+    .admin-topbar h1 {
+      margin: 0;
+      font-size: 20px;
+      font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+      font-weight: 800;
+      color: var(--tbjl-color-neutral-900, #161c21);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-search {
+      padding: 8px 14px 8px 14px;
+      border: 1px solid var(--tbjl-color-border, #dce3ea);
+      border-radius: var(--tbjl-radius-md, 0.5rem);
+      background: var(--tbjl-color-neutral-100, #eef4fb);
+      font-size: 13px;
+      min-width: 220px;
+
+      &:focus {
+        outline: none;
+        border-color: var(--tbjl-color-primary-500, #141cdb);
+      }
+    }
+
+    .topbar-icon-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--tbjl-color-border, #dce3ea);
+      background: #ffffff;
+      color: var(--tbjl-color-neutral-700, #454556);
+      cursor: pointer;
+
+      &:hover {
+        background: var(--tbjl-color-neutral-100, #eef4fb);
+      }
+    }
+
     .admin-content {
-      max-width: 1440px;
+      flex: 1;
+      max-width: 1600px;
+      width: 100%;
       margin: 0 auto;
       padding: 24px;
     }
   `,
 })
-export class AdminShellComponent {}
+export class AdminShellComponent implements OnInit, OnDestroy {
+  private readonly router = inject(Router);
+  private readonly destroy$ = new Subject<void>();
+
+  /** 9 ítems del sidenav, mismo orden que confirmó el Arquitecto (Issue #184). */
+  readonly navItems: AdminNavItem[] = [
+    { path: '/admin/dashboard-kpis', label: 'Dashboard', icon: 'space_dashboard' },
+    { path: '/admin/almacen', label: 'Almacén', icon: 'warehouse' },
+    { path: '/admin/mantenimiento', label: 'Mantenimiento', icon: 'build' },
+    { path: '/admin/rutas', label: 'Rutas', icon: 'route' },
+    { path: '/admin/ingresos', label: 'Ingresos', icon: 'payments' },
+    { path: '/admin/roi', label: 'ROI', icon: 'trending_up' },
+    { path: '/admin/envios', label: 'Envíos', icon: 'local_shipping' },
+    { path: '/admin/utilizacion-productividad', label: 'Utilización', icon: 'monitoring' },
+    { path: '/admin/vehiculos/nuevo', label: 'Alta Vehículo', icon: 'directions_car' },
+  ];
+
+  readonly activeTitle = signal('Panel de Control');
+
+  ngOnInit(): void {
+    this.updateTitle(this.router.url);
+
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((event) => this.updateTitle(event.urlAfterRedirects));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private updateTitle(url: string): void {
+    const normalizedUrl = url.split('?')[0];
+
+    // `item.path` es absoluto ("/admin/almacen") porque este shell se monta
+    // bajo `/admin` vía Native Federation (apps/shell) — pero también se
+    // sirve standalone sin ese prefijo (`apps/panel-admin` en dev/e2e-bdd,
+    // ver app.routes.ts), así que compara contra ambas formas.
+    const match = this.navItems.find(
+      (item) =>
+        normalizedUrl.startsWith(item.path) ||
+        normalizedUrl.startsWith(item.path.replace(/^\/admin/, '')),
+    );
+    this.activeTitle.set(match ? match.label : 'Panel de Control');
+  }
+}
