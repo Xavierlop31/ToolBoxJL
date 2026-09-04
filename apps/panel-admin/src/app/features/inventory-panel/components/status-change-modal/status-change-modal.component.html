@@ -1,97 +1,85 @@
-<div
-  class="modal-backdrop"
-  role="button"
-  tabindex="0"
-  aria-label="Cerrar modal"
-  (click)="close()"
-  (keydown.enter)="close()"
-  (keydown.space)="close()"
+<dialog
+  #dialogEl
+  class="modal-panel"
+  aria-label="Cambiar estado de la unidad"
+  (cancel)="close()"
+  (click)="onBackdropClick($event)"
 >
-  <div
-    class="modal-panel"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Cambiar estado de la unidad"
-    tabindex="-1"
-    (click)="$event.stopPropagation()"
-    (keydown)="$event.stopPropagation()"
-  >
-    <h2>Cambiar Estado</h2>
-    <p class="unit-context">
-      Serial <strong>{{ unit.numero_serie }}</strong> — estado actual: {{ unit.estado }}
-    </p>
+  <h2>Cambiar Estado</h2>
+  <p class="unit-context">
+    Serial <strong>{{ unit.numero_serie }}</strong> — estado actual: {{ unit.estado }}
+  </p>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="status-change-form">
-      @if (!lockEstado) {
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="status-change-form">
+    @if (!lockEstado) {
+      <div class="field">
+        <label for="estadoNuevo">Nuevo Estado</label>
+        <select id="estadoNuevo" formControlName="estado_nuevo">
+          @for (estado of estados; track estado) {
+            <option [value]="estado">{{ estado }}</option>
+          }
+        </select>
+      </div>
+    } @else {
+      <p class="preset-estado" data-testid="preset-estado">
+        Nuevo estado: <strong>{{ form.controls.estado_nuevo.value }}</strong>
+      </p>
+    }
+
+    @if (form.controls.estado_nuevo.value === 'En Mantenimiento') {
+      <div class="maintenance-fields" data-testid="maintenance-fields">
         <div class="field">
-          <label for="estadoNuevo">Nuevo Estado</label>
-          <select id="estadoNuevo" formControlName="estado_nuevo">
-            @for (estado of estados; track estado) {
-              <option [value]="estado">{{ estado }}</option>
+          <label for="tipoMantenimiento">Tipo</label>
+          <select id="tipoMantenimiento" formControlName="tipo_mantenimiento">
+            <option value="" disabled>Selecciona tipo</option>
+            @for (tipo of tiposMantenimiento; track tipo) {
+              <option [value]="tipo">{{ tipo }}</option>
             }
           </select>
         </div>
-      } @else {
-        <p class="preset-estado" data-testid="preset-estado">
-          Nuevo estado: <strong>{{ form.controls.estado_nuevo.value }}</strong>
-        </p>
-      }
 
-      @if (form.controls.estado_nuevo.value === 'En Mantenimiento') {
-        <div class="maintenance-fields" data-testid="maintenance-fields">
-          <div class="field">
-            <label for="tipoMantenimiento">Tipo</label>
-            <select id="tipoMantenimiento" formControlName="tipo_mantenimiento">
-              <option value="" disabled>Selecciona tipo</option>
-              @for (tipo of tiposMantenimiento; track tipo) {
-                <option [value]="tipo">{{ tipo }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="fallaReportada">Falla reportada</label>
-            <textarea id="fallaReportada" formControlName="falla_reportada" rows="2"></textarea>
-          </div>
-
-          <div class="field">
-            <label for="tecnicoAsignado">Técnico asignado</label>
-            <input id="tecnicoAsignado" type="text" formControlName="tecnico_asignado" />
-          </div>
-
-          <div class="field">
-            <label for="costoEstimado">Costo estimado (COP)</label>
-            <input id="costoEstimado" type="number" min="0" formControlName="costo_estimado" />
-          </div>
-
-          <div class="field">
-            <label for="fechaPrevistaFin">Fecha prevista de finalización</label>
-            <input id="fechaPrevistaFin" type="date" formControlName="fecha_prevista_fin" />
-          </div>
+        <div class="field">
+          <label for="fallaReportada">Falla reportada</label>
+          <textarea id="fallaReportada" formControlName="falla_reportada" rows="2"></textarea>
         </div>
-      }
 
-      @if (form.controls.estado_nuevo.value === 'Dado de Baja') {
-        <div class="field" data-testid="baja-fields">
-          <label for="motivoBaja">Motivo de la baja (acta de descarte)</label>
-          <textarea id="motivoBaja" formControlName="motivo_baja" rows="3"></textarea>
+        <div class="field">
+          <label for="tecnicoAsignado">Técnico asignado</label>
+          <input id="tecnicoAsignado" type="text" formControlName="tecnico_asignado" />
         </div>
-      }
 
-      @if (validationError()) {
-        <p class="form-error" role="alert">{{ validationError() }}</p>
-      }
+        <div class="field">
+          <label for="costoEstimado">Costo estimado (COP)</label>
+          <input id="costoEstimado" type="number" min="0" formControlName="costo_estimado" />
+        </div>
 
-      @if (submitError()) {
-        <p class="form-error" role="alert">{{ submitError() }}</p>
-      }
-
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" (click)="close()">Cancelar</button>
-        <button type="submit" class="btn-primary" [disabled]="submitting()">
-          {{ submitting() ? 'Guardando…' : 'Confirmar' }}
-        </button>
+        <div class="field">
+          <label for="fechaPrevistaFin">Fecha prevista de finalización</label>
+          <input id="fechaPrevistaFin" type="date" formControlName="fecha_prevista_fin" />
+        </div>
       </div>
-    </form>
-  </div>
-</div>
+    }
+
+    @if (form.controls.estado_nuevo.value === 'Dado de Baja') {
+      <div class="field" data-testid="baja-fields">
+        <label for="motivoBaja">Motivo de la baja (acta de descarte)</label>
+        <textarea id="motivoBaja" formControlName="motivo_baja" rows="3"></textarea>
+      </div>
+    }
+
+    @if (validationError()) {
+      <p class="form-error" role="alert">{{ validationError() }}</p>
+    }
+
+    @if (submitError()) {
+      <p class="form-error" role="alert">{{ submitError() }}</p>
+    }
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" (click)="close()">Cancelar</button>
+      <button type="submit" class="btn-primary" [disabled]="submitting()">
+        {{ submitting() ? 'Guardando…' : 'Confirmar' }}
+      </button>
+    </div>
+  </form>
+</dialog>

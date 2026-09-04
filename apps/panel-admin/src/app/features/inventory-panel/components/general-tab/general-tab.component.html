@@ -33,7 +33,11 @@
         data-testid="inventory-search"
         aria-label="Buscar por código QR, serial o modelo"
       />
-      <select [formControl]="estadoControl" data-testid="inventory-estado-filter" aria-label="Filtrar por estado">
+      <select
+        [formControl]="estadoControl"
+        data-testid="inventory-estado-filter"
+        aria-label="Todos los estados"
+      >
         <option value="">Todos los estados</option>
         @for (estado of estados; track estado) {
           <option [value]="estado">{{ estado }}</option>

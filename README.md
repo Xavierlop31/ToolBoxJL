@@ -79,3 +79,13 @@ pnpm bdd:lint   # valida sintaxis de features/*.feature
 Ver [`.github/workflows/`](./.github/workflows): `ci.yml` (lint/test/build vía
 Turborepo), `spec-lint.yml` (Spectral sobre `openapi.yaml`), `bdd-lint.yml`
 (validación de `features/*.feature`), `deploy-vercel.yml`, `deploy-railway.yml`.
+
+## Ambiente Productivo
+ToolBoxJL-Prod
+https://toolboxjl-prod.railway.app
+https://tool-box-jl-shell.vercel.app
+
+## Ambiente Staging
+ToolBoxJL-Dev
+https://toolboxjl-dev.railway.app
+https://tool-box-jl-shell-staging.vercel.app

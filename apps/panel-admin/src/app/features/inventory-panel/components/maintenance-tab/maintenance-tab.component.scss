@@ -63,7 +63,9 @@ output {
 
 .badge-mantenimiento {
   background: #ffe8c2;
-  color: #a2610a;
+  /* #8a5209 sobre #ffe8c2 = ratio 5.34:1 (WCAG AA, css:S7924) — antes #a2610a
+     daba 4.13:1, insuficiente para texto normal. */
+  color: #8a5209;
 }
 
 .badge-baja {

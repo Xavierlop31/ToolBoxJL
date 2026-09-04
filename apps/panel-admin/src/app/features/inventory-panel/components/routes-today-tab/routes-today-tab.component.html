@@ -25,9 +25,12 @@
 
             <div class="repartidor-progress">
               <span class="paradas-total">{{ repartidor.total_paradas }} paradas</span>
-              <div class="progress-bar" role="progressbar" [attr.aria-valuenow]="repartidor.porcentaje_avance">
-                <div class="progress-fill" [style.width.%]="repartidor.porcentaje_avance"></div>
-              </div>
+              <progress
+                class="progress-bar"
+                [value]="repartidor.porcentaje_avance"
+                max="100"
+                [attr.aria-label]="'Avance de ruta: ' + repartidor.porcentaje_avance + '%'"
+              ></progress>
               <span class="progress-pct">{{ repartidor.porcentaje_avance }}%</span>
             </div>
 

@@ -76,16 +76,34 @@ output {
   color: var(--tbjl-color-neutral-500, #757588);
 }
 
-.progress-bar {
+/* `<progress>` nativo (Web:S6819) reestilado para conservar el look de la
+   barra anterior (`div[role="progressbar"]` + relleno) — track gris claro,
+   relleno azul primario, extremos redondeados, 8px de alto. */
+progress.progress-bar {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   flex: 1;
   height: 8px;
-  background: var(--tbjl-color-neutral-100, #eef4fb);
+  border: none;
   border-radius: 999px;
   overflow: hidden;
+  background: var(--tbjl-color-neutral-100, #eef4fb);
+  color: var(--tbjl-color-primary-500, #141cdb); /* fallback IE/Edge legacy */
 }
 
-.progress-fill {
-  height: 100%;
+progress.progress-bar::-webkit-progress-bar {
+  background: var(--tbjl-color-neutral-100, #eef4fb);
+  border-radius: 999px;
+}
+
+progress.progress-bar::-webkit-progress-value {
+  background: var(--tbjl-color-primary-500, #141cdb);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+progress.progress-bar::-moz-progress-bar {
   background: var(--tbjl-color-primary-500, #141cdb);
   border-radius: 999px;
 }
@@ -110,7 +128,9 @@ output {
 
 .badge-en-progreso {
   background: #ffe8c2;
-  color: #a2610a;
+  /* #8a5209 sobre #ffe8c2 = ratio 5.34:1 (WCAG AA, css:S7924) — antes #a2610a
+     daba 4.13:1, insuficiente para texto normal. */
+  color: #8a5209;
 }
 
 .badge-completada {
