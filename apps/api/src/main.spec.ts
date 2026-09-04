@@ -45,7 +45,7 @@ describe("main.ts (bootstrap)", () => {
 
       expect(createMock).toHaveBeenCalledWith(expect.anything(), { rawBody: true });
       expect(mockApp.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
-      expect(mockApp.enableCors).toHaveBeenCalledWith();
+      expect(mockApp.enableCors).toHaveBeenCalledWith({ exposedHeaders: ["X-Total-Count"] });
       expect(mockApp.useGlobalPipes).toHaveBeenCalledWith(
         expect.objectContaining({ constructor: expect.objectContaining({ name: "ValidationPipe" }) }),
       );
