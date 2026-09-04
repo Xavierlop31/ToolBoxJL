@@ -29,7 +29,15 @@ async function bootstrap() {
   // esta API es el JWT Bearer de Supabase, no cookies — no hace falta `credentials: true`
   // ni restringir por origin, y evita romper cada vez que aparece un nuevo preview de
   // Vercel por PR (ya pasó varias veces hoy con otros hardcodeos de dominio).
-  app.enableCors();
+  //
+  // *** GAP DE PRODUCCIÓN DETECTADO 2026-09-04 ***: `X-Total-Count` (HU-12.1,
+  // paginación del catálogo) no estaba en `exposedHeaders`. Por el Fetch
+  // spec, un response cross-origin (Vercel → Railway) solo expone a
+  // JavaScript los headers "CORS-safelisted" salvo que el servidor los liste
+  // acá — `X-Total-Count` no es uno de ellos. `catalog.service.ts` caía al
+  // fallback `response.body?.length` (=pageSize=6), por lo que el portal
+  // mostraba solo 6 herramientas aunque hubiera 100 en `tool_models`.
+  app.enableCors({ exposedHeaders: ["X-Total-Count"] });
 
   // Valida los DTOs de request (class-validator) contra el contrato de
   // openapi.yaml antes de llegar a los controllers/use cases — cualquier
