@@ -1,5 +1,10 @@
-import { IsEnum, IsOptional, IsString, IsUUID, IsDateString } from "class-validator";
+import { IsEnum, IsOptional, IsString, IsUUID, IsDateString, MaxLength } from "class-validator";
+import { SanitizarTextoLibre } from "../../../../shared/sanitize.util";
 
+/**
+ * `direccion_entrega` es texto libre (Issue #187): `@MaxLength` +
+ * `@SanitizarTextoLibre()`.
+ */
 export class CotizarOrdenDto {
   @IsUUID()
   modelo_id!: string;
@@ -17,6 +22,8 @@ export class CotizarOrdenDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(300)
+  @SanitizarTextoLibre()
   direccion_entrega?: string;
 
   @IsUUID()
