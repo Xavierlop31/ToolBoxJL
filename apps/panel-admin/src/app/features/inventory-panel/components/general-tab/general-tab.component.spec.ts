@@ -3,7 +3,11 @@ import { of } from 'rxjs';
 
 import { GeneralTabComponent } from './general-tab.component';
 import { InventoryService } from '../../../../core/inventory/inventory.service';
-import { ListToolUnitsResult, ToolUnitListItem } from '../../../../core/models/inventory.models';
+import {
+  InventoryMetrics,
+  ListToolUnitsResult,
+  ToolUnitListItem,
+} from '../../../../core/models/inventory.models';
 
 describe('GeneralTabComponent', () => {
   let fixture: ComponentFixture<GeneralTabComponent>;
@@ -29,15 +33,25 @@ describe('GeneralTabComponent', () => {
     pageSize: 20,
   };
 
+  const mockMetrics: InventoryMetrics = {
+    total_unidades: 120,
+    operativas: 80,
+    en_alquiler: 30,
+    en_mantenimiento_o_baja: 10,
+  };
+
   beforeEach(() => {
     inventorySpy = jasmine.createSpyObj('InventoryService', [
       'listUnits',
       'listModelOptions',
+      'getMetrics',
       'getUnitById',
+      'getUnitHistory',
       'updateUnitStatus',
       'createUnit',
     ]);
     inventorySpy.listUnits.and.returnValue(of(mockResult));
+    inventorySpy.getMetrics.and.returnValue(of(mockMetrics));
 
     TestBed.configureTestingModule({
       imports: [GeneralTabComponent],
@@ -46,6 +60,14 @@ describe('GeneralTabComponent', () => {
 
     fixture = TestBed.createComponent(GeneralTabComponent);
     component = fixture.componentInstance;
+  });
+
+  it('HU-13.1: carga las 4 tarjetas de KPIs al iniciar', () => {
+    fixture.detectChanges();
+
+    expect(inventorySpy.getMetrics).toHaveBeenCalled();
+    expect(component.metrics()).toEqual(mockMetrics);
+    expect(component.loadingMetrics()).toBe(false);
   });
 
   it('HU-13.1: carga la tabla al iniciar sin filtros', () => {
@@ -104,38 +126,35 @@ describe('GeneralTabComponent', () => {
 
   it(
     'HU-13.2: NO cierra el modal al registrar la unidad — sigue montado mostrando la ' +
-      'vista previa imprimible del QR hasta que el usuario lo cierra explícitamente',
+      'vista previa imprimible del QR hasta que el usuario lo cierra explícitamente, y refresca tabla + KPIs',
     () => {
       fixture.detectChanges();
       inventorySpy.listUnits.calls.reset();
+      inventorySpy.getMetrics.calls.reset();
 
       component.openRegisterModal();
       component.onUnitRegistered();
 
       expect(component.showRegisterModal()).toBe(true);
       expect(inventorySpy.listUnits).toHaveBeenCalled();
+      expect(inventorySpy.getMetrics).toHaveBeenCalled();
     },
   );
 
-  it('HU-13.1: abre el modal de "Ver QR" con el id de la unidad', () => {
+  it('Issue #184: seleccionar una fila actualiza el panel docked de detalle', () => {
     fixture.detectChanges();
 
-    component.verQr(mockUnit);
+    expect(component.selectedUnit()).toBeNull();
 
-    expect(component.detailModal()).toEqual({ unitId: 'u1', mode: 'qr' });
+    component.selectUnit(mockUnit);
+
+    expect(component.selectedUnit()).toEqual(mockUnit);
   });
 
-  it('HU-13.1: abre el modal de "Historial" con el id de la unidad', () => {
-    fixture.detectChanges();
-
-    component.verHistorial(mockUnit);
-
-    expect(component.detailModal()).toEqual({ unitId: 'u1', mode: 'historial' });
-  });
-
-  it('HU-13.3: abre el modal de "Cambiar Estado" con la unidad seleccionada y refresca al actualizar', () => {
+  it('HU-13.3: abre el modal de "Cambiar Estado" con la unidad seleccionada y refresca la tabla + KPIs al actualizar', () => {
     fixture.detectChanges();
     inventorySpy.listUnits.calls.reset();
+    inventorySpy.getMetrics.calls.reset();
 
     component.cambiarEstado(mockUnit);
     expect(component.statusChangeUnit()).toEqual(mockUnit);
@@ -143,6 +162,7 @@ describe('GeneralTabComponent', () => {
     component.onStatusUpdated();
     expect(component.statusChangeUnit()).toBeNull();
     expect(inventorySpy.listUnits).toHaveBeenCalled();
+    expect(inventorySpy.getMetrics).toHaveBeenCalled();
   });
 
   it('pagina hacia adelante y hacia atrás dentro del rango válido', () => {
