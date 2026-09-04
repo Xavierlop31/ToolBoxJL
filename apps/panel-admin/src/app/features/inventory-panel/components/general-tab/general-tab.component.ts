@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnDestroy, OnInit, Output, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
@@ -6,24 +6,35 @@ import { InventoryService } from '../../../../core/inventory/inventory.service';
 import {
   ESTADOS_VISUALIZACION,
   EstadoVisualizacion,
-  ToolUnit,
+  InventoryMetrics,
   ToolUnitListItem,
+  estadoVisualizacionBadgeClass,
 } from '../../../../core/models/inventory.models';
 import { RegisterUnitModalComponent } from '../register-unit-modal/register-unit-modal.component';
 import { StatusChangeModalComponent } from '../status-change-modal/status-change-modal.component';
-import {
-  UnitDetailModalComponent,
-  UnitDetailModalMode,
-} from '../unit-detail-modal/unit-detail-modal.component';
+import { UnitDetailPanelComponent } from '../unit-detail-panel/unit-detail-panel.component';
 
 const PAGE_SIZE = 20;
 
 /**
- * Pestaña "Inventario General" del panel de Gestión de Inventario QR
- * (HU-13.1, HU-13.2, HU-13.3 — Issues #147, #148, #149) —
- * features/13_gestion_inventario_qr.feature: "Filtros y búsqueda en tabla
- * de unidades físicas", "Apertura del formulario de registro desde el
- * panel" y "Registro exitoso y generación de QR imprimible".
+ * Página "Almacén" (`/admin/almacen`, antes pestaña "Inventario General"
+ * de `/admin/inventario`) — HU-13.1, HU-13.2, HU-13.3 (Issues #147, #148,
+ * #149) — features/13_gestion_inventario_qr.feature: "Visualización de
+ * tarjetas de métricas de inventario", "Filtros y búsqueda en tabla de
+ * unidades físicas", "Apertura del formulario de registro desde el panel"
+ * y "Registro exitoso y generación de QR imprimible".
+ *
+ * Issue #184 (fidelidad visual contra el mockup Stitch "Gestión Inventario
+ * - Rediseño Admin"): esta página ahora se monta DIRECTAMENTE en la ruta
+ * (ya no hay un `InventoryPanelComponent` contenedor con pestañas ni
+ * tarjetas de KPIs por separado) — las 4 tarjetas de métricas de HU-13.1
+ * viven acá arriba de la tabla, porque es la vista de inventario general
+ * donde tienen más sentido (el nuevo Dashboard consolidado de HU-15.1 no
+ * las duplica, son métricas de ALCANCE distinto). El panel de detalle
+ * (`UnitDetailPanelComponent`) es ahora un panel DOCKED permanente al
+ * costado de la tabla, no un modal — fusiona los 2 modos viejos ("Ver QR"
+ * / "Historial") en una sola vista que se actualiza al seleccionar una
+ * fila.
  *
  * `GET /inventory/units` (openapi.yaml líneas 339-434) con `q`/`estado`/
  * `page`/`pageSize`, búsqueda con debounce de 300ms para el filtrado
@@ -37,7 +48,7 @@ const PAGE_SIZE = 20;
     ReactiveFormsModule,
     RegisterUnitModalComponent,
     StatusChangeModalComponent,
-    UnitDetailModalComponent,
+    UnitDetailPanelComponent,
   ],
   templateUrl: './general-tab.component.html',
   styleUrl: './general-tab.component.scss',
@@ -46,12 +57,12 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
   private readonly inventory = inject(InventoryService);
   private readonly destroy$ = new Subject<void>();
 
-  /** El panel contenedor refresca las tarjetas de KPIs tras un alta o un cambio de estado. */
-  @Output() readonly dataChanged = new EventEmitter<void>();
-
   readonly estados = ESTADOS_VISUALIZACION;
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly estadoControl = new FormControl<EstadoVisualizacion | ''>('', { nonNullable: true });
+
+  readonly loadingMetrics = signal(true);
+  readonly metrics = signal<InventoryMetrics | null>(null);
 
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -62,10 +73,12 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
 
   readonly showRegisterModal = signal(false);
 
-  readonly detailModal = signal<{ unitId: string; mode: UnitDetailModalMode } | null>(null);
-  readonly statusChangeUnit = signal<ToolUnit | null>(null);
+  /** Fila seleccionada de la tabla — pilotea el panel docked de detalle. */
+  readonly selectedUnit = signal<ToolUnitListItem | null>(null);
+  readonly statusChangeUnit = signal<ToolUnitListItem | null>(null);
 
   ngOnInit(): void {
+    this.loadMetrics();
     this.load();
 
     this.searchControl.valueChanges
@@ -84,6 +97,19 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  loadMetrics(): void {
+    this.loadingMetrics.set(true);
+    this.inventory.getMetrics().subscribe({
+      next: (metrics) => {
+        this.metrics.set(metrics);
+        this.loadingMetrics.set(false);
+      },
+      error: () => {
+        this.loadingMetrics.set(false);
+      },
+    });
   }
 
   load(): void {
@@ -136,15 +162,12 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
     // escenario "Registro exitoso y generación de QR imprimible").
     this.page.set(1);
     this.load();
-    this.dataChanged.emit();
+    this.loadMetrics();
   }
 
-  verQr(unit: ToolUnitListItem): void {
-    this.detailModal.set({ unitId: unit.id, mode: 'qr' });
-  }
-
-  verHistorial(unit: ToolUnitListItem): void {
-    this.detailModal.set({ unitId: unit.id, mode: 'historial' });
+  /** Selecciona una fila — pilotea el panel docked de detalle (reemplaza a los viejos "Ver QR"/"Historial" con modal). */
+  selectUnit(unit: ToolUnitListItem): void {
+    this.selectedUnit.set(unit);
   }
 
   cambiarEstado(unit: ToolUnitListItem): void {
@@ -154,19 +177,10 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
   onStatusUpdated(): void {
     this.statusChangeUnit.set(null);
     this.load();
-    this.dataChanged.emit();
+    this.loadMetrics();
   }
 
   estadoBadgeClass(estado: EstadoVisualizacion): string {
-    switch (estado) {
-      case 'Operativo':
-        return 'badge-operativo';
-      case 'En Alquiler':
-        return 'badge-en-alquiler';
-      case 'En Mantenimiento':
-        return 'badge-en-mantenimiento';
-      case 'Dado de Baja':
-        return 'badge-dado-de-baja';
-    }
+    return estadoVisualizacionBadgeClass(estado);
   }
 }

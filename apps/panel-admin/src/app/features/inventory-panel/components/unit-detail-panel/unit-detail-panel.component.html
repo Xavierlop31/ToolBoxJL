@@ -1,0 +1,112 @@
+<section class="detail-panel" data-testid="unit-detail-panel" aria-label="Detalle de Unidad">
+  @if (!unit) {
+    <div class="detail-empty" data-testid="unit-detail-empty">
+      <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+      <p>Seleccioná una unidad para ver su detalle.</p>
+    </div>
+  } @else {
+    <header class="detail-header">
+      <h2>Detalle de Unidad</h2>
+      <span class="badge" [class]="estadoBadgeClass()" data-testid="unit-detail-estado">
+        {{ unit.estado_visualizacion }}
+      </span>
+    </header>
+
+    <div class="detail-body">
+      @if (loading()) {
+        <output>Cargando detalle…</output>
+      }
+
+      @if (errorMessage()) {
+        <p class="form-error" role="alert">{{ errorMessage() }}</p>
+      }
+
+      <div class="detail-media">
+        <img
+          [src]="(detail() ?? unit).qr_code_url"
+          alt="Código QR de la unidad"
+          class="qr-image"
+          data-testid="unit-detail-qr"
+        />
+        <div class="photo-placeholder" aria-hidden="true">
+          <span class="material-symbols-outlined">photo_camera</span>
+        </div>
+      </div>
+      <p class="qr-serial" data-testid="unit-detail-serial">{{ unit.numero_serie }}</p>
+
+      <dl class="detail-meta" data-testid="unit-detail-meta">
+        <div>
+          <dt>Modelo</dt>
+          <dd>{{ unit.modelo_nombre }}</dd>
+        </div>
+        <div>
+          <dt>Categoría</dt>
+          <dd>{{ unit.modelo_categoria }}</dd>
+        </div>
+        <div>
+          <dt>Ubicación</dt>
+          <dd>{{ (detail() ?? unit).ubicacion_bodega || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Fecha Ingreso</dt>
+          <dd>{{ unit.fecha_ingreso | date: 'mediumDate' }}</dd>
+        </div>
+      </dl>
+
+      <h3 class="timeline-title">Hoja de Vida</h3>
+      <ol class="timeline" data-testid="unit-detail-timeline">
+        @for (evento of history(); track evento.id) {
+          <li class="timeline-entry" data-testid="timeline-entry">
+            <span class="timeline-dot" aria-hidden="true"></span>
+            <div class="timeline-content">
+              <div class="timeline-entry-header">
+                <span class="timeline-transition">
+                  {{ evento.estado_anterior ?? 'Alta inicial' }} → <strong>{{ evento.estado_nuevo }}</strong>
+                </span>
+                <time>{{ evento.created_at | date: 'medium' }}</time>
+              </div>
+              <p class="timeline-autor">Registrado por {{ evento.autor_id }}</p>
+
+              @if (evento.tipo_mantenimiento || evento.falla_reportada || evento.tecnico_asignado || evento.costo_estimado || evento.fecha_prevista_fin) {
+                <dl class="timeline-detail">
+                  @if (evento.tipo_mantenimiento) {
+                    <div><dt>Tipo</dt><dd>{{ evento.tipo_mantenimiento }}</dd></div>
+                  }
+                  @if (evento.falla_reportada) {
+                    <div><dt>Falla reportada</dt><dd>{{ evento.falla_reportada }}</dd></div>
+                  }
+                  @if (evento.tecnico_asignado) {
+                    <div><dt>Técnico asignado</dt><dd>{{ evento.tecnico_asignado }}</dd></div>
+                  }
+                  @if (evento.costo_estimado) {
+                    <div><dt>Costo estimado</dt><dd>{{ evento.costo_estimado }} COP</dd></div>
+                  }
+                  @if (evento.fecha_prevista_fin) {
+                    <div><dt>Fecha prevista de fin</dt><dd>{{ evento.fecha_prevista_fin }}</dd></div>
+                  }
+                </dl>
+              }
+
+              @if (evento.motivo_baja) {
+                <p class="timeline-motivo-baja"><strong>Motivo de baja:</strong> {{ evento.motivo_baja }}</p>
+              }
+            </div>
+          </li>
+        } @empty {
+          @if (!loading()) {
+            <li class="timeline-empty">Esta unidad todavía no tiene eventos registrados en su hoja de vida.</li>
+          }
+        }
+      </ol>
+    </div>
+
+    <footer class="detail-footer">
+      <button type="button" class="btn-outline" disabled title="No disponible en este sprint">
+        Editar
+      </button>
+      <button type="button" class="btn-outline" disabled title="No disponible en este sprint">
+        Asignar
+      </button>
+    </footer>
+  }
+</section>
