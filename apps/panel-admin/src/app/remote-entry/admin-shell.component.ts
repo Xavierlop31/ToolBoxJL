@@ -90,14 +90,30 @@ interface AdminNavItem {
     </div>
   `,
   styles: `
+    /*
+     * Layout tipo mockup Stitch: "h-full overflow-hidden" en el shell + una
+     * sola región con scroll interno (.admin-content) — NO usamos
+     * position:sticky/fixed para el sidenav/topbar (a diferencia del subnav
+     * viejo). Motivo (Issue #184, hallado vía Playwright-BDD): este shell
+     * asume un navbar externo de 64px que solo existe cuando el remote corre
+     * federado bajo apps/shell (.navbar de app.component.ts) — en el runner
+     * standalone de e2e-bdd (apps/panel-admin/src/app/app.component.html,
+     * solo <router-outlet>) ese navbar no existe. Con sticky/fixed, apenas la
+     * página hacía cualquier scroll el topbar "saltaba" a top:64px y quedaba
+     * flotando sobre el contenido, interceptando clics (repartidor-toggle en
+     * "/rutas", HU-13.4). Con scroll contenido en .admin-content en vez de
+     * en el documento, el header y el sidenav nunca se mueven — no hay nada
+     * que puedan tapar.
+     */
     .admin-shell {
       display: flex;
-      min-height: calc(100vh - 64px);
+      height: calc(100vh - 64px);
       background-color: var(--tbjl-color-background, #f5faff);
       font-family: var(--tbjl-font-family, sans-serif);
+      overflow: hidden;
     }
 
-    /* --- SideNavBar oscuro fijo (mockup Stitch: bg-deep-navy, w-64) --- */
+    /* --- SideNavBar oscuro (mockup Stitch: bg-deep-navy, w-64) --- */
     .admin-sidenav {
       display: none;
 
@@ -106,12 +122,8 @@ interface AdminNavItem {
         flex-direction: column;
         width: 256px;
         min-width: 256px;
-        position: fixed;
-        left: 0;
-        top: 64px;
-        bottom: 0;
+        height: 100%;
         background: var(--tbjl-color-primary-700, #0b0e3d);
-        z-index: 40;
         padding: 16px 0;
         overflow-y: auto;
       }
@@ -197,10 +209,8 @@ interface AdminNavItem {
       display: flex;
       flex-direction: column;
       min-width: 0;
-
-      @media (min-width: 768px) {
-        margin-left: 256px;
-      }
+      height: 100%;
+      overflow: hidden;
     }
 
     .admin-topbar {
@@ -209,12 +219,10 @@ interface AdminNavItem {
       justify-content: space-between;
       gap: 16px;
       height: 64px;
+      flex-shrink: 0;
       padding: 0 24px;
       background: var(--tbjl-color-card, #ffffff);
       border-bottom: 1px solid var(--tbjl-color-border, #dce3ea);
-      position: sticky;
-      top: 64px;
-      z-index: 30;
     }
 
     .admin-topbar h1 {
@@ -264,10 +272,13 @@ interface AdminNavItem {
 
     .admin-content {
       flex: 1;
-      max-width: 1600px;
-      width: 100%;
-      margin: 0 auto;
+      overflow-y: auto;
       padding: 24px;
+    }
+
+    .admin-content > * {
+      max-width: 1600px;
+      margin: 0 auto;
     }
   `,
 })

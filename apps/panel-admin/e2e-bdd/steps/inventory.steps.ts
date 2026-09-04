@@ -467,10 +467,10 @@ Then(
 Then('el evento se añade a la hoja de vida de la unidad.', async () => {
   // El backend crea la entrada de tool_unit_status_log en la misma llamada
   // PATCH /inventory/units/{id}/status ya verificada en el step anterior
-  // (mockUpdateStatus) — el contrato no expone en este sprint una vista de
-  // "hoja de vida" completa por separado (ver la nota en
-  // UnitDetailModalComponent), así que no hay una aserción de UI adicional
-  // posible acá.
+  // (mockUpdateStatus). La hoja de vida completa SÍ se puede consultar
+  // (GET /inventory/units/{id}/history, ver UnitDetailPanelComponent), pero
+  // este escenario no navega a esa vista — no hay una aserción de UI
+  // adicional posible acá sin duplicar el smoke test de HU-13.1.
 });
 
 // --- HU-13.3: retorno a estado operativo o baja definitiva ---
