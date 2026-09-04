@@ -38,6 +38,24 @@ export const ESTADOS_VISUALIZACION = [
 
 export type EstadoVisualizacion = (typeof ESTADOS_VISUALIZACION)[number];
 
+/**
+ * Clase CSS de badge por estado DE VISUALIZACIÓN — compartida entre
+ * `GeneralTabComponent` (tabla de "Almacén") y `UnitDetailPanelComponent`
+ * (panel docked de detalle, Issue #184) para no duplicar el mapeo.
+ */
+export function estadoVisualizacionBadgeClass(estado: EstadoVisualizacion): string {
+  switch (estado) {
+    case 'Operativo':
+      return 'badge-operativo';
+    case 'En Alquiler':
+      return 'badge-en-alquiler';
+    case 'En Mantenimiento':
+      return 'badge-en-mantenimiento';
+    case 'Dado de Baja':
+      return 'badge-dado-de-baja';
+  }
+}
+
 export const TIPOS_MANTENIMIENTO = ['Preventivo', 'Correctivo'] as const;
 
 export type TipoMantenimiento = (typeof TIPOS_MANTENIMIENTO)[number];
