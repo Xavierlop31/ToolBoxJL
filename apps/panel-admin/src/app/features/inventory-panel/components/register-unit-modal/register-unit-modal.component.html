@@ -1,3 +1,12 @@
+<!--
+  El (click) de acá abajo es el cierre "clickear afuera del panel" (mouse-only,
+  ver onBackdropClick — geometría contra el propio <dialog>). No hace falta un
+  keyup/keydown equivalente propio ni tabindex: el <dialog> nativo abierto con
+  showModal() ya da foco/focus-trap automático y su Escape nativo dispara
+  (cancel), que cae en el mismo close() de acá abajo — el requisito real de
+  accesibilidad (cerrar por teclado) ya está cubierto sin duplicar lógica.
+-->
+<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
 <dialog
   #dialogEl
   class="modal-panel"
