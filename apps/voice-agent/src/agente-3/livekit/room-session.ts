@@ -156,36 +156,17 @@ export async function manejarSesionDeVoz(deps: RoomSessionDeps, roomName: string
       );
   }
 
-  const jwt = await resolverJwtConReintentos(room, logger);
-
-  const audioSource = new AudioSource(SAMPLE_RATE_PCM, 1);
-  const localTrack = LocalAudioTrack.createAudioTrack("agente-3-voz", audioSource);
-  await room.localParticipant?.publishTrack(
-    localTrack,
-    new TrackPublishOptions({ source: TrackSource.SOURCE_MICROPHONE }),
-  );
-
   /**
-   * Saludo proactivo (HU-14.1): se sintetiza y reproduce ACÁ, después de
-   * publicar el track del bot y antes de escuchar `RoomEvent.TrackSubscribed`
-   * — mismo patrón síntesis+captureFrame que `manejarTurno`, pero sin pasar
-   * por STT/Claude (no es una respuesta a nada que haya dicho el cliente).
-   * No propaga si falla (ej. ElevenLabs caído): el saludo es una mejora de
-   * experiencia, no debe tumbar el arranque de la sesión de voz.
+   * `jwt`/`audioSource` se resuelven más abajo (reintentos de JWT + síntesis
+   * del saludo, ambos con latencia real de red) pero SE DECLARAN ACÁ y se
+   * asignan por reasignación (no `const` en su punto de uso original) para
+   * que `manejarTurno`/`reproducirSaludoDeBienvenida` puedan cerrarlas por
+   * referencia desde ANTES de que estén listas — necesario porque el
+   * listener de `RoomEvent.TrackSubscribed` se registra a continuación,
+   * antes de esos `await`s (ver el comentario grande más abajo sobre por qué).
    */
-  async function reproducirSaludoDeBienvenida(): Promise<void> {
-    try {
-      const audioPcm = await deps.textToSpeech.sintetizar(MENSAJE_BIENVENIDA);
-      const samplesSaludo = bufferPcmAInt16Array(audioPcm);
-      const frameSaludo = new AudioFrame(samplesSaludo, SAMPLE_RATE_PCM, 1, samplesSaludo.length);
-      await audioSource.captureFrame(frameSaludo);
-      emitirEventoDeVoz(construirEventoSaludo());
-      logger.log(`[Agente 3] Sala "${roomName}": saludo de bienvenida reproducido.`);
-    } catch (error) {
-      logger.error(`[Agente 3] Error reproduciendo el saludo de bienvenida en sala "${roomName}":`, error);
-    }
-  }
-  await reproducirSaludoDeBienvenida();
+  let jwt!: string;
+  let audioSource!: AudioSource;
 
   let mensajes: Anthropic.MessageParam[] = [];
   const detector = new TurnBoundaryDetector();
@@ -288,7 +269,56 @@ export async function manejarSesionDeVoz(deps: RoomSessionDeps, roomName: string
     }
     void procesarAudioDeParticipante(track);
   };
+  /**
+   * *** FIX (bug de producción reportado por el Arquitecto 2026-09-04):
+   * "el conserje se queda pensando después del saludo" ***. El listener se
+   * registra ACÁ, antes de `resolverJwtConReintentos`/el saludo — antes,
+   * se registraba después de esos dos `await` (reintentos de JWT con
+   * backoff de 300ms + una llamada de red a ElevenLabs para sintetizar el
+   * saludo, varios segundos en total). LiveKit auto-suscribe al bot a la
+   * pista de audio del cliente muy poco después de `room.connect()`, y
+   * `RoomEvent.TrackSubscribed` se emite UNA sola vez: si ya se había
+   * disparado durante esos segundos de setup, se perdía para siempre — el
+   * bot terminaba conectado, con el saludo reproducido, pero sin ningún
+   * listener activo que arrancara a leer el audio del cliente. Confirmado
+   * en los logs reales de Railway del Agente 3: tras "saludo de bienvenida
+   * reproducido" no aparece NINGÚN log de transcripción/STT/LLM hasta que
+   * el cliente se va — exactamente ese silencio.
+   */
   room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
+
+  jwt = await resolverJwtConReintentos(room, logger);
+
+  audioSource = new AudioSource(SAMPLE_RATE_PCM, 1);
+  const localTrack = LocalAudioTrack.createAudioTrack("agente-3-voz", audioSource);
+  await room.localParticipant?.publishTrack(
+    localTrack,
+    new TrackPublishOptions({ source: TrackSource.SOURCE_MICROPHONE }),
+  );
+
+  /**
+   * Saludo proactivo (HU-14.1): se sintetiza y reproduce ACÁ, después de
+   * publicar el track del bot — mismo patrón síntesis+captureFrame que
+   * `manejarTurno`, pero sin pasar por STT/Claude (no es una respuesta a
+   * nada que haya dicho el cliente). No propaga si falla (ej. ElevenLabs
+   * caído): el saludo es una mejora de experiencia, no debe tumbar el
+   * arranque de la sesión de voz. El listener de `TrackSubscribed` ya está
+   * activo desde antes (ver el comentario de arriba), así que esta síntesis
+   * puede demorar lo que demore sin riesgo de perderse el audio del cliente.
+   */
+  async function reproducirSaludoDeBienvenida(): Promise<void> {
+    try {
+      const audioPcm = await deps.textToSpeech.sintetizar(MENSAJE_BIENVENIDA);
+      const samplesSaludo = bufferPcmAInt16Array(audioPcm);
+      const frameSaludo = new AudioFrame(samplesSaludo, SAMPLE_RATE_PCM, 1, samplesSaludo.length);
+      await audioSource.captureFrame(frameSaludo);
+      emitirEventoDeVoz(construirEventoSaludo());
+      logger.log(`[Agente 3] Sala "${roomName}": saludo de bienvenida reproducido.`);
+    } catch (error) {
+      logger.error(`[Agente 3] Error reproduciendo el saludo de bienvenida en sala "${roomName}":`, error);
+    }
+  }
+  await reproducirSaludoDeBienvenida();
 
   return async () => {
     room.off(RoomEvent.TrackSubscribed, onTrackSubscribed);

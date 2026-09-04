@@ -9,7 +9,7 @@ import { ActiveOrdersComponent } from '../active-orders/active-orders.component'
 
 import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
 
-export const PAGE_SIZES = [6, 12, 24] as const;
+export const PAGE_SIZES = [8, 12, 24] as const;
 
 /**
  * Búsqueda pública de catálogo — RF-1.1 (visibilidad del catálogo),
@@ -36,7 +36,7 @@ export class CatalogSearchComponent implements OnInit {
   // Paginación (HU-12.1) — page 1-based, pageSize uno de PAGE_SIZES.
   readonly pageSizes = PAGE_SIZES;
   readonly page = signal(1);
-  readonly pageSize = signal<(typeof PAGE_SIZES)[number]>(6);
+  readonly pageSize = signal<(typeof PAGE_SIZES)[number]>(8);
   readonly total = signal(0);
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 

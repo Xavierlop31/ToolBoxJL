@@ -256,7 +256,7 @@ paths:
           description: "1-based. Si se omite (junto con pageSize), no pagina."
         - name: pageSize
           in: query
-          schema: { type: integer, enum: [6, 12, 24] }
+          schema: { type: integer, enum: [8, 12, 24] }
       responses:
         "200":
           description: >
