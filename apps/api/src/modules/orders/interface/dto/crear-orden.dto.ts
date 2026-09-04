@@ -1,6 +1,11 @@
-import { IsEnum, IsOptional, IsString, IsUUID, IsDateString } from "class-validator";
+import { IsEnum, IsOptional, IsString, IsUUID, IsDateString, MaxLength } from "class-validator";
 import type { OrderInput, TipoOrden, ModoRetorno } from "@toolboxjl/shared-types";
+import { SanitizarTextoLibre } from "../../../../shared/sanitize.util";
 
+/**
+ * `direccion_entrega` es texto libre (Issue #187): `@MaxLength` +
+ * `@SanitizarTextoLibre()`.
+ */
 export class CrearOrdenDto implements OrderInput {
   @IsUUID()
   modelo_id!: string;
@@ -20,6 +25,8 @@ export class CrearOrdenDto implements OrderInput {
   return_mode!: ModoRetorno;
 
   @IsString()
+  @MaxLength(300)
+  @SanitizarTextoLibre()
   direccion_entrega!: string;
 
   @IsUUID()

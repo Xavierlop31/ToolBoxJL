@@ -1,23 +1,23 @@
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(11, 14, 61, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 24px;
-}
-
+/* `<dialog>` nativo (Web:S6819) en lugar del viejo par de `<div>`s
+   backdrop `role="button"` + panel `role="dialog"`. `showModal()` la centra
+   sola (UA stylesheet de `dialog:modal`: `position:fixed; inset:0; margin:
+   auto;`) — acá solo reseteamos el borde por defecto y el ancho, calculado
+   para dejar el mismo respiro de 24px por lado que tenía el viejo
+   `.modal-backdrop { padding: 24px }` en viewports angostos. */
 .modal-panel {
+  border: none;
   background: var(--tbjl-color-card, #ffffff);
   border-radius: var(--tbjl-radius-lg, 0.75rem);
   box-shadow: var(--tbjl-shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.2));
   padding: 28px;
-  width: 100%;
+  width: calc(100% - 48px);
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
+
+  &::backdrop {
+    background: rgba(11, 14, 61, 0.55);
+  }
 }
 
 h2 {

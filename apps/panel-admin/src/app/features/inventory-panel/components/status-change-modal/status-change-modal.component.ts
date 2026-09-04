@@ -1,4 +1,15 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  ViewChild,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 
 import { InventoryService } from '../../../../core/inventory/inventory.service';
@@ -36,12 +47,21 @@ import {
   templateUrl: './status-change-modal.component.html',
   styleUrl: './status-change-modal.component.scss',
 })
-export class StatusChangeModalComponent implements OnInit {
+export class StatusChangeModalComponent implements OnInit, AfterViewInit {
   private readonly inventory = inject(InventoryService);
   private readonly formBuilder = inject(FormBuilder);
 
   @Input({ required: true }) unit!: ToolUnit;
   @Input() presetEstado: EstadoUnidad | null = null;
+
+  /**
+   * `<dialog>` nativo (Web:S6819 — reemplaza el viejo backdrop
+   * `role="button"` + panel `role="dialog"` sobre `<div>`s). Se abre en
+   * `ngAfterViewInit` vía `showModal()`, que además da focus trap y cierre
+   * con Escape gratis; `close()` es el único punto de cierre (botones,
+   * click fuera del panel y Escape vía `(cancel)`).
+   */
+  @ViewChild('dialogEl') private readonly dialogEl!: ElementRef<HTMLDialogElement>;
 
   @Output() readonly closed = new EventEmitter<void>();
   /** Emitido tras el cambio exitoso — el panel/tab refresca listas y KPIs. */
@@ -63,6 +83,10 @@ export class StatusChangeModalComponent implements OnInit {
     fecha_prevista_fin: '',
     motivo_baja: '',
   });
+
+  ngAfterViewInit(): void {
+    this.dialogEl.nativeElement.showModal();
+  }
 
   ngOnInit(): void {
     // El valor inicial del select depende de `@Input() unit`/`presetEstado`,
@@ -130,7 +154,24 @@ export class StatusChangeModalComponent implements OnInit {
     });
   }
 
+  /** Click en el `<dialog>` fuera del área visible del panel (equivalente al
+   * viejo backdrop `role="button"`) — geometría en vez de `stopPropagation`
+   * porque el contenido ya no tiene un wrapper interno separado. */
+  onBackdropClick(event: MouseEvent): void {
+    const rect = this.dialogEl.nativeElement.getBoundingClientRect();
+    const dentroDelPanel =
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+
+    if (!dentroDelPanel) {
+      this.close();
+    }
+  }
+
   close(): void {
+    this.dialogEl?.nativeElement.close();
     this.closed.emit();
   }
 }

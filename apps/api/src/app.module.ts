@@ -1,5 +1,8 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerModule, seconds } from "@nestjs/throttler";
+import { UsuarioOIpThrottlerGuard } from "./shared/throttler/usuario-o-ip.throttler.guard";
 import { AuthModule } from "./modules/auth/interface/auth.module";
 import { validarEnvDeAuth } from "./modules/auth/infrastructure/config/supabase-auth.config";
 import { CatalogInventoryModule } from "./modules/catalog-inventory/interface/catalog-inventory.module";
@@ -76,6 +79,11 @@ import { ZonesModule } from "./modules/zones/interface/zones.module";
  * AnalyticsModule existente, que a partir de este sprint también importa
  * CatalogInventoryModule/OrdersModule/UsersModule (mismo criterio que
  * LogisticsModule en Sprint 14); sin módulo nuevo propio ni cambio acá.
+ *
+ * Issue #187 (hardening de seguridad): `ThrottlerModule` + `APP_GUARD` global
+ * con `UsuarioOIpThrottlerGuard` (partición por usuario autenticado o IP, ver
+ * ese archivo) — límite por defecto de 100 req/60s, endpoints puntuales
+ * (`auth-otp`) se acotan más con `@Throttle(...)` en su propio controller.
  */
 @Module({
   imports: [
@@ -83,6 +91,7 @@ import { ZonesModule } from "./modules/zones/interface/zones.module";
       isGlobal: true,
       validate: validarEnvDeAuth,
     }),
+    ThrottlerModule.forRoot([{ name: "default", ttl: seconds(60), limit: 100 }]),
     AuthModule,
     CatalogInventoryModule,
     OrdersModule,
@@ -97,5 +106,6 @@ import { ZonesModule } from "./modules/zones/interface/zones.module";
     VoiceAgentModule,
     ZonesModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: UsuarioOIpThrottlerGuard }],
 })
 export class AppModule {}
