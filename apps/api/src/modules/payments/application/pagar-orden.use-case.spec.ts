@@ -62,7 +62,7 @@ describe("PagarOrdenUseCase", () => {
   it("paga contra_entrega sin depósito: crea un único pago pendiente y confirma la orden", async () => {
     const { orden } = await sembrarOrden();
 
-    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "contra_entrega");
+    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "contra_entrega");
 
     expect(resultado.pagoPrincipal.estado).toBe("pendiente");
     expect(resultado.pagoPrincipal.wompi_transaction_id).toBeNull();
@@ -80,7 +80,7 @@ describe("PagarOrdenUseCase", () => {
   it("paga contra_entrega con depósito: crea también un pago de depósito de garantía pendiente", async () => {
     const { orden } = await sembrarOrden({ depositoPct: 0.2 });
 
-    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "contra_entrega");
+    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "contra_entrega");
 
     expect(resultado.pagoDeposito).not.toBeNull();
     expect(resultado.pagoDeposito?.tipo).toBe("deposito_garantia");
@@ -90,7 +90,7 @@ describe("PagarOrdenUseCase", () => {
   it("paga con tarjeta: inicia transacción Wompi, el depósito queda en hold y devuelve el split simulado", async () => {
     const { orden } = await sembrarOrden({ depositoPct: 0.2 });
 
-    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "tarjeta");
+    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "tarjeta");
 
     expect(resultado.pagoPrincipal.estado).toBe("capturado");
     expect(resultado.pagoPrincipal.wompi_transaction_id).toMatch(/^wompi-fake-/);
@@ -101,13 +101,17 @@ describe("PagarOrdenUseCase", () => {
   it("paga con pse: el depósito se captura de inmediato (no queda en hold)", async () => {
     const { orden } = await sembrarOrden({ depositoPct: 0.2 });
 
-    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "pse");
+    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "pse", {
+      userLegalIdType: "CC",
+      userLegalId: "123456789",
+      financialInstitutionCode: "1",
+    });
 
     expect(resultado.pagoDeposito?.estado).toBe("capturado");
   });
 
   it("lanza OrdenNoEncontradaError si la orden no existe", async () => {
-    await expect(useCase.ejecutar(randomUUID(), "cliente-1", "contra_entrega")).rejects.toThrow(
+    await expect(useCase.ejecutar(randomUUID(), "cliente-1", "cliente@example.com", "contra_entrega")).rejects.toThrow(
       OrdenNoEncontradaError,
     );
   });
@@ -115,7 +119,7 @@ describe("PagarOrdenUseCase", () => {
   it("lanza OrdenNoEncontradaError si un cliente intenta pagar la orden de otro (anti-enumeración)", async () => {
     const { orden } = await sembrarOrden({ clienteId: "cliente-dueno" });
 
-    await expect(useCase.ejecutar(orden.id, "otro-cliente", "contra_entrega")).rejects.toThrow(
+    await expect(useCase.ejecutar(orden.id, "otro-cliente", "cliente@example.com", "contra_entrega")).rejects.toThrow(
       OrdenNoEncontradaError,
     );
   });
@@ -124,7 +128,7 @@ describe("PagarOrdenUseCase", () => {
     const { orden } = await sembrarOrden();
     await ordenes.actualizarEstado(orden.id, "confirmada");
 
-    await expect(useCase.ejecutar(orden.id, "cliente-1", "contra_entrega")).rejects.toThrow(OrdenNoPagableError);
+    await expect(useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "contra_entrega")).rejects.toThrow(OrdenNoPagableError);
   });
 
   it("lanza UnidadNoEncontradaError si la unidad reservada por la orden ya no existe", async () => {
@@ -145,7 +149,7 @@ describe("PagarOrdenUseCase", () => {
       items: [{ unidadId: randomUUID(), tarifaAplicada: 20_000 }],
     });
 
-    await expect(useCase.ejecutar(orden.id, "cliente-1", "contra_entrega")).rejects.toThrow(UnidadNoEncontradaError);
+    await expect(useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "contra_entrega")).rejects.toThrow(UnidadNoEncontradaError);
     void modelo;
   });
 
@@ -162,6 +166,6 @@ describe("PagarOrdenUseCase", () => {
       items: [{ unidadId: unidad.id, tarifaAplicada: 20_000 }],
     });
 
-    await expect(useCase.ejecutar(orden.id, "cliente-1", "contra_entrega")).rejects.toThrow(ModeloNoEncontradoError);
+    await expect(useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "contra_entrega")).rejects.toThrow(ModeloNoEncontradoError);
   });
 });

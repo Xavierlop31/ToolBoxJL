@@ -275,9 +275,40 @@
                   </label>
                 </div>
 
-                @if (selectedMetodoPago() === 'tarjeta' || selectedMetodoPago() === 'pse') {
+                @if (selectedMetodoPago() === 'pse') {
+                  <form [formGroup]="pseForm" class="pse-fields" data-testid="pse-fields">
+                    <div class="field">
+                      <label for="userLegalIdType">Tipo de documento</label>
+                      <select id="userLegalIdType" formControlName="user_legal_id_type">
+                        <option value="CC">Cédula de ciudadanía</option>
+                        <option value="CE">Cédula de extranjería</option>
+                        <option value="NIT">NIT</option>
+                        <option value="TI">Tarjeta de identidad</option>
+                        <option value="PP">Pasaporte</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="userLegalId">Número de documento</label>
+                      <input id="userLegalId" type="text" formControlName="user_legal_id" />
+                    </div>
+                    <div class="field">
+                      <label for="financialInstitutionCode">Banco</label>
+                      <select id="financialInstitutionCode" formControlName="financial_institution_code">
+                        <option value="">Selecciona tu banco</option>
+                        @for (banco of pseBanks(); track banco.codigo) {
+                          <option [value]="banco.codigo">{{ banco.nombre }}</option>
+                        }
+                      </select>
+                      @if (pseBanksLoading()) {
+                        <span class="hint-text">Cargando bancos…</span>
+                      }
+                    </div>
+                  </form>
+                }
+
+                @if (selectedMetodoPago() === 'tarjeta') {
                   <p class="payment-placeholder-note">
-                    En producción, acá se embebe el checkout seguro de Wompi (tokeniza la tarjeta/PSE directo con Wompi, sin pasar por nuestro servidor).
+                    En producción, acá se embebe el checkout seguro de Wompi (tokeniza la tarjeta directo con Wompi, sin pasar por nuestro servidor) — todavía no implementado en este frontend.
                   </p>
                 }
 

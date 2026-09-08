@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import type { Payment } from "@toolboxjl/shared-types";
+import type { Payment, PseBank } from "@toolboxjl/shared-types";
 import { PaymentsController } from "./payments.controller";
 import { OrdenNoEncontradaError } from "../../orders/domain/errors/orden-no-encontrada.error";
 import { OrdenNoPagableError } from "../domain/errors/orden-no-pagable.error";
@@ -23,30 +23,88 @@ function pagoFake(overrides: Partial<Payment> = {}): Payment {
   };
 }
 
+const usuarioConEmail = { id: "cliente-1", email: "cliente@example.com" } as never;
+
 describe("PaymentsController", () => {
   let pagarOrden: ReturnType<typeof crearMockUseCase>;
   let confirmarPagoContraEntrega: ReturnType<typeof crearMockUseCase>;
+  let listarBancosPse: ReturnType<typeof crearMockUseCase>;
   let controller: PaymentsController;
 
   beforeEach(() => {
     pagarOrden = crearMockUseCase();
     confirmarPagoContraEntrega = crearMockUseCase();
-    controller = new PaymentsController(pagarOrden as never, confirmarPagoContraEntrega as never);
+    listarBancosPse = crearMockUseCase();
+    controller = new PaymentsController(
+      pagarOrden as never,
+      confirmarPagoContraEntrega as never,
+      listarBancosPse as never,
+    );
   });
 
   describe("pagar", () => {
-    it("delega en PagarOrdenUseCase y devuelve el pago principal", async () => {
+    it("delega en PagarOrdenUseCase (pse sin datos de banco) y devuelve el pago principal", async () => {
       const pago = pagoFake();
+      pagarOrden.ejecutar.mockResolvedValue({ pagoPrincipal: pago });
+      const ordenId = randomUUID();
+
+      const resultado = await controller.pagar(ordenId, { metodo: "pse" } as never, usuarioConEmail);
+
+      expect(pagarOrden.ejecutar).toHaveBeenCalledWith(
+        ordenId,
+        "cliente-1",
+        "cliente@example.com",
+        "pse",
+        undefined,
+      );
+      expect(resultado).toBe(pago);
+    });
+
+    it("arma datosPse cuando el DTO trae los 3 campos de PSE completos", async () => {
+      const pago = pagoFake();
+      pagarOrden.ejecutar.mockResolvedValue({ pagoPrincipal: pago });
+      const ordenId = randomUUID();
+
+      await controller.pagar(
+        ordenId,
+        {
+          metodo: "pse",
+          user_legal_id_type: "CC",
+          user_legal_id: "123456789",
+          financial_institution_code: "1",
+        } as never,
+        usuarioConEmail,
+      );
+
+      expect(pagarOrden.ejecutar).toHaveBeenCalledWith(
+        ordenId,
+        "cliente-1",
+        "cliente@example.com",
+        "pse",
+        { userLegalIdType: "CC", userLegalId: "123456789", financialInstitutionCode: "1" },
+      );
+    });
+
+    it("rechaza con BadRequestException si el usuario no tiene email y el método no es contra_entrega", async () => {
+      const ordenId = randomUUID();
+
+      await expect(
+        controller.pagar(ordenId, { metodo: "pse" } as never, { id: "cliente-1", email: null } as never),
+      ).rejects.toThrow(BadRequestException);
+      expect(pagarOrden.ejecutar).not.toHaveBeenCalled();
+    });
+
+    it("no exige email si el método es contra_entrega", async () => {
+      const pago = pagoFake({ metodo: "contra_entrega", estado: "pendiente" });
       pagarOrden.ejecutar.mockResolvedValue({ pagoPrincipal: pago });
       const ordenId = randomUUID();
 
       const resultado = await controller.pagar(
         ordenId,
-        { metodo: "pse" } as never,
-        { id: "cliente-1" } as never,
+        { metodo: "contra_entrega" } as never,
+        { id: "cliente-1", email: null } as never,
       );
 
-      expect(pagarOrden.ejecutar).toHaveBeenCalledWith(ordenId, "cliente-1", "pse");
       expect(resultado).toBe(pago);
     });
 
@@ -54,7 +112,7 @@ describe("PaymentsController", () => {
       pagarOrden.ejecutar.mockRejectedValue(new OrdenNoEncontradaError(randomUUID()));
 
       await expect(
-        controller.pagar(randomUUID(), { metodo: "pse" } as never, { id: "cliente-1" } as never),
+        controller.pagar(randomUUID(), { metodo: "pse" } as never, usuarioConEmail),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -62,7 +120,7 @@ describe("PaymentsController", () => {
       pagarOrden.ejecutar.mockRejectedValue(new OrdenNoPagableError(randomUUID(), "confirmada"));
 
       await expect(
-        controller.pagar(randomUUID(), { metodo: "pse" } as never, { id: "cliente-1" } as never),
+        controller.pagar(randomUUID(), { metodo: "pse" } as never, usuarioConEmail),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -70,8 +128,20 @@ describe("PaymentsController", () => {
       pagarOrden.ejecutar.mockRejectedValue(new Error("boom"));
 
       await expect(
-        controller.pagar(randomUUID(), { metodo: "pse" } as never, { id: "cliente-1" } as never),
+        controller.pagar(randomUUID(), { metodo: "pse" } as never, usuarioConEmail),
       ).rejects.toThrow("boom");
+    });
+  });
+
+  describe("pseBanks", () => {
+    it("delega en ListarBancosPseUseCase", async () => {
+      const bancos: PseBank[] = [{ codigo: "1", nombre: "Banco A" }];
+      listarBancosPse.ejecutar.mockResolvedValue(bancos);
+
+      const resultado = await controller.pseBanks();
+
+      expect(listarBancosPse.ejecutar).toHaveBeenCalledWith();
+      expect(resultado).toBe(bancos);
     });
   });
 

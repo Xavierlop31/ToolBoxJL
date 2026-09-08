@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   HttpCode,
   NotFoundException,
   Param,
@@ -15,11 +16,12 @@ import { RolesGuard } from "../../auth/interface/guards/roles.guard";
 import { SupabaseAuthGuard } from "../../auth/interface/guards/supabase-auth.guard";
 import { PagarOrdenUseCase } from "../application/pagar-orden.use-case";
 import { ConfirmarPagoContraEntregaUseCase } from "../application/confirmar-pago-contra-entrega.use-case";
+import { ListarBancosPseUseCase } from "../application/listar-bancos-pse.use-case";
 import { PagarOrdenDto } from "./dto/pagar-orden.dto";
 import { OrdenNoEncontradaError } from "../../orders/domain/errors/orden-no-encontrada.error";
 import { OrdenNoPagableError } from "../domain/errors/orden-no-pagable.error";
 import { SinPagosPendientesError } from "../domain/errors/sin-pagos-pendientes.error";
-import type { Payment, UsuarioAutenticado } from "@toolboxjl/shared-types";
+import type { Payment, PseBank, UsuarioAutenticado } from "@toolboxjl/shared-types";
 
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Controller()
@@ -27,7 +29,14 @@ export class PaymentsController {
   constructor(
     private readonly pagarOrden: PagarOrdenUseCase,
     private readonly confirmarPagoContraEntrega: ConfirmarPagoContraEntregaUseCase,
+    private readonly listarBancosPse: ListarBancosPseUseCase,
   ) {}
+
+  @Roles("cliente")
+  @Get("payments/pse-banks")
+  async pseBanks(): Promise<PseBank[]> {
+    return this.listarBancosPse.ejecutar();
+  }
 
   @Roles("cliente")
   @Post("orders/:id/pay")
@@ -38,7 +47,31 @@ export class PaymentsController {
     @UsuarioActual() usuario: UsuarioAutenticado,
   ): Promise<Payment> {
     try {
-      const resultado = await this.pagarOrden.ejecutar(id, usuario.id, dto.metodo);
+      // Wompi exige customer_email en toda transacción (PSE/tarjeta) —
+      // contra_entrega nunca llama a Wompi, así que no lo necesita.
+      if (dto.metodo !== "contra_entrega" && !usuario.email) {
+        throw new BadRequestException(
+          "Tu cuenta no tiene un email registrado, necesario para pagar con PSE o tarjeta. Usá contra entrega, o actualizá tu perfil.",
+        );
+      }
+      const datosPse =
+        dto.metodo === "pse" &&
+        dto.user_legal_id_type &&
+        dto.user_legal_id &&
+        dto.financial_institution_code
+          ? {
+              userLegalIdType: dto.user_legal_id_type,
+              userLegalId: dto.user_legal_id,
+              financialInstitutionCode: dto.financial_institution_code,
+            }
+          : undefined;
+      const resultado = await this.pagarOrden.ejecutar(
+        id,
+        usuario.id,
+        usuario.email ?? "",
+        dto.metodo,
+        datosPse,
+      );
       return resultado.pagoPrincipal;
     } catch (error) {
       if (error instanceof OrdenNoEncontradaError) {

@@ -16,7 +16,7 @@ import { ModeloNoEncontradoError } from "../../catalog-inventory/domain/errors/m
 import { OrdenNoPagableError } from "../domain/errors/orden-no-pagable.error";
 import { PAYMENT_REPOSITORY, WOMPI_GATEWAY } from "../infrastructure/payments.tokens";
 import type { PaymentRepository } from "../domain/payment.repository";
-import type { ResultadoSplitWompi, WompiGateway } from "../domain/wompi-gateway";
+import type { DatosPseWompi, ResultadoSplitWompi, WompiGateway } from "../domain/wompi-gateway";
 import { SHIPMENT_REPOSITORY } from "../../logistics/infrastructure/logistics.tokens";
 import type { ShipmentRepository } from "../../logistics/domain/shipment.repository";
 
@@ -67,7 +67,9 @@ export class PagarOrdenUseCase {
   async ejecutar(
     ordenId: string,
     clienteId: string,
+    clienteEmail: string,
     metodo: MetodoPago,
+    datosPse?: DatosPseWompi,
   ): Promise<ResultadoPagoOrden> {
     const orden = await this.ordenes.buscarPorId(ordenId);
     // Ocultar la existencia de órdenes ajenas: si no existe o no pertenece
@@ -130,12 +132,14 @@ export class PagarOrdenUseCase {
       // como hold con tarjeta (preautorización) y como captura con PSE (se
       // cobra de inmediato; el reembolso tras inspección satisfactoria es
       // responsabilidad de InspectionModule, Sprint 5 — no implementado acá).
-      const transaccionPrincipal = await this.wompi.iniciarTransaccion(
-        cotizacion.tarifa_base,
+      const transaccionPrincipal = await this.wompi.iniciarTransaccion({
+        monto: cotizacion.tarifa_base,
         metodo,
-        "captura",
-        `${orden.id}-principal-${randomUUID()}`,
-      );
+        modo: "captura",
+        referencia: `${orden.id}-principal-${randomUUID()}`,
+        customerEmail: clienteEmail,
+        datosPse: metodo === "pse" ? datosPse : undefined,
+      });
       pagoPrincipal = await this.pagos.crear({
         orderId: orden.id,
         tipo: tipoPagoPrincipal,
@@ -147,12 +151,14 @@ export class PagarOrdenUseCase {
 
       if (requiereDeposito) {
         const modoDeposito = metodo === "tarjeta" ? "hold" : "captura";
-        const transaccionDeposito = await this.wompi.iniciarTransaccion(
-          cotizacion.deposito_garantia,
+        const transaccionDeposito = await this.wompi.iniciarTransaccion({
+          monto: cotizacion.deposito_garantia,
           metodo,
-          modoDeposito,
-          `${orden.id}-deposito-${randomUUID()}`,
-        );
+          modo: modoDeposito,
+          referencia: `${orden.id}-deposito-${randomUUID()}`,
+          customerEmail: clienteEmail,
+          datosPse: metodo === "pse" ? datosPse : undefined,
+        });
         pagoDeposito = await this.pagos.crear({
           orderId: orden.id,
           tipo: "deposito_garantia",

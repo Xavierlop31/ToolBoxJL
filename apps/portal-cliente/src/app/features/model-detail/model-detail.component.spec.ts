@@ -357,6 +357,10 @@ describe('ModelDetailComponent', () => {
       expect(component.quoteResult()).toBeNull();
       expect(component.orderLoading()).toBe(false);
 
+      // pse queda seleccionado por default — precarga la lista de bancos.
+      const bancosReq = httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`);
+      bancosReq.flush([{ codigo: '1', nombre: 'Banco A' }]);
+
       fixture.detectChanges();
       const successText = (fixture.nativeElement as HTMLElement).querySelector(
         '[data-testid="order-success"]',
@@ -401,9 +405,25 @@ describe('ModelDetailComponent', () => {
 
       component.setMetodoPago('tarjeta');
       expect(component.selectedMetodoPago()).toBe('tarjeta');
+      httpMock.expectNone((r) => r.url.includes('/payments/pse-banks'));
 
       component.setMetodoPago('contra_entrega');
       expect(component.selectedMetodoPago()).toBe('contra_entrega');
+    });
+
+    it('al elegir pse, carga los bancos una sola vez (no refetch en selecciones repetidas)', () => {
+      loadModel();
+      const component = fixture.componentInstance;
+
+      component.setMetodoPago('pse');
+      const req = httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`);
+      req.flush([{ codigo: '1', nombre: 'Banco A' }]);
+
+      expect(component.pseBanks()).toEqual([{ codigo: '1', nombre: 'Banco A' }]);
+
+      component.setMetodoPago('tarjeta');
+      component.setMetodoPago('pse');
+      httpMock.expectNone(`${environment.apiUrl}/payments/pse-banks`);
     });
   });
 
@@ -435,14 +455,35 @@ describe('ModelDetailComponent', () => {
       httpMock.expectNone((r) => r.url.includes('/pay'));
     });
 
-    it('confirma el pago exitosamente y actualiza el estado de la orden cuando queda "capturado"', () => {
+    it('no confirma un pago PSE si falta el banco/documento — marca el form como touched', () => {
       loadModel();
       createOrderAndSetResult();
       const component = fixture.componentInstance;
 
       component.confirmPayment();
+
+      httpMock.expectNone((r) => r.url.includes('/pay'));
+      expect(component.pseForm.touched).toBe(true);
+    });
+
+    it('confirma el pago exitosamente (pse) y actualiza el estado de la orden cuando queda "capturado"', () => {
+      loadModel();
+      createOrderAndSetResult();
+      const component = fixture.componentInstance;
+      component.pseForm.setValue({
+        user_legal_id_type: 'CC',
+        user_legal_id: '123456789',
+        financial_institution_code: '1',
+      });
+
+      component.confirmPayment();
       const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);
-      expect(req.request.body).toEqual({ metodo: 'pse' });
+      expect(req.request.body).toEqual({
+        metodo: 'pse',
+        user_legal_id_type: 'CC',
+        user_legal_id: '123456789',
+        financial_institution_code: '1',
+      });
 
       req.flush({
         id: 'pay-1',
@@ -505,6 +546,7 @@ describe('ModelDetailComponent', () => {
       loadModel();
       createOrderAndSetResult();
       const component = fixture.componentInstance;
+      component.setMetodoPago('contra_entrega');
 
       component.confirmPayment();
       const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);

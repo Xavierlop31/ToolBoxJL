@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { AvailabilityResult, ToolModel, Zona } from '../models/catalog.models';
-import { Quote, OrderInput, Order, Payment, MetodoPago } from '../models/order.models';
+import { Quote, OrderInput, Order, Payment, PagarOrdenInput, PseBank } from '../models/order.models';
 
 export interface CatalogSearchParams {
   q?: string;
@@ -109,8 +109,13 @@ export class CatalogService {
     return this.http.post<Order>(`${this.apiUrl}/orders`, input);
   }
 
-  payOrder(orderId: string, metodo: MetodoPago): Observable<Payment> {
-    return this.http.post<Payment>(`${this.apiUrl}/orders/${orderId}/pay`, { metodo });
+  payOrder(orderId: string, input: PagarOrdenInput): Observable<Payment> {
+    return this.http.post<Payment>(`${this.apiUrl}/orders/${orderId}/pay`, input);
+  }
+
+  /** `GET /payments/pse-banks` — pobla el selector de banco antes de un pago PSE. */
+  getPseBanks(): Observable<PseBank[]> {
+    return this.http.get<PseBank[]>(`${this.apiUrl}/payments/pse-banks`);
   }
 
   /** `GET /zones?ciudad=` (HU-12.2) — reemplaza el array de zonas hardcodeado del form. */
