@@ -74,6 +74,17 @@ async function prepararOrdenPendienteDePago(page: Page): Promise<void> {
     });
   });
 
+  // Wompi exige datos de PSE (documento + banco) que ModelDetailComponent
+  // ahora recolecta antes de habilitar "Confirmar pago" — sin mockear esto,
+  // el selector de banco de los escenarios PSE queda vacío.
+  await page.route('**/payments/pse-banks', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ codigo: '1', nombre: 'Banco de Prueba' }]),
+    });
+  });
+
   await prepararSesionAutenticada(page);
   await page.goto(`/catalogo/${MODEL_ID}`);
   await page.fill('#fechaInicio', '2026-10-01');
@@ -116,6 +127,22 @@ function mockearPago(
   });
 }
 
+/**
+ * Completa el mini-formulario de PSE (documento + banco) que
+ * `ModelDetailComponent` exige desde que Wompi empezó a rechazar
+ * transacciones PSE sin `payment_method` completo — sin esto,
+ * "Confirmar pago" queda deshabilitado y nunca llega a `POST .../pay`.
+ */
+async function completarDatosPse(page: Page): Promise<void> {
+  await page.selectOption('#userLegalIdType', 'CC');
+  await page.fill('#userLegalId', '123456789');
+  // Playwright nunca reporta un <option> nativo como "visible" (no tiene
+  // caja propia hasta que el <select> se abre) — "attached" alcanza para
+  // saber que la opción ya llegó del GET /payments/pse-banks mockeado.
+  await page.locator('#financialInstitutionCode option[value="1"]').waitFor({ state: 'attached' });
+  await page.selectOption('#financialInstitutionCode', '1');
+}
+
 // ============================================================================
 // Esquema del escenario: Cliente paga una orden con distintos métodos
 // ============================================================================
@@ -150,6 +177,9 @@ When('elijo pagar con {string}', async ({ page }, metodoLabel: string) => {
   });
 
   await page.click(`input[value="${metodo}"]`);
+  if (metodo === 'pse') {
+    await completarDatosPse(page);
+  }
   await page.click('[data-testid="confirm-payment"]');
 });
 
@@ -194,6 +224,7 @@ Given(
       wompiTransactionId: 'wompi-tx-003',
     });
     await page.click('input[value="pse"]');
+    await completarDatosPse(page);
   },
 );
 

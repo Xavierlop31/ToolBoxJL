@@ -66,6 +66,7 @@ When("elijo pagar con {string}", async function (this: ToolboxWorld, metodo: str
   this.ultimoResultadoPago = await this.pagarOrden.ejecutar(
     this.ultimaOrden!.id,
     this.usuarioActualId,
+    "cliente@example.com",
     aMetodoPago(metodo),
   );
 });
@@ -140,6 +141,7 @@ When("se procesa el pago", async function (this: ToolboxWorld) {
   this.ultimoResultadoPago = await this.pagarOrden.ejecutar(
     this.ultimaOrden!.id,
     this.usuarioActualId,
+    "cliente@example.com",
     this.metodoPagoEscenario!,
   );
 });
@@ -208,6 +210,7 @@ When("el pago se confirma", async function (this: ToolboxWorld) {
   this.ultimoResultadoPago = await this.pagarOrden.ejecutar(
     this.ultimaOrden!.id,
     this.usuarioActualId,
+    "cliente@example.com",
     this.metodoPagoEscenario!,
   );
 });

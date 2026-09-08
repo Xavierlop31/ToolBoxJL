@@ -84,7 +84,7 @@ async function crearOrdenConfirmadaConEnvio(this: ToolboxWorld): Promise<void> {
     direccion_entrega: "Calle Falsa 123",
     zona_id: randomUUID(),
   });
-  await this.pagarOrden.ejecutar(orden.id, clienteId, "contra_entrega");
+  await this.pagarOrden.ejecutar(orden.id, clienteId, "cliente@example.com", "contra_entrega");
 }
 
 Given("que soy un Gerente autenticado", async function (this: ToolboxWorld) {

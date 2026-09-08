@@ -52,7 +52,7 @@ Given(
       direccion_entrega: DIRECCION_ENTREGA_ESCENARIO,
       zona_id: randomUUID(),
     });
-    await this.pagarOrden.ejecutar(orden.id, clienteId, "contra_entrega");
+    await this.pagarOrden.ejecutar(orden.id, clienteId, "cliente@example.com", "contra_entrega");
 
     const pendientes = await this.listarPedidosPendientes.ejecutar();
     const shipmentDeLaOrden = pendientes.find((s) => s.order_id === orden.id);

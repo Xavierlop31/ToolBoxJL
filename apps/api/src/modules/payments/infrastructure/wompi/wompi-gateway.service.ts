@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
+import type { PseBank } from "@toolboxjl/shared-types";
 import type {
-  MetodoPagoWompi,
+  IniciarTransaccionInput,
   ModoTransaccionWompi,
   ResultadoSplitWompi,
   ResultadoTransaccionWompi,
@@ -11,35 +12,55 @@ import { loadSplitLogisticaPct, loadWompiCredentials } from "../config/wompi.con
 /**
  * Implementación real contra Wompi sandbox (https://sandbox.wompi.co/v1).
  *
- * *** NUNCA FUE PROBADA CONTRA LA API REAL DE WOMPI *** — este entorno de
- * desarrollo no tiene credenciales de sandbox (WOMPI_PRIVATE_KEY/
- * WOMPI_PUBLIC_KEY). El mapeo de campos del request (amount_in_cents,
- * payment_method_type, capture_method, ...) sigue la documentación pública
- * de Wompi para transacciones (POST /transactions) pero no fue validado
- * end-to-end — mismo criterio que schema.prisma/migrations respecto a
- * `DATABASE_URL`. Es responsabilidad de quien tenga credenciales de sandbox
- * (Tech Lead / DevOps) validar y ajustar este mapeo antes de un despliegue
- * real. Para tests/BDD, usá InMemoryWompiGateway — no requiere credenciales.
+ * *** NUNCA FUE PROBADA END-TO-END CONTRA LA API REAL DE WOMPI *** — ver
+ * historial de esta clase: dos rechazos reales de producción ya corregidos
+ * acá (401 por credencial de producción vs. sandbox — env var, no código;
+ * 422 por `reference` faltante). El mapeo de `payment_method` para PSE
+ * sigue la documentación pública de Wompi para `POST /transactions` pero
+ * TAMPOCO fue confirmado end-to-end — puede necesitar otra vuelta si Wompi
+ * rechaza algún campo más. Tarjeta (`CARD`) queda deliberadamente sin
+ * resolver: Wompi exige un `token` generado del lado del cliente con
+ * Wompi.js (tokenización real de la tarjeta), que no existe en este
+ * frontend — seleccionar "Tarjeta" sigue fallando hasta que se construya
+ * esa integración aparte.
+ *
+ * *** PSE es asíncrono en Wompi real, esto NO lo maneja *** — Wompi
+ * devuelve `status: "PENDING"` en la creación (mapeado acá a
+ * `estado: "pendiente"`) y la confirmación final (aprobado/declinado)
+ * llega después por webhook, tras que el pagador se autentique en su
+ * banco. No hay webhook de Wompi implementado en este repo — la orden
+ * queda pagada informalmente en `estado: "pendiente"` sin actualizarse
+ * sola cuando el banco confirma. Gap documentado, no un bug de este PR.
  */
 @Injectable()
 export class WompiGatewayService implements WompiGateway {
   private static readonly BASE_URL = "https://sandbox.wompi.co/v1";
 
   private readonly privateKey: string;
+  private readonly publicKey: string;
   private readonly splitLogisticaPct: number;
 
   constructor() {
     const credenciales = loadWompiCredentials();
     this.privateKey = credenciales.privateKey;
+    this.publicKey = credenciales.publicKey;
     this.splitLogisticaPct = loadSplitLogisticaPct();
   }
 
-  async iniciarTransaccion(
-    monto: number,
-    metodo: MetodoPagoWompi,
-    modo: ModoTransaccionWompi,
-    referencia: string,
-  ): Promise<ResultadoTransaccionWompi> {
+  async iniciarTransaccion(input: IniciarTransaccionInput): Promise<ResultadoTransaccionWompi> {
+    const paymentMethod =
+      input.metodo === "pse"
+        ? {
+            type: "PSE",
+            // 0 = persona natural (Wompi) — este flujo no soporta persona jurídica.
+            user_type: 0,
+            user_legal_id_type: input.datosPse?.userLegalIdType,
+            user_legal_id: input.datosPse?.userLegalId,
+            financial_institution_code: input.datosPse?.financialInstitutionCode,
+            payment_description: `Pago ToolBox JL — orden ${input.referencia}`,
+          }
+        : { type: "CARD" }; // *** sin token — ver comentario de cabecera de la clase ***
+
     const response = await fetch(`${WompiGatewayService.BASE_URL}/transactions`, {
       method: "POST",
       headers: {
@@ -47,11 +68,12 @@ export class WompiGatewayService implements WompiGateway {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount_in_cents: monto * 100,
+        amount_in_cents: input.monto * 100,
         currency: "COP",
-        reference: referencia,
-        payment_method_type: metodo === "tarjeta" ? "CARD" : "PSE",
-        capture_method: modo === "hold" ? "manual" : "automatic",
+        customer_email: input.customerEmail,
+        reference: input.referencia,
+        payment_method: paymentMethod,
+        capture_method: input.modo === "hold" ? "manual" : "automatic",
       }),
     });
 
@@ -63,11 +85,11 @@ export class WompiGatewayService implements WompiGateway {
         // se queda con el fallback de arriba — no tapar el error original por uno de logging.
       }
       throw new Error(
-        `Wompi sandbox respondió ${response.status} al iniciar la transacción (metodo: ${metodo}, modo: ${modo}). Detalle: ${detalle}`,
+        `Wompi sandbox respondió ${response.status} al iniciar la transacción (metodo: ${input.metodo}, modo: ${input.modo}). Detalle: ${detalle}`,
       );
     }
 
-    const body = (await response.json()) as { data?: { id?: string } };
+    const body = (await response.json()) as { data?: { id?: string; status?: string } };
     const wompiTransactionId = body.data?.id;
     if (!wompiTransactionId) {
       throw new Error("Wompi sandbox no devolvió un id de transacción.");
@@ -75,8 +97,18 @@ export class WompiGatewayService implements WompiGateway {
 
     return {
       wompiTransactionId,
-      estado: modo === "hold" ? "hold" : "capturado",
+      estado: this.mapearEstado(body.data?.status, input.modo),
     };
+  }
+
+  private mapearEstado(
+    status: string | undefined,
+    modo: ModoTransaccionWompi,
+  ): ResultadoTransaccionWompi["estado"] {
+    if (status === "PENDING") {
+      return "pendiente";
+    }
+    return modo === "hold" ? "hold" : "capturado";
   }
 
   simularSplit(recargoLogistico: number): ResultadoSplitWompi {
@@ -114,5 +146,25 @@ export class WompiGatewayService implements WompiGateway {
     }
 
     return { estado: "capturado" };
+  }
+
+  /** `GET /pse/financial_institutions?public_key=...` — lista pública de Wompi, no exige la private key. */
+  async listarBancosPse(): Promise<PseBank[]> {
+    const response = await fetch(
+      `${WompiGatewayService.BASE_URL}/pse/financial_institutions?public_key=${this.publicKey}`,
+    );
+
+    if (!response.ok) {
+      throw new Error(`Wompi sandbox respondió ${response.status} al listar bancos PSE.`);
+    }
+
+    const body = (await response.json()) as {
+      data?: { financial_institution_code: string; financial_institution_name: string }[];
+    };
+
+    return (body.data ?? []).map((banco) => ({
+      codigo: banco.financial_institution_code,
+      nombre: banco.financial_institution_name,
+    }));
   }
 }

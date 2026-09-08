@@ -48,6 +48,7 @@ Given(
     this.ultimoResultadoPago = await this.pagarOrden.ejecutar(
       this.ultimaOrden.id,
       clienteId,
+      "cliente@example.com",
       "tarjeta",
     );
 
@@ -193,6 +194,7 @@ Given(
     this.ultimoResultadoPago = await this.pagarOrden.ejecutar(
       this.ultimaOrden.id,
       this.usuarioActualId,
+      "cliente@example.com",
       "contra_entrega",
     );
   },

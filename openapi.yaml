@@ -748,6 +748,18 @@ paths:
               required: [metodo]
               properties:
                 metodo: { type: string, enum: [pse, tarjeta, contra_entrega] }
+                user_legal_id_type:
+                  type: string
+                  enum: [CC, CE, NIT, TI, PP]
+                  description: Requerido solo si metodo=pse (Wompi lo exige para /transactions).
+                user_legal_id:
+                  type: string
+                  description: Número de documento del pagador. Requerido solo si metodo=pse.
+                financial_institution_code:
+                  type: string
+                  description: >
+                    Código del banco elegido, de la lista que devuelve
+                    GET /payments/pse-banks. Requerido solo si metodo=pse.
       responses:
         "200":
           description: >
@@ -759,6 +771,26 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Payment" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /payments/pse-banks:
+    get:
+      operationId: listPseBanks
+      summary: Lista de bancos habilitados para PSE (Wompi)
+      description: >
+        Proxy de `GET /pse/financial_institutions` de Wompi — el frontend la
+        usa para poblar el selector de banco antes de confirmar un pago PSE
+        (`POST /orders/{id}/pay` con `financial_institution_code`).
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente]
+      responses:
+        "200":
+          description: Bancos disponibles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PseBank" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /orders/{id}/confirm-cod-payment:
@@ -1655,6 +1687,12 @@ components:
           enum: [pendiente, hold, capturado, reembolsado, fallido]
         monto: { type: integer, description: "COP" }
         wompi_transaction_id: { type: string, nullable: true }
+
+    PseBank:
+      type: object
+      properties:
+        codigo: { type: string, description: "financial_institution_code de Wompi." }
+        nombre: { type: string }
 
     Quote:
       type: object

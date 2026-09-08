@@ -56,3 +56,23 @@ export interface Payment {
   monto: number;
   wompi_transaction_id: string | null;
 }
+
+/** Valores que acepta Wompi para `payment_method.user_legal_id_type` en transacciones PSE. */
+export type TipoDocumentoPse = 'CC' | 'CE' | 'NIT' | 'TI' | 'PP';
+
+/** `GET /payments/pse-banks` — bancos habilitados para PSE (Wompi). */
+export interface PseBank {
+  codigo: string;
+  nombre: string;
+}
+
+/**
+ * `POST /orders/{id}/pay` — los 3 campos de PSE son requeridos solo cuando
+ * metodo === 'pse' (Wompi los exige para armar payment_method).
+ */
+export interface PagarOrdenInput {
+  metodo: MetodoPago;
+  user_legal_id_type?: TipoDocumentoPse;
+  user_legal_id?: string;
+  financial_institution_code?: string;
+}
