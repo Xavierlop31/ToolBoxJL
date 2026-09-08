@@ -115,7 +115,15 @@ describe('ActiveOrdersComponent', () => {
         ordenDe({
           id: 'a',
           estado: 'confirmada',
-          items: [{ id: 'item-1', order_id: 'a', unidad_id: 'unidad-1', tarifa_aplicada: 25000 }],
+          items: [
+            {
+              id: 'item-1',
+              order_id: 'a',
+              unidad_id: 'unidad-1',
+              tarifa_aplicada: 25000,
+              herramienta_nombre: 'Taladro Percutor',
+            },
+          ],
         }),
       ],
       total: 1,
@@ -133,6 +141,9 @@ describe('ActiveOrdersComponent', () => {
 
     const dialog = nativeElement.querySelector<HTMLDialogElement>('dialog[data-testid="order-detail-dialog"]')!;
     expect(dialog.open).toBeTrue();
-    expect(nativeElement.querySelector('[data-testid="order-items"]')!.textContent).toContain('25,000');
+    const itemsTexto = nativeElement.querySelector('[data-testid="order-items"]')!.textContent!;
+    expect(itemsTexto).toContain('Taladro Percutor');
+    expect(itemsTexto).toContain('25,000');
+    expect(itemsTexto).not.toContain('unidad-1');
   });
 });

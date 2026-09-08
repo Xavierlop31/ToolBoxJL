@@ -47,8 +47,8 @@
   @if (order.items && order.items.length > 0) {
     <ul class="order-items" data-testid="order-items">
       @for (item of order.items; track item.id) {
-        <li>
-          <span class="item-unidad">Unidad {{ item.unidad_id.slice(0, 8) }}</span>
+        <li [attr.data-unidad-id]="item.unidad_id">
+          <span class="item-nombre">{{ item.herramienta_nombre ?? 'Herramienta' }}</span>
           <span class="item-tarifa">{{ item.tarifa_aplicada | number: '1.0-0' }} COP</span>
         </li>
       }
