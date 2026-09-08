@@ -19,12 +19,20 @@
         @for (order of orders(); track order.id) {
           <li class="order-row">
             <div class="order-main">
-              <span class="order-id">#{{ order.id.slice(0, 8) }}</span>
               <span class="order-date">{{ order.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
               <span class="order-tipo">{{ order.tipo === 'alquiler' ? 'Alquiler' : 'Venta' }}</span>
-              <span class="order-badge" [attr.data-estado]="order.estado">
+              @if (order.return_mode) {
+                <span class="order-return-mode">{{ returnModeLabel[order.return_mode] }}</span>
+              }
+              <button
+                type="button"
+                class="order-badge"
+                [attr.data-estado]="order.estado"
+                (click)="verDetalle(order)"
+                [attr.aria-label]="'Ver detalle del pedido — ' + estadoLabel[order.estado]"
+              >
                 {{ estadoLabel[order.estado] }}
-              </span>
+              </button>
             </div>
           </li>
         }
@@ -39,6 +47,10 @@
           </button>
         </nav>
       }
+    }
+
+    @if (selectedOrder(); as order) {
+      <app-order-detail-modal [order]="order" (closed)="selectedOrder.set(null)" />
     }
   </section>
 }

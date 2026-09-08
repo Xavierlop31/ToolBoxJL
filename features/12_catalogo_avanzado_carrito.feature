@@ -22,7 +22,8 @@ Característica: Catálogo Avanzado & Carrito de Compras
     Dado que soy un cliente autenticado con pedidos en estado "confirmada" o "en_curso"
     Cuando me desplazo a la sección inferior "Mis Pedidos Activos" en el Home / Catálogo
     Entonces visualizo una tabla/cards con los pedidos ordenados cronológicamente del más reciente al más antiguo
-    Y cada pedido muestra: ID de Orden, Fecha, Herramientas, Modalidad (Alquiler/Venta), Estado con Badge de color y Total COP.
+    Y cada pedido muestra: Fecha, Modalidad (Alquiler/Venta) y Modo de retorno, sin exponer el identificador interno de la orden
+    Y el Estado se presenta como un botón de acción que, al presionarlo, abre una ventana emergente de solo lectura con el detalle completo del pedido y sus ítems.
 
   @HU-12.1 @PedidosActivos
   Escenario: Paginación del listado de pedidos activos

@@ -1,0 +1,117 @@
+.order-detail-dialog {
+  border: none;
+  background: var(--tbjl-color-card, #ffffff);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  box-shadow: var(--tbjl-shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.2));
+  padding: 28px;
+  width: calc(100% - 48px);
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  &::backdrop {
+    background: rgba(11, 14, 61, 0.55);
+  }
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--tbjl-color-neutral-900, #161c21);
+  }
+}
+
+.close-btn {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--tbjl-color-neutral-500, #757588);
+  padding: 4px;
+
+  &:hover {
+    color: var(--tbjl-color-neutral-900, #161c21);
+  }
+}
+
+.order-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0 0 20px 0;
+
+  dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tbjl-color-neutral-500, #757588);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 14px;
+    color: var(--tbjl-color-neutral-900, #161c21);
+  }
+}
+
+.estado-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--tbjl-color-primary-50, #e0e0ff);
+  color: var(--tbjl-color-primary-700, #0b0e3d);
+
+  &[data-estado='en_curso'] {
+    background: #e6f7ef;
+    color: #0d5f32;
+  }
+}
+
+.items-title {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tbjl-color-neutral-900, #161c21);
+}
+
+.order-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--tbjl-color-neutral-100, #eef4fb);
+    border-radius: var(--tbjl-radius-md, 0.5rem);
+    font-size: 13px;
+  }
+
+  .item-unidad {
+    font-family: monospace;
+    color: var(--tbjl-color-neutral-700, #454556);
+  }
+
+  .item-tarifa {
+    font-weight: 600;
+    color: var(--tbjl-color-neutral-900, #161c21);
+  }
+}
+
+.empty-hint {
+  color: var(--tbjl-color-neutral-500, #757588);
+  font-size: 13px;
+}
