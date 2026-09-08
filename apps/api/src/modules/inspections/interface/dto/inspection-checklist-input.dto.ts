@@ -1,7 +1,7 @@
 import { Type } from "class-transformer";
 import {
   IsArray,
-  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsUrl,
@@ -20,7 +20,7 @@ export class HallazgoDto implements Hallazgo {
   @IsString()
   descripcion!: string;
 
-  @IsEnum(["leve", "moderada", "grave"])
+  @IsIn(["leve", "moderada", "grave"])
   severidad!: SeveridadHallazgo;
 }
 
@@ -36,7 +36,7 @@ export class InspectionChecklistInputDto implements InspectionChecklistInput {
   @IsUUID()
   shipment_id!: string;
 
-  @IsEnum(["salida", "recepcion"])
+  @IsIn(["salida", "recepcion"])
   tipo!: TipoInspeccion;
 
   @IsOptional()
