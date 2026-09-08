@@ -79,6 +79,28 @@ describe("WompiGatewayService", () => {
     );
   });
 
+  it("incluye el cuerpo de la respuesta de Wompi en el mensaje de error, para diagnosticar rechazos de validación (422)", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      text: async () => '{"error":{"messages":{"payment_method":["is required"]}}}',
+    });
+
+    const servicio = crearServicio();
+    await expect(servicio.iniciarTransaccion(10_000, "pse", "captura")).rejects.toThrow(
+      /respondió 422.*payment_method/s,
+    );
+  });
+
+  it("no revienta si la respuesta de error no tiene body legible", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
+
+    const servicio = crearServicio();
+    await expect(servicio.iniciarTransaccion(10_000, "tarjeta", "captura")).rejects.toThrow(
+      /no se pudo leer el cuerpo/,
+    );
+  });
+
   it("lanza un Error si Wompi no devuelve un id de transacción", async () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ data: {} }) });
 
