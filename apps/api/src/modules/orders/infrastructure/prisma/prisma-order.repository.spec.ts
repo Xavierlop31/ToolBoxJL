@@ -13,6 +13,7 @@ function fakeOrder(
 ): PrismaOrder & { items: FakeOrderItem[] } {
   return {
     id: "orden-1",
+    numeroOrden: 1,
     clienteId: "cliente-1",
     tipo: "alquiler",
     estado: "pendiente_pago",
@@ -82,6 +83,7 @@ describe("PrismaOrderRepository", () => {
       include: INCLUDE_ITEMS_CON_MODELO,
     });
     expect(resultado.id).toBe("orden-1");
+    expect(resultado.numero_orden).toBe("TJL0000001");
     expect(resultado.items).toHaveLength(1);
     expect(resultado.items[0].unidad_id).toBe("unidad-1");
     expect(resultado.items[0].herramienta_nombre).toBe("Taladro Percutor");

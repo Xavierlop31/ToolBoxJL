@@ -31,6 +31,8 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  /** Identificador legible para el cliente (ej. "TJL0000001") — `id` sigue siendo la PK real. */
+  numero_orden: string;
   cliente_id: string;
   tipo: 'alquiler' | 'venta';
   estado: 'pendiente_pago' | 'confirmada' | 'en_curso' | 'devuelta' | 'cerrada' | 'cancelada';

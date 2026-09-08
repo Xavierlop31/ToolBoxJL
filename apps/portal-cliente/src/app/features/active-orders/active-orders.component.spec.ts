@@ -10,6 +10,7 @@ import { Order } from '../../core/models/order.models';
 function ordenDe(overrides: Partial<Order>): Order {
   return {
     id: '11111111-1111-1111-1111-111111111111',
+    numero_orden: 'TJL0000001',
     cliente_id: 'cliente-1',
     tipo: 'alquiler',
     estado: 'confirmada',
@@ -141,6 +142,7 @@ describe('ActiveOrdersComponent', () => {
 
     const dialog = nativeElement.querySelector<HTMLDialogElement>('dialog[data-testid="order-detail-dialog"]')!;
     expect(dialog.open).toBeTrue();
+    expect(dialog.textContent).toContain('TJL0000001');
     const itemsTexto = nativeElement.querySelector('[data-testid="order-items"]')!.textContent!;
     expect(itemsTexto).toContain('Taladro Percutor');
     expect(itemsTexto).toContain('25,000');
