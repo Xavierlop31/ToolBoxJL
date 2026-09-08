@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { ejecutarMoraCalculatorJob } from "./main";
+import { ejecutarMoraCalculatorJob, ejecutarJobAislado } from "./main";
 
 function fakeOrden(overrides: Record<string, unknown> = {}) {
   return {
@@ -95,5 +95,28 @@ describe("ejecutarMoraCalculatorJob", () => {
 
     expect(emitidos).toBe(0);
     expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("ejecutarJobAislado", () => {
+  it("devuelve false y no loguea nada si ejecutar() resuelve bien", async () => {
+    const errorSpy = jest.fn();
+    const ejecutar = jest.fn().mockResolvedValue(undefined);
+
+    const huboError = await ejecutarJobAislado("JobDePrueba", ejecutar, { error: errorSpy });
+
+    expect(huboError).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("devuelve true y loguea el error con el nombre del job si ejecutar() rechaza, sin propagar", async () => {
+    const errorSpy = jest.fn();
+    const fallo = new Error("credenciales faltantes");
+    const ejecutar = jest.fn().mockRejectedValue(fallo);
+
+    const huboError = await ejecutarJobAislado("WhatsAppReminderJob", ejecutar, { error: errorSpy });
+
+    expect(huboError).toBe(true);
+    expect(errorSpy).toHaveBeenCalledWith("[WhatsAppReminderJob] Falló:", fallo);
   });
 });
