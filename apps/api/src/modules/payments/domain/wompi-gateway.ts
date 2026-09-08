@@ -26,10 +26,20 @@ export interface ResultadoSplitWompi {
 }
 
 export interface WompiGateway {
+  /**
+   * `referencia` — Wompi la exige (`reference`, campo requerido de
+   * `POST /transactions`; detectado en producción vía el 422
+   * `INPUT_VALIDATION_ERROR` que devolvía antes de este campo existir). Debe
+   * ser única por intento, no solo por orden: `PagarOrdenUseCase` puede
+   * llamar esto dos veces por pago (pago principal + depósito) y de nuevo
+   * en un reintento tras un fallo — reusar la misma referencia arriesga que
+   * Wompi la trate como duplicada.
+   */
   iniciarTransaccion(
     monto: number,
     metodo: MetodoPagoWompi,
     modo: ModoTransaccionWompi,
+    referencia: string,
   ): Promise<ResultadoTransaccionWompi>;
 
   /**

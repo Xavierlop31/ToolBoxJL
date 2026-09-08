@@ -21,6 +21,7 @@ export class InMemoryWompiGateway implements WompiGateway {
     monto: number,
     _metodo: MetodoPagoWompi,
     modo: ModoTransaccionWompi,
+    _referencia: string,
   ): Promise<ResultadoTransaccionWompi> {
     if (monto <= 0) {
       throw new Error("Wompi (simulado): no se puede iniciar una transacción con monto <= 0.");
