@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import type { PseBank } from "@toolboxjl/shared-types";
 import type {
-  MetodoPagoWompi,
-  ModoTransaccionWompi,
+  IniciarTransaccionInput,
   ResultadoSplitWompi,
   ResultadoTransaccionWompi,
   WompiGateway,
@@ -16,19 +16,18 @@ import type {
 @Injectable()
 export class InMemoryWompiGateway implements WompiGateway {
   private static readonly SPLIT_LOGISTICA_PCT_DEFAULT = 0.15;
+  private static readonly BANCOS_FAKE: PseBank[] = [
+    { codigo: "1", nombre: "Banco de Prueba 1" },
+    { codigo: "2", nombre: "Banco de Prueba 2" },
+  ];
 
-  async iniciarTransaccion(
-    monto: number,
-    _metodo: MetodoPagoWompi,
-    modo: ModoTransaccionWompi,
-    _referencia: string,
-  ): Promise<ResultadoTransaccionWompi> {
-    if (monto <= 0) {
+  async iniciarTransaccion(input: IniciarTransaccionInput): Promise<ResultadoTransaccionWompi> {
+    if (input.monto <= 0) {
       throw new Error("Wompi (simulado): no se puede iniciar una transacción con monto <= 0.");
     }
     return {
       wompiTransactionId: `wompi-fake-${randomUUID()}`,
-      estado: modo === "hold" ? "hold" : "capturado",
+      estado: input.modo === "hold" ? "hold" : "capturado",
     };
   }
 
@@ -45,5 +44,9 @@ export class InMemoryWompiGateway implements WompiGateway {
   /** Fake determinístico — siempre "captura" con éxito, nunca llama a la red. */
   async capturarHold(_wompiTransactionId: string): Promise<{ estado: "capturado" }> {
     return { estado: "capturado" };
+  }
+
+  async listarBancosPse(): Promise<PseBank[]> {
+    return InMemoryWompiGateway.BANCOS_FAKE;
   }
 }

@@ -8,7 +8,14 @@ import { ReturnIntentService } from '../../core/auth/return-intent.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ToolModel, Zona } from '../../core/models/catalog.models';
-import { Quote, Order, Payment, MetodoPago } from '../../core/models/order.models';
+import {
+  Quote,
+  Order,
+  Payment,
+  MetodoPago,
+  PagarOrdenInput,
+  PseBank,
+} from '../../core/models/order.models';
 import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
 
 /** Forma persistida del intento guardado antes de redirigir a /login (auth-wall, HU-11.1). */
@@ -68,6 +75,16 @@ export class ModelDetailComponent implements OnInit {
   readonly paymentError = signal<string | null>(null);
   readonly paymentResult = signal<Payment | null>(null);
   readonly selectedMetodoPago = signal<MetodoPago>('pse');
+
+  // Datos de PSE (Wompi los exige para armar payment_method — sin esto,
+  // POST /orders/:id/pay respondía 422 "No se especificó método de pago").
+  readonly pseBanks = signal<PseBank[]>([]);
+  readonly pseBanksLoading = signal(false);
+  readonly pseForm = this.formBuilder.nonNullable.group({
+    user_legal_id_type: ['CC' as const, Validators.required],
+    user_legal_id: ['', Validators.required],
+    financial_institution_code: ['', Validators.required],
+  });
 
   // HU-12.2: zonas reales por ciudad (GET /zones?ciudad=) — ya no un array
   // hardcodeado. El zonaId enviado a /orders/quote y /orders debe ser un
@@ -281,6 +298,7 @@ export class ModelDetailComponent implements OnInit {
         this.orderResult.set(order);
         this.orderLoading.set(false);
         this.quoteResult.set(null); // Limpiar cotización al confirmar
+        this.setMetodoPago(this.selectedMetodoPago()); // precarga bancos PSE si aplica (default)
       },
       error: (err) => {
         this.orderError.set(err?.error?.message || 'No pudimos confirmar la orden. Intenta de nuevo.');
@@ -291,16 +309,41 @@ export class ModelDetailComponent implements OnInit {
 
   setMetodoPago(metodo: MetodoPago): void {
     this.selectedMetodoPago.set(metodo);
+    if (metodo === 'pse' && this.pseBanks().length === 0 && !this.pseBanksLoading()) {
+      this.cargarBancosPse();
+    }
+  }
+
+  private cargarBancosPse(): void {
+    this.pseBanksLoading.set(true);
+    this.catalog.getPseBanks().subscribe({
+      next: (bancos) => {
+        this.pseBanks.set(bancos);
+        this.pseBanksLoading.set(false);
+      },
+      error: () => {
+        this.pseBanksLoading.set(false);
+      },
+    });
   }
 
   confirmPayment(): void {
     const order = this.orderResult();
     if (!order) return;
 
+    const metodo = this.selectedMetodoPago();
+    if (metodo === 'pse' && this.pseForm.invalid) {
+      this.pseForm.markAllAsTouched();
+      return;
+    }
+
     this.paymentLoading.set(true);
     this.paymentError.set(null);
 
-    this.catalog.payOrder(order.id, this.selectedMetodoPago()).subscribe({
+    const input: PagarOrdenInput =
+      metodo === 'pse' ? { metodo, ...this.pseForm.getRawValue() } : { metodo };
+
+    this.catalog.payOrder(order.id, input).subscribe({
       next: (payment) => {
         this.paymentResult.set(payment);
         this.paymentLoading.set(false);
