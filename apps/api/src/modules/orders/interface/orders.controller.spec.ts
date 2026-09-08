@@ -18,6 +18,7 @@ function usuario(overrides: Partial<UsuarioAutenticado> = {}): UsuarioAutenticad
 function ordenFake(overrides: Partial<Order> = {}): Order {
   return {
     id: randomUUID(),
+    numero_orden: "TJL0000001",
     cliente_id: "cliente-1",
     tipo: "alquiler",
     estado: "pendiente_pago",

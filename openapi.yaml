@@ -1584,6 +1584,15 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
+        numero_orden:
+          type: string
+          description: >
+            Identificador legible para el cliente (ej. "TJL0000001") — un
+            entero autoincremental formateado con prefijo "TJL" y 7 dígitos
+            con ceros a la izquierda. `id` (UUID) sigue siendo la clave
+            primaria real de la tabla; este campo es solo para mostrarle al
+            cliente algo reconocible en vez del UUID (pantalla de "Orden
+            Creada Exitosamente", detalle de "Mis Pedidos").
         cliente_id: { type: string, format: uuid }
         tipo: { type: string, enum: [alquiler, venta] }
         estado:

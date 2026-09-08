@@ -2,15 +2,18 @@ import { Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { EstadoOrden, Order } from "@toolboxjl/shared-types";
 import type { NuevaOrdenInput, OrderRepository } from "../../domain/order.repository";
+import { formatearNumeroOrden } from "../../domain/numero-orden.util";
 
 @Injectable()
 export class InMemoryOrderRepository implements OrderRepository {
   private readonly ordenes = new Map<string, Order>();
+  private siguienteNumeroOrden = 1;
 
   async crear(input: NuevaOrdenInput): Promise<Order> {
     const orderId = randomUUID();
     const orden: Order = {
       id: orderId,
+      numero_orden: formatearNumeroOrden(this.siguienteNumeroOrden++),
       cliente_id: input.clienteId,
       tipo: input.tipo,
       estado: "pendiente_pago",

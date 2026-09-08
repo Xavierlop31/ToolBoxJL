@@ -342,6 +342,7 @@ describe('ModelDetailComponent', () => {
 
       const order: Order = {
         id: 'order-1',
+        numero_orden: 'TJL0000001',
         cliente_id: 'cliente-1',
         tipo: 'alquiler',
         estado: 'pendiente_pago',
@@ -355,6 +356,13 @@ describe('ModelDetailComponent', () => {
       expect(component.orderResult()).toEqual(order);
       expect(component.quoteResult()).toBeNull();
       expect(component.orderLoading()).toBe(false);
+
+      fixture.detectChanges();
+      const successText = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-testid="order-success"]',
+      )!.textContent!;
+      expect(successText).toContain('TJL0000001');
+      expect(successText).not.toContain('order-1');
     });
 
     it('setea un error si la confirmación de orden falla', () => {
@@ -404,6 +412,7 @@ describe('ModelDetailComponent', () => {
       const component = fixture.componentInstance;
       const order: Order = {
         id: 'order-1',
+        numero_orden: 'TJL0000001',
         cliente_id: 'cliente-1',
         tipo: 'alquiler',
         estado: estadoInicial,

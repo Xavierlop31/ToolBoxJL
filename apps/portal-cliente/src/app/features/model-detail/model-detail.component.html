@@ -254,7 +254,7 @@
         @if (orderResult(); as order) {
           <div class="order-success" data-testid="order-success">
             <h3>¡Orden Creada Exitosamente!</h3>
-            <p>Tu orden ha sido registrada con el ID: <strong>{{ order.id }}</strong></p>
+            <p>Tu orden ha sido registrada con el número: <strong>{{ order.numero_orden }}</strong></p>
             <p>Estado actual: <span class="badge-pending">{{ order.estado }}</span></p>
 
             @if (!paymentResult()) {
