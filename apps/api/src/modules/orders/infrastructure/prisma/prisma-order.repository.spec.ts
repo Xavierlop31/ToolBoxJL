@@ -2,10 +2,15 @@ import type { Order as PrismaOrder, OrderItem as PrismaOrderItem } from "@prisma
 import { PrismaOrderRepository } from "./prisma-order.repository";
 import type { PrismaService } from "../../../catalog-inventory/infrastructure/prisma/prisma.service";
 
+/** `unidad.modelo` anidado — mismo `include` que usa `PrismaOrderRepository` para resolver
+ * `herramienta_nombre` (openapi.yaml `OrderItem`). Solo lo necesitan los métodos que pasan
+ * por `aDominio`; `obtenerUnidadesReservadasEnRango`/`obtenerUnidadesConOrdenesActivas` no. */
+type FakeOrderItem = PrismaOrderItem & { unidad: { modelo: { nombre: string } } };
+
 function fakeOrder(
   overrides: Partial<PrismaOrder> = {},
-  items: PrismaOrderItem[] = [],
-): PrismaOrder & { items: PrismaOrderItem[] } {
+  items: FakeOrderItem[] = [],
+): PrismaOrder & { items: FakeOrderItem[] } {
   return {
     id: "orden-1",
     clienteId: "cliente-1",
@@ -18,18 +23,23 @@ function fakeOrder(
     zonaId: "zona-1",
     ...overrides,
     items,
-  } as PrismaOrder & { items: PrismaOrderItem[] };
+  } as PrismaOrder & { items: FakeOrderItem[] };
 }
 
-function fakeItem(overrides: Partial<PrismaOrderItem> = {}): PrismaOrderItem {
+function fakeItem(overrides: Partial<PrismaOrderItem> = {}): FakeOrderItem {
   return {
     id: "item-1",
     orderId: "orden-1",
     unidadId: "unidad-1",
     tarifaAplicada: 40_000,
+    unidad: { modelo: { nombre: "Taladro Percutor" } },
     ...overrides,
-  } as PrismaOrderItem;
+  } as FakeOrderItem;
 }
+
+const INCLUDE_ITEMS_CON_MODELO = {
+  items: { include: { unidad: { include: { modelo: true } } } },
+};
 
 describe("PrismaOrderRepository", () => {
   let prisma: { order: Record<string, jest.Mock> };
@@ -69,11 +79,12 @@ describe("PrismaOrderRepository", () => {
         fechaFin: new Date("2026-09-05"),
         items: { create: [{ unidadId: "unidad-1", tarifaAplicada: 40_000 }] },
       }),
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     expect(resultado.id).toBe("orden-1");
     expect(resultado.items).toHaveLength(1);
     expect(resultado.items[0].unidad_id).toBe("unidad-1");
+    expect(resultado.items[0].herramienta_nombre).toBe("Taladro Percutor");
     expect(resultado.fecha_inicio).toBe("2026-09-01");
   });
 
@@ -95,7 +106,7 @@ describe("PrismaOrderRepository", () => {
 
     expect(prisma.order.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ fechaInicio: null, fechaFin: null }),
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
   });
 
@@ -106,7 +117,7 @@ describe("PrismaOrderRepository", () => {
 
     expect(prisma.order.findUnique).toHaveBeenCalledWith({
       where: { id: "orden-1" },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     expect(resultado?.cliente_id).toBe("cliente-1");
   });
@@ -160,7 +171,7 @@ describe("PrismaOrderRepository", () => {
     expect(prisma.order.update).toHaveBeenCalledWith({
       where: { id: "orden-1" },
       data: { estado: "confirmada" },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     expect(resultado.estado).toBe("confirmada");
   });
@@ -176,7 +187,7 @@ describe("PrismaOrderRepository", () => {
         estado: { in: ["confirmada", "en_curso"] },
         fechaFin: { lt: ahora },
       },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     expect(resultado).toHaveLength(1);
   });
@@ -191,7 +202,7 @@ describe("PrismaOrderRepository", () => {
     expect(prisma.order.update).toHaveBeenCalledWith({
       where: { id: "orden-1" },
       data: { fechaFin: new Date("2026-09-08") },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     expect(resultado.fecha_fin).toBe("2026-09-08");
   });

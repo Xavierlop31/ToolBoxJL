@@ -1621,6 +1621,16 @@ components:
         order_id: { type: string, format: uuid }
         unidad_id: { type: string, format: uuid }
         tarifa_aplicada: { type: integer, description: "COP" }
+        herramienta_nombre:
+          type: string
+          description: >
+            Nombre del modelo de herramienta (ToolModel.nombre) al que
+            pertenece unidad_id. Resuelto server-side vía JOIN al leer la
+            orden — no se persiste en order_items, así que siempre refleja
+            el modelo real de la unidad. Sprint 12 (HU-12.1): el detalle de
+            "Mis Pedidos" del cliente lo muestra en vez del identificador
+            interno de la unidad (unidad_id no se expone en esa UI, aunque
+            sigue en el payload).
 
     Payment:
       type: object
