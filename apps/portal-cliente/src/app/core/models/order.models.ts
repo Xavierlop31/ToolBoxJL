@@ -24,7 +24,7 @@ export interface OrderItem {
   id: string;
   order_id: string;
   unidad_id: string;
-  tarifa_applied: number;
+  tarifa_aplicada: number;
 }
 
 export interface Order {

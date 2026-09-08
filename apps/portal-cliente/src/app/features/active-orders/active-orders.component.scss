@@ -39,19 +39,26 @@
   width: 100%;
 }
 
-.order-id {
-  font-family: monospace;
+.order-return-mode {
+  font-size: 13px;
   color: var(--tbjl-color-neutral-500, #757588);
 }
 
 .order-badge {
   margin-left: auto;
   padding: 4px 10px;
+  border: none;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
   background: var(--tbjl-color-primary-50, #e0e0ff);
   color: var(--tbjl-color-primary-700, #0b0e3d);
+
+  &:hover {
+    filter: brightness(0.96);
+  }
 
   &[data-estado='en_curso'] {
     background: #e6f7ef;
