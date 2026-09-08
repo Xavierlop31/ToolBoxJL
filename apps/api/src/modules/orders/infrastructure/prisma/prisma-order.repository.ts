@@ -2,9 +2,22 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../catalog-inventory/infrastructure/prisma/prisma.service";
 import type { Order, TipoOrden, EstadoOrden, ModoRetorno } from "@toolboxjl/shared-types";
 import type { NuevaOrdenInput, OrderRepository } from "../../domain/order.repository";
-import type { Order as PrismaOrder, OrderItem as PrismaOrderItem } from "@prisma/client";
+import type {
+  Order as PrismaOrder,
+  OrderItem as PrismaOrderItem,
+  ToolUnit as PrismaToolUnit,
+  ToolModel as PrismaToolModel,
+} from "@prisma/client";
 
-function aDominio(o: PrismaOrder & { items: PrismaOrderItem[] }): Order {
+/** `include` compartido por todas las queries de abajo que alimentan `aDominio` — resuelve
+ * `herramienta_nombre` (openapi.yaml `OrderItem`) vía JOIN a `unidad.modelo`, sin persistirlo. */
+const INCLUDE_ITEMS_CON_MODELO = {
+  items: { include: { unidad: { include: { modelo: true } } } },
+} as const;
+
+type PrismaOrderItemConModelo = PrismaOrderItem & { unidad: PrismaToolUnit & { modelo: PrismaToolModel } };
+
+function aDominio(o: PrismaOrder & { items: PrismaOrderItemConModelo[] }): Order {
   return {
     id: o.id,
     cliente_id: o.clienteId,
@@ -20,6 +33,7 @@ function aDominio(o: PrismaOrder & { items: PrismaOrderItem[] }): Order {
       order_id: i.orderId,
       unidad_id: i.unidadId,
       tarifa_aplicada: i.tarifaAplicada,
+      herramienta_nombre: i.unidad.modelo.nombre,
     })),
   };
 }
@@ -45,9 +59,7 @@ export class PrismaOrderRepository implements OrderRepository {
           })),
         },
       },
-      include: {
-        items: true,
-      },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     return aDominio(creado);
   }
@@ -55,7 +67,7 @@ export class PrismaOrderRepository implements OrderRepository {
   async buscarPorId(id: string): Promise<Order | null> {
     const encontrado = await this.prisma.order.findUnique({
       where: { id },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     return encontrado ? aDominio(encontrado) : null;
   }
@@ -122,7 +134,7 @@ export class PrismaOrderRepository implements OrderRepository {
     const actualizado = await this.prisma.order.update({
       where: { id },
       data: { estado },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     return aDominio(actualizado);
   }
@@ -133,7 +145,7 @@ export class PrismaOrderRepository implements OrderRepository {
         estado: { in: ["confirmada", "en_curso"] },
         fechaFin: { lt: ahora },
       },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     return encontradas.map(aDominio);
   }
@@ -142,7 +154,7 @@ export class PrismaOrderRepository implements OrderRepository {
     const actualizado = await this.prisma.order.update({
       where: { id },
       data: { fechaFin: new Date(nuevaFechaFin) },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     return aDominio(actualizado);
   }
@@ -170,7 +182,7 @@ export class PrismaOrderRepository implements OrderRepository {
         estado: { in: ["confirmada", "en_curso"] },
         fechaFin: { lte: umbral },
       },
-      include: { items: true },
+      include: INCLUDE_ITEMS_CON_MODELO,
     });
     return encontradas.map(aDominio);
   }
@@ -190,7 +202,7 @@ export class PrismaOrderRepository implements OrderRepository {
         orderBy: { createdAt: "desc" as const },
         skip: (filtro.page - 1) * filtro.pageSize,
         take: filtro.pageSize,
-        include: { items: true },
+        include: INCLUDE_ITEMS_CON_MODELO,
       }),
     ]);
     return { items: encontradas.map(aDominio), total };

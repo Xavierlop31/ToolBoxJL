@@ -25,6 +25,8 @@ export interface OrderItem {
   order_id: string;
   unidad_id: string;
   tarifa_aplicada: number;
+  /** Nombre del modelo de herramienta — resuelto server-side, no persistido. */
+  herramienta_nombre?: string;
 }
 
 export interface Order {
