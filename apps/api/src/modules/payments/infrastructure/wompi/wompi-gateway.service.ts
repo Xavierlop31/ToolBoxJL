@@ -54,8 +54,14 @@ export class WompiGatewayService implements WompiGateway {
     });
 
     if (!response.ok) {
+      let detalle = "(no se pudo leer el cuerpo de la respuesta)";
+      try {
+        detalle = await response.text();
+      } catch {
+        // se queda con el fallback de arriba — no tapar el error original por uno de logging.
+      }
       throw new Error(
-        `Wompi sandbox respondió ${response.status} al iniciar la transacción (metodo: ${metodo}, modo: ${modo}).`,
+        `Wompi sandbox respondió ${response.status} al iniciar la transacción (metodo: ${metodo}, modo: ${modo}). Detalle: ${detalle}`,
       );
     }
 
