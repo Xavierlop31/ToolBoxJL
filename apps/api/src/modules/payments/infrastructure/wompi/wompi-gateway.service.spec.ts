@@ -36,7 +36,7 @@ describe("WompiGatewayService", () => {
     });
 
     const servicio = crearServicio();
-    const resultado = await servicio.iniciarTransaccion(50_000, "tarjeta", "captura");
+    const resultado = await servicio.iniciarTransaccion(50_000, "tarjeta", "captura", "orden-1-principal-ref");
 
     expect(resultado).toEqual({ wompiTransactionId: "txn-abc-123", estado: "capturado" });
     expect(fetchMock).toHaveBeenCalledWith(
@@ -50,6 +50,7 @@ describe("WompiGatewayService", () => {
     expect(body).toEqual({
       amount_in_cents: 5_000_000,
       currency: "COP",
+      reference: "orden-1-principal-ref",
       payment_method_type: "CARD",
       capture_method: "automatic",
     });
@@ -62,10 +63,11 @@ describe("WompiGatewayService", () => {
     });
 
     const servicio = crearServicio();
-    const resultado = await servicio.iniciarTransaccion(10_000, "pse", "hold");
+    const resultado = await servicio.iniciarTransaccion(10_000, "pse", "hold", "orden-1-deposito-ref");
 
     expect(resultado.estado).toBe("hold");
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.reference).toBe("orden-1-deposito-ref");
     expect(body.payment_method_type).toBe("PSE");
     expect(body.capture_method).toBe("manual");
   });
@@ -74,7 +76,7 @@ describe("WompiGatewayService", () => {
     fetchMock.mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({}) });
 
     const servicio = crearServicio();
-    await expect(servicio.iniciarTransaccion(10_000, "tarjeta", "captura")).rejects.toThrow(
+    await expect(servicio.iniciarTransaccion(10_000, "tarjeta", "captura", "ref-1")).rejects.toThrow(
       /respondió 502/,
     );
   });
@@ -87,7 +89,7 @@ describe("WompiGatewayService", () => {
     });
 
     const servicio = crearServicio();
-    await expect(servicio.iniciarTransaccion(10_000, "pse", "captura")).rejects.toThrow(
+    await expect(servicio.iniciarTransaccion(10_000, "pse", "captura", "ref-1")).rejects.toThrow(
       /respondió 422.*payment_method/s,
     );
   });
@@ -96,7 +98,7 @@ describe("WompiGatewayService", () => {
     fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
 
     const servicio = crearServicio();
-    await expect(servicio.iniciarTransaccion(10_000, "tarjeta", "captura")).rejects.toThrow(
+    await expect(servicio.iniciarTransaccion(10_000, "tarjeta", "captura", "ref-1")).rejects.toThrow(
       /no se pudo leer el cuerpo/,
     );
   });
@@ -105,7 +107,7 @@ describe("WompiGatewayService", () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ data: {} }) });
 
     const servicio = crearServicio();
-    await expect(servicio.iniciarTransaccion(10_000, "tarjeta", "captura")).rejects.toThrow(
+    await expect(servicio.iniciarTransaccion(10_000, "tarjeta", "captura", "ref-1")).rejects.toThrow(
       "Wompi sandbox no devolvió un id de transacción.",
     );
   });
