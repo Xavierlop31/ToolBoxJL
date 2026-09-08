@@ -1,9 +1,10 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Order } from '../../core/models/order.models';
+import { OrderDetailModalComponent } from './components/order-detail-modal/order-detail-modal.component';
 
 const PAGE_SIZE = 5;
 
@@ -19,6 +20,11 @@ const ESTADO_LABEL: Record<Order['estado'], string> = {
   cancelada: 'Cancelada',
 };
 
+const RETURN_MODE_LABEL: Record<NonNullable<Order['return_mode']>, string> = {
+  en_sede: 'Retiro en sede',
+  recogida_domicilio: 'Recogida a domicilio',
+};
+
 /**
  * "Mis Pedidos Activos" (HU-12.1, Fase 3) — sección inferior del Home/Catálogo,
  * solo visible con sesión activa. Consulta `GET /orders` sin filtro de
@@ -26,11 +32,17 @@ const ESTADO_LABEL: Record<Order['estado'], string> = {
  * cuentan como "activo" hoy en el modelo real de `Order` (`confirmada`,
  * `en_curso` — el Gherkin de origen usa nombres de estado que no existen en
  * el backend, ver la nota de Sprint 12 en el PR).
+ *
+ * La fila ya no muestra el UUID de la orden (poco legible para el cliente) y
+ * el Estado pasó de badge puramente informativo a botón de acción: abre
+ * `OrderDetailModalComponent` con el detalle completo + ítems, de solo
+ * lectura (no permite editar nada desde acá — mismo criterio de
+ * `GET /orders/:id`).
  */
 @Component({
   selector: 'app-active-orders',
   standalone: true,
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, OrderDetailModalComponent],
   templateUrl: './active-orders.component.html',
   styleUrl: './active-orders.component.scss',
 })
@@ -44,8 +56,10 @@ export class ActiveOrdersComponent implements OnInit {
   readonly page = signal(1);
   readonly total = signal(0);
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
+  readonly selectedOrder = signal<Order | null>(null);
 
   readonly estadoLabel = ESTADO_LABEL;
+  readonly returnModeLabel = RETURN_MODE_LABEL;
   readonly isAuthenticated = this.auth.isAuthenticated;
 
   ngOnInit(): void {
@@ -58,6 +72,11 @@ export class ActiveOrdersComponent implements OnInit {
     if (page < 1 || page > this.totalPages()) return;
     this.page.set(page);
     this.cargar();
+  }
+
+  /** Botón de Estado en la fila — abre el detalle completo del pedido (solo lectura). */
+  verDetalle(order: Order): void {
+    this.selectedOrder.set(order);
   }
 
   private cargar(): void {

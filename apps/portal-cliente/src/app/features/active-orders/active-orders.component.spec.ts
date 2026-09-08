@@ -82,4 +82,57 @@ describe('ActiveOrdersComponent', () => {
 
     expect(fixture.componentInstance.errorMessage()).toBe('No pudimos cargar tus pedidos activos.');
   });
+
+  it('no muestra el UUID de la orden y sí el modo de retorno en la fila', () => {
+    configurar(true);
+    fixture.detectChanges();
+
+    httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+      items: [
+        ordenDe({
+          id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+          estado: 'confirmada',
+          return_mode: 'recogida_domicilio',
+        }),
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
+    fixture.detectChanges();
+
+    const filaTexto = (fixture.nativeElement as HTMLElement).querySelector('.order-row')!.textContent!;
+    expect(filaTexto).not.toContain('aaaaaaaa');
+    expect(filaTexto).toContain('Recogida a domicilio');
+  });
+
+  it('al hacer click en el botón de Estado, abre el detalle de la orden con sus ítems (solo lectura)', () => {
+    configurar(true);
+    fixture.detectChanges();
+
+    httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+      items: [
+        ordenDe({
+          id: 'a',
+          estado: 'confirmada',
+          items: [{ id: 'item-1', order_id: 'a', unidad_id: 'unidad-1', tarifa_aplicada: 25000 }],
+        }),
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
+    fixture.detectChanges();
+
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    expect(nativeElement.querySelector('dialog[data-testid="order-detail-dialog"]')).toBeNull();
+
+    const boton = nativeElement.querySelector<HTMLButtonElement>('.order-badge')!;
+    boton.click();
+    fixture.detectChanges();
+
+    const dialog = nativeElement.querySelector<HTMLDialogElement>('dialog[data-testid="order-detail-dialog"]')!;
+    expect(dialog.open).toBeTrue();
+    expect(nativeElement.querySelector('[data-testid="order-items"]')!.textContent).toContain('25,000');
+  });
 });
