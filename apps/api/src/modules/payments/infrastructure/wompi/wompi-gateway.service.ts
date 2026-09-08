@@ -38,6 +38,7 @@ export class WompiGatewayService implements WompiGateway {
     monto: number,
     metodo: MetodoPagoWompi,
     modo: ModoTransaccionWompi,
+    referencia: string,
   ): Promise<ResultadoTransaccionWompi> {
     const response = await fetch(`${WompiGatewayService.BASE_URL}/transactions`, {
       method: "POST",
@@ -48,6 +49,7 @@ export class WompiGatewayService implements WompiGateway {
       body: JSON.stringify({
         amount_in_cents: monto * 100,
         currency: "COP",
+        reference: referencia,
         payment_method_type: metodo === "tarjeta" ? "CARD" : "PSE",
         capture_method: modo === "hold" ? "manual" : "automatic",
       }),

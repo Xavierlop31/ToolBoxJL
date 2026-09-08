@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import type { MetodoPago, Payment } from "@toolboxjl/shared-types";
 import { ORDER_REPOSITORY } from "../../orders/infrastructure/orders.tokens";
 import type { OrderRepository } from "../../orders/domain/order.repository";
@@ -133,6 +134,7 @@ export class PagarOrdenUseCase {
         cotizacion.tarifa_base,
         metodo,
         "captura",
+        `${orden.id}-principal-${randomUUID()}`,
       );
       pagoPrincipal = await this.pagos.crear({
         orderId: orden.id,
@@ -149,6 +151,7 @@ export class PagarOrdenUseCase {
           cotizacion.deposito_garantia,
           metodo,
           modoDeposito,
+          `${orden.id}-deposito-${randomUUID()}`,
         );
         pagoDeposito = await this.pagos.crear({
           orderId: orden.id,
