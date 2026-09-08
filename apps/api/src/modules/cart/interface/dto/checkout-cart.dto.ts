@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 import type { CheckoutCartInput, ModoRetorno } from "@toolboxjl/shared-types";
 import { SanitizarTextoLibre } from "../../../../shared/sanitize.util";
 
@@ -18,6 +18,6 @@ export class CheckoutCartDto implements CheckoutCartInput {
   zona_id!: string;
 
   @IsOptional()
-  @IsEnum(["en_sede", "recogida_domicilio"])
+  @IsIn(["en_sede", "recogida_domicilio"])
   return_mode?: ModoRetorno;
 }

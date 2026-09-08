@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID, IsDateString, MaxLength } from "class-validator";
+import { IsIn, IsOptional, IsString, IsUUID, IsDateString, MaxLength } from "class-validator";
 import { SanitizarTextoLibre } from "../../../../shared/sanitize.util";
 
 /**
@@ -9,7 +9,7 @@ export class CotizarOrdenDto {
   @IsUUID()
   modelo_id!: string;
 
-  @IsEnum(["alquiler", "venta"])
+  @IsIn(["alquiler", "venta"])
   tipo!: "alquiler" | "venta";
 
   @IsOptional()

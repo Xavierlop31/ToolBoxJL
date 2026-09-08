@@ -172,6 +172,20 @@
             }
           </div>
 
+          <div class="field toggle-field">
+            <span class="label">Modo de retorno</span>
+            <div class="radio-group">
+              <label>
+                <input type="radio" value="en_sede" formControlName="returnMode" />
+                Retiro en sede
+              </label>
+              <label>
+                <input type="radio" value="recogida_domicilio" formControlName="returnMode" />
+                Recogida a domicilio
+              </label>
+            </div>
+          </div>
+
           <div class="form-actions">
             <button type="submit" class="btn-primary" [disabled]="quoteLoading()">
               {{ quoteLoading() ? 'Calculando cotización…' : 'Calcular Cotización' }}

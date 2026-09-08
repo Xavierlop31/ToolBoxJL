@@ -20,6 +20,7 @@ interface ReturnIntentData {
     fechaFin: string;
     direccionEntrega: string;
     zonaId: string;
+    returnMode: 'en_sede' | 'recogida_domicilio';
   };
 }
 
@@ -90,6 +91,7 @@ export class ModelDetailComponent implements OnInit {
     fechaFin: [''],
     direccionEntrega: ['', Validators.required],
     zonaId: ['', Validators.required],
+    returnMode: ['en_sede' as 'en_sede' | 'recogida_domicilio', Validators.required],
   });
 
   getToolImage(model: ToolModel): string {
@@ -260,13 +262,14 @@ export class ModelDetailComponent implements OnInit {
     this.orderLoading.set(true);
     this.orderError.set(null);
 
-    const { tipo, fechaInicio, fechaFin, direccionEntrega, zonaId } = this.form.getRawValue();
+    const { tipo, fechaInicio, fechaFin, direccionEntrega, zonaId, returnMode } = this.form.getRawValue();
 
     const payload = {
       modelo_id: model.id,
       tipo: tipo as 'alquiler' | 'venta',
       direccion_entrega: direccionEntrega,
       zona_id: zonaId,
+      return_mode: returnMode,
       ...(tipo === 'alquiler' ? {
         fecha_inicio: fechaInicio,
         fecha_fin: fechaFin
