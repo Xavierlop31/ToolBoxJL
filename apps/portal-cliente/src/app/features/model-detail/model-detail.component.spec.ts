@@ -56,6 +56,7 @@ describe('ModelDetailComponent', () => {
       fechaFin: '2026-09-05',
       direccionEntrega: 'Calle Falsa 123',
       zonaId: 'zona-test-uuid',
+      returnMode: 'en_sede',
     });
   }
 
@@ -246,6 +247,7 @@ describe('ModelDetailComponent', () => {
         fechaFin: '',
         direccionEntrega: 'Calle Falsa 123',
         zonaId: 'zona-test-uuid',
+        returnMode: 'en_sede',
       });
 
       component.getQuote();
@@ -333,6 +335,7 @@ describe('ModelDetailComponent', () => {
         tipo: 'alquiler',
         direccion_entrega: 'Calle Falsa 123',
         zona_id: 'zona-test-uuid',
+        return_mode: 'en_sede',
         fecha_inicio: '2026-09-01',
         fecha_fin: '2026-09-05',
       });

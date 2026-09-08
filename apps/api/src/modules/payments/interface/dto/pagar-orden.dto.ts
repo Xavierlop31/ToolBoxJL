@@ -1,4 +1,4 @@
-import { IsEnum } from "class-validator";
+import { IsIn } from "class-validator";
 import type { MetodoPago } from "@toolboxjl/shared-types";
 
 /**
@@ -9,6 +9,6 @@ import type { MetodoPago } from "@toolboxjl/shared-types";
  * API solo recibe el método elegido.
  */
 export class PagarOrdenDto {
-  @IsEnum(["pse", "tarjeta", "contra_entrega"])
+  @IsIn(["pse", "tarjeta", "contra_entrega"])
   metodo!: MetodoPago;
 }

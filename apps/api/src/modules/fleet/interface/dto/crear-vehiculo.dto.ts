@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsNumber, IsOptional, IsUUID, Min } from "class-validator";
+import { IsArray, IsIn, IsNumber, IsOptional, IsUUID, Min } from "class-validator";
 import type { TipoVehiculo, VehicleInput } from "@toolboxjl/shared-types";
 
 /**
@@ -8,7 +8,7 @@ import type { TipoVehiculo, VehicleInput } from "@toolboxjl/shared-types";
  * `CrearModeloDto`/`CrearOrdenDto`).
  */
 export class CrearVehiculoDto implements VehicleInput {
-  @IsEnum(["moto", "camioneta", "camion"])
+  @IsIn(["moto", "camioneta", "camion"])
   tipo!: TipoVehiculo;
 
   @IsNumber()

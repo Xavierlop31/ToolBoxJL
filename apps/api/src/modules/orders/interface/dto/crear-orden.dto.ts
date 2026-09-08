@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID, IsDateString, MaxLength } from "class-validator";
+import { IsIn, IsOptional, IsString, IsUUID, IsDateString, MaxLength } from "class-validator";
 import type { OrderInput, TipoOrden, ModoRetorno } from "@toolboxjl/shared-types";
 import { SanitizarTextoLibre } from "../../../../shared/sanitize.util";
 
@@ -10,7 +10,7 @@ export class CrearOrdenDto implements OrderInput {
   @IsUUID()
   modelo_id!: string;
 
-  @IsEnum(["alquiler", "venta"])
+  @IsIn(["alquiler", "venta"])
   tipo!: TipoOrden;
 
   @IsOptional()
@@ -21,7 +21,7 @@ export class CrearOrdenDto implements OrderInput {
   @IsDateString()
   fecha_fin?: string;
 
-  @IsEnum(["en_sede", "recogida_domicilio"])
+  @IsIn(["en_sede", "recogida_domicilio"])
   return_mode!: ModoRetorno;
 
   @IsString()
