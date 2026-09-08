@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../catalog-inventory/infrastructure/prisma/prisma.service";
 import type { Order, TipoOrden, EstadoOrden, ModoRetorno } from "@toolboxjl/shared-types";
 import type { NuevaOrdenInput, OrderRepository } from "../../domain/order.repository";
+import { formatearNumeroOrden } from "../../domain/numero-orden.util";
 import type {
   Order as PrismaOrder,
   OrderItem as PrismaOrderItem,
@@ -20,6 +21,7 @@ type PrismaOrderItemConModelo = PrismaOrderItem & { unidad: PrismaToolUnit & { m
 function aDominio(o: PrismaOrder & { items: PrismaOrderItemConModelo[] }): Order {
   return {
     id: o.id,
+    numero_orden: formatearNumeroOrden(o.numeroOrden),
     cliente_id: o.clienteId,
     tipo: o.tipo as TipoOrden,
     estado: o.estado as EstadoOrden,

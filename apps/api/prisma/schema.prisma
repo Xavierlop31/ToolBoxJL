@@ -177,6 +177,11 @@ model ToolUnitStatusLog {
 
 model Order {
   id               String      @id @default(uuid()) @db.Uuid
+  /// Entero autoincremental — formateado como "TJL0000001" (prefijo + 7
+  /// dígitos) en el dominio (`Order.numero_orden`, ver
+  /// PrismaOrderRepository). `id` sigue siendo la PK real; este campo es
+  /// solo para mostrarle al cliente un identificador legible.
+  numeroOrden      Int         @unique @default(autoincrement()) @map("numero_orden")
   clienteId        String      @map("cliente_id") @db.Uuid
   tipo             TipoOrden
   estado           EstadoOrden @default(pendiente_pago)
