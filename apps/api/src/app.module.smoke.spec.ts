@@ -52,6 +52,7 @@ describe("AppModule (smoke — arranque real, sin mocks de DI)", () => {
     DATABASE_URL: "postgresql://user:pass@localhost:5432/smoke_test",
     WOMPI_PRIVATE_KEY: "prv_test_smoke",
     WOMPI_PUBLIC_KEY: "pub_test_smoke",
+    WOMPI_INTEGRITY_SECRET: "test_integrity_smoke",
     WHATSAPP_TOKEN: "smoke-token",
     WHATSAPP_PHONE_NUMBER_ID: "0000000000",
     WHATSAPP_BUSINESS_ACCOUNT_ID: "0000000000",

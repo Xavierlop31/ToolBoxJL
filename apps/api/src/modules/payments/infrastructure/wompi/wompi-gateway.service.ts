@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import type { PseBank, WompiTerms } from "@toolboxjl/shared-types";
 import type {
   IniciarTransaccionInput,
@@ -13,9 +14,13 @@ import { loadSplitLogisticaPct, loadWompiCredentials } from "../config/wompi.con
  * Implementación real contra Wompi sandbox (https://sandbox.wompi.co/v1).
  *
  * *** NUNCA FUE PROBADA END-TO-END CONTRA LA API REAL DE WOMPI *** — ver
- * historial de esta clase: dos rechazos reales de producción ya corregidos
- * acá (401 por credencial de producción vs. sandbox — env var, no código;
- * 422 por `reference` faltante). El mapeo de `payment_method` para PSE
+ * historial de esta clase: varios rechazos reales de producción ya
+ * corregidos acá, uno por uno, cada vez que se destapó el siguiente (401 por
+ * credencial de producción vs. sandbox — env var, no código; 422 por
+ * `reference` faltante; 401 en `listarBancosPse` por mandar la public key
+ * como query param en vez de header; 422 por `acceptance_token` faltante;
+ * 422 por `signature` de integridad faltante). El mapeo de `payment_method`
+ * para PSE
  * sigue la documentación pública de Wompi para `POST /transactions` pero
  * TAMPOCO fue confirmado end-to-end — puede necesitar otra vuelta si Wompi
  * rechaza algún campo más. Tarjeta (`CARD`) queda deliberadamente sin
@@ -38,12 +43,14 @@ export class WompiGatewayService implements WompiGateway {
 
   private readonly privateKey: string;
   private readonly publicKey: string;
+  private readonly integritySecret: string;
   private readonly splitLogisticaPct: number;
 
   constructor() {
     const credenciales = loadWompiCredentials();
     this.privateKey = credenciales.privateKey;
     this.publicKey = credenciales.publicKey;
+    this.integritySecret = credenciales.integritySecret;
     this.splitLogisticaPct = loadSplitLogisticaPct();
   }
 
@@ -76,6 +83,7 @@ export class WompiGatewayService implements WompiGateway {
         capture_method: input.modo === "hold" ? "manual" : "automatic",
         acceptance_token: input.acceptanceToken,
         accept_personal_auth: input.personalAuthToken,
+        signature: this.calcularFirmaIntegridad(input.referencia, input.monto * 100),
       }),
     });
 
@@ -101,6 +109,19 @@ export class WompiGatewayService implements WompiGateway {
       wompiTransactionId,
       estado: this.mapearEstado(body.data?.status, input.modo),
     };
+  }
+
+  /**
+   * `POST /transactions` con la firma de integridad habilitada exige un
+   * `signature` = SHA256(reference + amount_in_cents + currency + secreto),
+   * en ese orden exacto — ver
+   * https://docs.wompi.co/en/docs/colombia/firma-de-integridad/. Sin esto,
+   * Wompi rechaza con 422 `{"signature":["Firma de integridad requerida no
+   * enviada"]}` (encontrado en producción).
+   */
+  private calcularFirmaIntegridad(referencia: string, montoEnCentavos: number): string {
+    const cadena = `${referencia}${montoEnCentavos}COP${this.integritySecret}`;
+    return createHash("sha256").update(cadena).digest("hex");
   }
 
   private mapearEstado(
