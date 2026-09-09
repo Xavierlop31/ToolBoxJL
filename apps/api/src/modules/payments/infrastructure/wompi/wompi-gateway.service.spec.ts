@@ -1,5 +1,11 @@
+import { createHash } from "node:crypto";
 import type { IniciarTransaccionInput } from "../../domain/wompi-gateway";
 import { WompiGatewayService } from "./wompi-gateway.service";
+
+/** Mismo algoritmo que WompiGatewayService.calcularFirmaIntegridad — ver esa clase. */
+function firmaIntegridadEsperada(referencia: string, montoEnCentavos: number, secreto: string): string {
+  return createHash("sha256").update(`${referencia}${montoEnCentavos}COP${secreto}`).digest("hex");
+}
 
 describe("WompiGatewayService", () => {
   const envOriginal = { ...process.env };
@@ -8,6 +14,7 @@ describe("WompiGatewayService", () => {
   beforeEach(() => {
     process.env.WOMPI_PRIVATE_KEY = "prv_test_1234";
     process.env.WOMPI_PUBLIC_KEY = "pub_test_1234";
+    process.env.WOMPI_INTEGRITY_SECRET = "test_integrity_secret_1234";
     process.env.WOMPI_SPLIT_LOGISTICA_PCT = "0.2";
     fetchMock = jest.fn();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,6 +68,12 @@ describe("WompiGatewayService", () => {
     expect(() => crearServicio()).toThrow(/WOMPI_PRIVATE_KEY/);
   });
 
+  it("lanza si WOMPI_INTEGRITY_SECRET no está definida al construir", () => {
+    delete process.env.WOMPI_INTEGRITY_SECRET;
+
+    expect(() => crearServicio()).toThrow(/WOMPI_INTEGRITY_SECRET/);
+  });
+
   it("iniciarTransaccion (tarjeta, captura) llama a Wompi y devuelve el id + estado capturado", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -88,6 +101,7 @@ describe("WompiGatewayService", () => {
       capture_method: "automatic",
       acceptance_token: "token-aceptacion-test",
       accept_personal_auth: "token-autorizacion-datos-test",
+      signature: firmaIntegridadEsperada("orden-1-principal-ref", 5_000_000, "test_integrity_secret_1234"),
     });
   });
 

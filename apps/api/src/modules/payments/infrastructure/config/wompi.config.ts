@@ -1,6 +1,7 @@
 export interface WompiCredentials {
   readonly privateKey: string;
   readonly publicKey: string;
+  readonly integritySecret: string;
 }
 
 /**
@@ -8,21 +9,30 @@ export interface WompiCredentials {
  * (catalog-inventory/infrastructure/config/database.config.ts): fallan
  * explícito en runtime si no están, sin fallback silencioso — son
  * credenciales, no una regla de negocio.
+ *
+ * `WOMPI_INTEGRITY_SECRET` ("Secreto de integridad" del dashboard de Wompi,
+ * Developers > Secretos para integración técnica) — encontrado en
+ * producción como 422 `{"signature":["Firma de integridad requerida no
+ * enviada"]}`: este merchant tiene la firma de integridad habilitada, así
+ * que `POST /transactions` la exige en TODA transacción (ver
+ * WompiGatewayService.calcularFirmaIntegridad).
  */
 export function loadWompiCredentials(
   env: NodeJS.ProcessEnv = process.env,
 ): WompiCredentials {
   const privateKey = env.WOMPI_PRIVATE_KEY?.trim();
   const publicKey = env.WOMPI_PUBLIC_KEY?.trim();
-  if (!privateKey || !publicKey) {
+  const integritySecret = env.WOMPI_INTEGRITY_SECRET?.trim();
+  if (!privateKey || !publicKey || !integritySecret) {
     throw new Error(
-      "WOMPI_PRIVATE_KEY y/o WOMPI_PUBLIC_KEY no están definidas. WompiGatewayService " +
-        "(implementación real contra Wompi sandbox) no puede autenticar transacciones sin " +
-        "ellas. Definilas en el entorno — ver apps/api/.env.example. (Para tests/BDD, usá " +
-        "InMemoryWompiGateway en vez de la implementación real — no requiere credenciales.)",
+      "WOMPI_PRIVATE_KEY, WOMPI_PUBLIC_KEY y/o WOMPI_INTEGRITY_SECRET no están definidas. " +
+        "WompiGatewayService (implementación real contra Wompi sandbox) no puede autenticar " +
+        "ni firmar transacciones sin ellas. Definilas en el entorno — ver " +
+        "apps/api/.env.example. (Para tests/BDD, usá InMemoryWompiGateway en vez de la " +
+        "implementación real — no requiere credenciales.)",
     );
   }
-  return { privateKey, publicKey };
+  return { privateKey, publicKey, integritySecret };
 }
 
 /**
