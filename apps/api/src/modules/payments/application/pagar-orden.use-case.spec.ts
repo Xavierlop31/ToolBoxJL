@@ -125,6 +125,18 @@ describe("PagarOrdenUseCase", () => {
     expect(resultado.pagoDeposito?.estado).toBe("capturado");
   });
 
+  it("pide un token de aceptación fresco por cada transacción Wompi (principal y depósito) — son de un único uso", async () => {
+    const { orden } = await sembrarOrden({ depositoPct: 0.2 });
+    const obtenerTerminosSpy = jest.spyOn(wompi, "obtenerTerminos");
+
+    await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "tarjeta", undefined, aceptacionWompiFake);
+
+    // Wompi rechaza con 422 "El token de aceptación ya fue usado" si se
+    // reutiliza el mismo token en 2 transacciones (encontrado en
+    // producción) — por eso acá van 2 llamadas, no 1, cuando hay depósito.
+    expect(obtenerTerminosSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("lanza un Error si se paga con pse/tarjeta sin aceptacionWompi (bug de programación, no debería llegar acá pasando por el DTO)", async () => {
     const { orden } = await sembrarOrden();
 
