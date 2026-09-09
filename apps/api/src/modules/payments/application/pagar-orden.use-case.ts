@@ -49,6 +49,12 @@ export interface ResultadoPagoOrden {
  * del Tech Lead para este sprint: en vez de reabrir el schema de `orders`,
  * se recalcula la cotización acá reusando `CotizarOrdenUseCase` a partir de
  * la unidad física reservada por la orden.
+ *
+ * Pide un `WompiGateway.obtenerTerminos()` nuevo antes de CADA
+ * `iniciarTransaccion` (no reusa el mismo par principal/depósito) — el
+ * `acceptance_token`/`accept_personal_auth` de Wompi es de un único uso;
+ * reusarlo en la segunda transacción de una orden con depósito producía 422
+ * "El token de aceptación ya fue usado" (encontrado en producción).
  */
 @Injectable()
 export class PagarOrdenUseCase {
@@ -144,12 +150,20 @@ export class PagarOrdenUseCase {
       // Habeas Data) — PagarOrdenDto ya lo valida como obligatorio para
       // metodo !== "contra_entrega", así que llegar a este punto sin él es
       // un bug de programación (llamada directa al caso de uso sin pasar por
-      // el DTO), no una condición esperada del negocio.
+      // el DTO), no una condición esperada del negocio. Los valores en sí
+      // (aceptacionWompi.acceptanceToken/personalAuthToken) NO se reenvían a
+      // Wompi: son de un único uso ("El token de aceptación ya fue usado",
+      // encontrado en producción al reusar el mismo token en la transacción
+      // de depósito tras haberlo consumido en la principal) — acá solo
+      // confirman que el cliente completó el flujo de consentimiento; el
+      // token real que viaja a cada POST /transactions se pide de nuevo,
+      // fresco, inmediatamente antes de cada llamada.
       if (!aceptacionWompi) {
         throw new Error(
           `PagarOrdenUseCase: falta aceptacionWompi para completar el pago con "${metodo}" de la orden ${orden.id}.`,
         );
       }
+      const terminosPrincipal = await this.wompi.obtenerTerminos();
       const transaccionPrincipal = await this.wompi.iniciarTransaccion({
         monto: cotizacion.tarifa_base,
         metodo,
@@ -157,8 +171,8 @@ export class PagarOrdenUseCase {
         referencia: `${orden.id}-principal-${randomUUID()}`,
         customerEmail: clienteEmail,
         datosPse: metodo === "pse" ? datosPse : undefined,
-        acceptanceToken: aceptacionWompi.acceptanceToken,
-        personalAuthToken: aceptacionWompi.personalAuthToken,
+        acceptanceToken: terminosPrincipal.acceptance_token,
+        personalAuthToken: terminosPrincipal.accept_personal_auth,
       });
       pagoPrincipal = await this.pagos.crear({
         orderId: orden.id,
@@ -171,6 +185,10 @@ export class PagarOrdenUseCase {
 
       if (requiereDeposito) {
         const modoDeposito = metodo === "tarjeta" ? "hold" : "captura";
+        // Token fresco de nuevo — el de terminosPrincipal ya fue consumido
+        // por la transacción principal de arriba (single-use, ver comentario
+        // más arriba).
+        const terminosDeposito = await this.wompi.obtenerTerminos();
         const transaccionDeposito = await this.wompi.iniciarTransaccion({
           monto: cotizacion.deposito_garantia,
           metodo,
@@ -178,8 +196,8 @@ export class PagarOrdenUseCase {
           referencia: `${orden.id}-deposito-${randomUUID()}`,
           customerEmail: clienteEmail,
           datosPse: metodo === "pse" ? datosPse : undefined,
-          acceptanceToken: aceptacionWompi.acceptanceToken,
-          personalAuthToken: aceptacionWompi.personalAuthToken,
+          acceptanceToken: terminosDeposito.acceptance_token,
+          personalAuthToken: terminosDeposito.accept_personal_auth,
         });
         pagoDeposito = await this.pagos.crear({
           orderId: orden.id,
