@@ -574,7 +574,7 @@ describe('ModelDetailComponent', () => {
       expect(component.orderResult()?.estado).toBe('confirmada');
     });
 
-    it('no modifica el estado de la orden si el pago queda "pendiente"', () => {
+    it('actualiza el estado de la orden a "confirmada" aunque el pago quede "pendiente" (PagarOrdenUseCase confirma la orden en toda respuesta 200, sin importar el método)', () => {
       loadModel();
       createOrderAndSetResult();
       const component = fixture.componentInstance;
@@ -592,7 +592,7 @@ describe('ModelDetailComponent', () => {
         wompi_transaction_id: null,
       });
 
-      expect(component.orderResult()?.estado).toBe('pendiente_pago');
+      expect(component.orderResult()?.estado).toBe('confirmada');
     });
 
     it('setea un error si el pago falla', () => {
