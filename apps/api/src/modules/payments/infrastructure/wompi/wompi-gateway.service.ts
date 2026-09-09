@@ -148,14 +148,29 @@ export class WompiGatewayService implements WompiGateway {
     return { estado: "capturado" };
   }
 
-  /** `GET /pse/financial_institutions?public_key=...` — lista pública de Wompi, no exige la private key. */
+  /**
+   * `GET /pse/financial_institutions` — lista pública de Wompi (no exige la
+   * private key), pero SÍ exige la public key como Bearer, no como query
+   * param (a diferencia de lo que el nombre del query param sugeriría) — ver
+   * https://docs.wompi.co/en/docs/colombia/metodos-de-pago/. Mandarla como
+   * `?public_key=` (como se hacía antes) produce 401 aunque la key sea
+   * correcta.
+   */
   async listarBancosPse(): Promise<PseBank[]> {
-    const response = await fetch(
-      `${WompiGatewayService.BASE_URL}/pse/financial_institutions?public_key=${this.publicKey}`,
-    );
+    const response = await fetch(`${WompiGatewayService.BASE_URL}/pse/financial_institutions`, {
+      headers: { Authorization: `Bearer ${this.publicKey}` },
+    });
 
     if (!response.ok) {
-      throw new Error(`Wompi sandbox respondió ${response.status} al listar bancos PSE.`);
+      let detalle = "(no se pudo leer el cuerpo de la respuesta)";
+      try {
+        detalle = await response.text();
+      } catch {
+        // se queda con el fallback de arriba — no tapar el error original por uno de logging.
+      }
+      throw new Error(
+        `Wompi sandbox respondió ${response.status} al listar bancos PSE. Detalle: ${detalle}`,
+      );
     }
 
     const body = (await response.json()) as {
