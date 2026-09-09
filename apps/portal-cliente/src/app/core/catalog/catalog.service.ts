@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { AvailabilityResult, ToolModel, Zona } from '../models/catalog.models';
-import { Quote, OrderInput, Order, Payment, PagarOrdenInput, PseBank } from '../models/order.models';
+import { Quote, OrderInput, Order, Payment, PagarOrdenInput, PseBank, WompiTerms } from '../models/order.models';
 
 export interface CatalogSearchParams {
   q?: string;
@@ -116,6 +116,11 @@ export class CatalogService {
   /** `GET /payments/pse-banks` — pobla el selector de banco antes de un pago PSE. */
   getPseBanks(): Observable<PseBank[]> {
     return this.http.get<PseBank[]>(`${this.apiUrl}/payments/pse-banks`);
+  }
+
+  /** `GET /payments/wompi-terms` — tokens y links a los PDF que el cliente debe aceptar antes de pagar (PSE/tarjeta). */
+  getWompiTerms(): Observable<WompiTerms> {
+    return this.http.get<WompiTerms>(`${this.apiUrl}/payments/wompi-terms`);
   }
 
   /** `GET /zones?ciudad=` (HU-12.2) — reemplaza el array de zonas hardcodeado del form. */

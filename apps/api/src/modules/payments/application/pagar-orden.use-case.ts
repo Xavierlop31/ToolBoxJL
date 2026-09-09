@@ -20,6 +20,12 @@ import type { DatosPseWompi, ResultadoSplitWompi, WompiGateway } from "../domain
 import { SHIPMENT_REPOSITORY } from "../../logistics/infrastructure/logistics.tokens";
 import type { ShipmentRepository } from "../../logistics/domain/shipment.repository";
 
+/** Tokens que Wompi exige en toda transacción real (pse/tarjeta) — ver `WompiTerms`. */
+export interface AceptacionWompi {
+  acceptanceToken: string;
+  personalAuthToken: string;
+}
+
 export interface ResultadoPagoOrden {
   pagoPrincipal: Payment;
   pagoDeposito: Payment | null;
@@ -70,6 +76,7 @@ export class PagarOrdenUseCase {
     clienteEmail: string,
     metodo: MetodoPago,
     datosPse?: DatosPseWompi,
+    aceptacionWompi?: AceptacionWompi,
   ): Promise<ResultadoPagoOrden> {
     const orden = await this.ordenes.buscarPorId(ordenId);
     // Ocultar la existencia de órdenes ajenas: si no existe o no pertenece
@@ -132,6 +139,17 @@ export class PagarOrdenUseCase {
       // como hold con tarjeta (preautorización) y como captura con PSE (se
       // cobra de inmediato; el reembolso tras inspección satisfactoria es
       // responsabilidad de InspectionModule, Sprint 5 — no implementado acá).
+      //
+      // aceptacionWompi es requerido acá (Wompi lo exige en toda transacción,
+      // Habeas Data) — PagarOrdenDto ya lo valida como obligatorio para
+      // metodo !== "contra_entrega", así que llegar a este punto sin él es
+      // un bug de programación (llamada directa al caso de uso sin pasar por
+      // el DTO), no una condición esperada del negocio.
+      if (!aceptacionWompi) {
+        throw new Error(
+          `PagarOrdenUseCase: falta aceptacionWompi para completar el pago con "${metodo}" de la orden ${orden.id}.`,
+        );
+      }
       const transaccionPrincipal = await this.wompi.iniciarTransaccion({
         monto: cotizacion.tarifa_base,
         metodo,
@@ -139,6 +157,8 @@ export class PagarOrdenUseCase {
         referencia: `${orden.id}-principal-${randomUUID()}`,
         customerEmail: clienteEmail,
         datosPse: metodo === "pse" ? datosPse : undefined,
+        acceptanceToken: aceptacionWompi.acceptanceToken,
+        personalAuthToken: aceptacionWompi.personalAuthToken,
       });
       pagoPrincipal = await this.pagos.crear({
         orderId: orden.id,
@@ -158,6 +178,8 @@ export class PagarOrdenUseCase {
           referencia: `${orden.id}-deposito-${randomUUID()}`,
           customerEmail: clienteEmail,
           datosPse: metodo === "pse" ? datosPse : undefined,
+          acceptanceToken: aceptacionWompi.acceptanceToken,
+          personalAuthToken: aceptacionWompi.personalAuthToken,
         });
         pagoDeposito = await this.pagos.crear({
           orderId: orden.id,

@@ -315,6 +315,40 @@
                   </p>
                 }
 
+                @if (selectedMetodoPago() !== 'contra_entrega') {
+                  <div class="wompi-terms" data-testid="wompi-terms">
+                    @if (wompiTermsLoading()) {
+                      <span class="hint-text">Cargando términos de Wompi…</span>
+                    }
+                    @if (wompiTermsError()) {
+                      <p class="form-error" role="alert">{{ wompiTermsError() }}</p>
+                    }
+                    @if (wompiTerms(); as terminos) {
+                      <label class="consent-check">
+                        <input
+                          id="aceptaReglamento"
+                          type="checkbox"
+                          [checked]="aceptaReglamento()"
+                          (change)="aceptaReglamento.set($any($event.target).checked)"
+                        />
+                        Acepto el <a [href]="terminos.reglamento_url" target="_blank" rel="noopener">Reglamento</a> de Wompi
+                      </label>
+                      <label class="consent-check">
+                        <input
+                          id="aceptaDatos"
+                          type="checkbox"
+                          [checked]="aceptaDatos()"
+                          (change)="aceptaDatos.set($any($event.target).checked)"
+                        />
+                        Acepto la <a [href]="terminos.politica_datos_url" target="_blank" rel="noopener">Política de Tratamiento de Datos</a> de Wompi
+                      </label>
+                    }
+                    @if (consentimientoFaltante()) {
+                      <p class="form-error" role="alert">Debes aceptar el Reglamento y la Política de Tratamiento de Datos de Wompi para continuar.</p>
+                    }
+                  </div>
+                }
+
                 <button type="button" class="btn-primary" data-testid="confirm-payment" (click)="confirmPayment()" [disabled]="paymentLoading()">
                   {{ paymentLoading() ? 'Procesando pago…' : 'Confirmar pago' }}
                 </button>

@@ -85,6 +85,22 @@ async function prepararOrdenPendienteDePago(page: Page): Promise<void> {
     });
   });
 
+  // Wompi exige acceptance_token/accept_personal_auth en toda transacción
+  // real (Habeas Data) — ModelDetailComponent los pide acá y solo habilita
+  // "Confirmar pago" (pse/tarjeta) tras marcar los 2 checkboxes de consentimiento.
+  await page.route('**/payments/wompi-terms', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        acceptance_token: 'token-aceptacion-e2e',
+        accept_personal_auth: 'token-autorizacion-datos-e2e',
+        reglamento_url: 'https://wompi.co/reglamento.pdf',
+        politica_datos_url: 'https://wompi.co/politica-datos.pdf',
+      }),
+    });
+  });
+
   await prepararSesionAutenticada(page);
   await page.goto(`/catalogo/${MODEL_ID}`);
   await page.fill('#fechaInicio', '2026-10-01');
@@ -143,6 +159,17 @@ async function completarDatosPse(page: Page): Promise<void> {
   await page.selectOption('#financialInstitutionCode', '1');
 }
 
+/**
+ * Marca los 2 checkboxes de consentimiento (Reglamento + Política de Datos
+ * de Wompi) que ModelDetailComponent exige antes de habilitar "Confirmar
+ * pago" con PSE o tarjeta — Wompi los exige en toda transacción real
+ * (Habeas Data). No aplica a contra entrega (nunca llama a Wompi).
+ */
+async function aceptarTerminosWompi(page: Page): Promise<void> {
+  await page.check('#aceptaReglamento');
+  await page.check('#aceptaDatos');
+}
+
 // ============================================================================
 // Esquema del escenario: Cliente paga una orden con distintos métodos
 // ============================================================================
@@ -180,6 +207,9 @@ When('elijo pagar con {string}', async ({ page }, metodoLabel: string) => {
   if (metodo === 'pse') {
     await completarDatosPse(page);
   }
+  if (metodo !== 'contra_entrega') {
+    await aceptarTerminosWompi(page);
+  }
   await page.click('[data-testid="confirm-payment"]');
 });
 
@@ -204,6 +234,7 @@ Given(
       wompiTransactionId: 'wompi-tx-002',
     });
     await page.click('input[value="tarjeta"]');
+    await aceptarTerminosWompi(page);
   },
 );
 
@@ -225,6 +256,7 @@ Given(
     });
     await page.click('input[value="pse"]');
     await completarDatosPse(page);
+    await aceptarTerminosWompi(page);
   },
 );
 

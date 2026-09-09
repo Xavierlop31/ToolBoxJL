@@ -15,6 +15,20 @@ function aMetodoPago(texto: string): MetodoPago {
 }
 
 /**
+ * `aceptacionWompi` es requerido por PagarOrdenUseCase para pse/tarjeta
+ * (Wompi lo exige en toda transacción real, Habeas Data) — InMemoryWompiGateway
+ * no valida el contenido, así que un fake fijo alcanza para los escenarios BDD.
+ */
+const ACEPTACION_WOMPI_FAKE = {
+  acceptanceToken: "token-aceptacion-bdd",
+  personalAuthToken: "token-autorizacion-datos-bdd",
+};
+
+function aceptacionSiAplica(metodo: MetodoPago) {
+  return metodo === "contra_entrega" ? undefined : ACEPTACION_WOMPI_FAKE;
+}
+
+/**
  * Registra un modelo (con peso, para que el recargo logístico y por lo
  * tanto el split sean > 0) + una unidad + una orden en `pendiente_pago`,
  * lista para pagar en el `When` de cada escenario.
@@ -63,11 +77,14 @@ Given(
 );
 
 When("elijo pagar con {string}", async function (this: ToolboxWorld, metodo: string) {
+  const metodoPago = aMetodoPago(metodo);
   this.ultimoResultadoPago = await this.pagarOrden.ejecutar(
     this.ultimaOrden!.id,
     this.usuarioActualId,
     "cliente@example.com",
-    aMetodoPago(metodo),
+    metodoPago,
+    undefined,
+    aceptacionSiAplica(metodoPago),
   );
 });
 
@@ -143,6 +160,8 @@ When("se procesa el pago", async function (this: ToolboxWorld) {
     this.usuarioActualId,
     "cliente@example.com",
     this.metodoPagoEscenario!,
+    undefined,
+    aceptacionSiAplica(this.metodoPagoEscenario!),
   );
 });
 
@@ -212,6 +231,8 @@ When("el pago se confirma", async function (this: ToolboxWorld) {
     this.usuarioActualId,
     "cliente@example.com",
     this.metodoPagoEscenario!,
+    undefined,
+    aceptacionSiAplica(this.metodoPagoEscenario!),
   );
 });
 

@@ -30,6 +30,8 @@ describe("WompiGatewayService", () => {
       modo: "captura",
       referencia: "orden-1-principal-ref",
       customerEmail: "cliente@example.com",
+      acceptanceToken: "token-aceptacion-test",
+      personalAuthToken: "token-autorizacion-datos-test",
       ...overrides,
     };
   }
@@ -46,6 +48,8 @@ describe("WompiGatewayService", () => {
         userLegalId: "123456789",
         financialInstitutionCode: "1",
       },
+      acceptanceToken: "token-aceptacion-test",
+      personalAuthToken: "token-autorizacion-datos-test",
       ...overrides,
     };
   }
@@ -82,6 +86,8 @@ describe("WompiGatewayService", () => {
       reference: "orden-1-principal-ref",
       payment_method: { type: "CARD" },
       capture_method: "automatic",
+      acceptance_token: "token-aceptacion-test",
+      accept_personal_auth: "token-autorizacion-datos-test",
     });
   });
 
@@ -215,5 +221,48 @@ describe("WompiGatewayService", () => {
 
     const servicio = crearServicio();
     await expect(servicio.listarBancosPse()).rejects.toThrow(/respondió 500/);
+  });
+
+  it("obtenerTerminos llama a GET /merchants/{public_key} y mapea los tokens presigned", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          presigned_acceptance: {
+            acceptance_token: "token-reglamento-abc",
+            permalink: "https://wompi.co/reglamento.pdf",
+          },
+          presigned_personal_data_auth: {
+            acceptance_token: "token-datos-personales-abc",
+            permalink: "https://wompi.co/politica-datos.pdf",
+          },
+        },
+      }),
+    });
+
+    const servicio = crearServicio();
+    const terminos = await servicio.obtenerTerminos();
+
+    expect(terminos).toEqual({
+      acceptance_token: "token-reglamento-abc",
+      accept_personal_auth: "token-datos-personales-abc",
+      reglamento_url: "https://wompi.co/reglamento.pdf",
+      politica_datos_url: "https://wompi.co/politica-datos.pdf",
+    });
+    expect(fetchMock).toHaveBeenCalledWith("https://sandbox.wompi.co/v1/merchants/pub_test_1234");
+  });
+
+  it("obtenerTerminos lanza un Error si Wompi responde con status no-ok", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 404 });
+
+    const servicio = crearServicio();
+    await expect(servicio.obtenerTerminos()).rejects.toThrow(/respondió 404/);
+  });
+
+  it("obtenerTerminos lanza un Error si Wompi no devuelve los tokens presigned esperados", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ data: {} }) });
+
+    const servicio = crearServicio();
+    await expect(servicio.obtenerTerminos()).rejects.toThrow(/no devolvió presigned_acceptance/);
   });
 });

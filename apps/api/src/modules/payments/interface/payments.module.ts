@@ -6,6 +6,7 @@ import { LogisticsModule } from "../../logistics/interface/logistics.module";
 import { PagarOrdenUseCase } from "../application/pagar-orden.use-case";
 import { ConfirmarPagoContraEntregaUseCase } from "../application/confirmar-pago-contra-entrega.use-case";
 import { ListarBancosPseUseCase } from "../application/listar-bancos-pse.use-case";
+import { ObtenerTerminosWompiUseCase } from "../application/obtener-terminos-wompi.use-case";
 import { PAYMENT_REPOSITORY, WOMPI_GATEWAY } from "../infrastructure/payments.tokens";
 import { PrismaPaymentRepository } from "../infrastructure/prisma/prisma-payment.repository";
 import { WompiGatewayService } from "../infrastructure/wompi/wompi-gateway.service";
@@ -39,6 +40,7 @@ import { PaymentsController } from "./payments.controller";
     PagarOrdenUseCase,
     ConfirmarPagoContraEntregaUseCase,
     ListarBancosPseUseCase,
+    ObtenerTerminosWompiUseCase,
   ],
   exports: [
     PAYMENT_REPOSITORY,
@@ -46,6 +48,7 @@ import { PaymentsController } from "./payments.controller";
     PagarOrdenUseCase,
     ConfirmarPagoContraEntregaUseCase,
     ListarBancosPseUseCase,
+    ObtenerTerminosWompiUseCase,
   ],
 })
 export class PaymentsModule {}

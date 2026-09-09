@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import type { Payment, PseBank } from "@toolboxjl/shared-types";
+import type { Payment, PseBank, WompiTerms } from "@toolboxjl/shared-types";
 import { PaymentsController } from "./payments.controller";
 import { OrdenNoEncontradaError } from "../../orders/domain/errors/orden-no-encontrada.error";
 import { OrdenNoPagableError } from "../domain/errors/orden-no-pagable.error";
@@ -29,16 +29,19 @@ describe("PaymentsController", () => {
   let pagarOrden: ReturnType<typeof crearMockUseCase>;
   let confirmarPagoContraEntrega: ReturnType<typeof crearMockUseCase>;
   let listarBancosPse: ReturnType<typeof crearMockUseCase>;
+  let obtenerTerminosWompi: ReturnType<typeof crearMockUseCase>;
   let controller: PaymentsController;
 
   beforeEach(() => {
     pagarOrden = crearMockUseCase();
     confirmarPagoContraEntrega = crearMockUseCase();
     listarBancosPse = crearMockUseCase();
+    obtenerTerminosWompi = crearMockUseCase();
     controller = new PaymentsController(
       pagarOrden as never,
       confirmarPagoContraEntrega as never,
       listarBancosPse as never,
+      obtenerTerminosWompi as never,
     );
   });
 
@@ -55,6 +58,7 @@ describe("PaymentsController", () => {
         "cliente-1",
         "cliente@example.com",
         "pse",
+        undefined,
         undefined,
       );
       expect(resultado).toBe(pago);
@@ -82,6 +86,32 @@ describe("PaymentsController", () => {
         "cliente@example.com",
         "pse",
         { userLegalIdType: "CC", userLegalId: "123456789", financialInstitutionCode: "1" },
+        undefined,
+      );
+    });
+
+    it("arma aceptacionWompi cuando el DTO trae acceptance_token y accept_personal_auth", async () => {
+      const pago = pagoFake();
+      pagarOrden.ejecutar.mockResolvedValue({ pagoPrincipal: pago });
+      const ordenId = randomUUID();
+
+      await controller.pagar(
+        ordenId,
+        {
+          metodo: "tarjeta",
+          acceptance_token: "token-reglamento-abc",
+          accept_personal_auth: "token-datos-abc",
+        } as never,
+        usuarioConEmail,
+      );
+
+      expect(pagarOrden.ejecutar).toHaveBeenCalledWith(
+        ordenId,
+        "cliente-1",
+        "cliente@example.com",
+        "tarjeta",
+        undefined,
+        { acceptanceToken: "token-reglamento-abc", personalAuthToken: "token-datos-abc" },
       );
     });
 
@@ -142,6 +172,23 @@ describe("PaymentsController", () => {
 
       expect(listarBancosPse.ejecutar).toHaveBeenCalledWith();
       expect(resultado).toBe(bancos);
+    });
+  });
+
+  describe("wompiTerms", () => {
+    it("delega en ObtenerTerminosWompiUseCase", async () => {
+      const terminos: WompiTerms = {
+        acceptance_token: "token-reglamento-abc",
+        accept_personal_auth: "token-datos-abc",
+        reglamento_url: "https://wompi.co/reglamento.pdf",
+        politica_datos_url: "https://wompi.co/politica-datos.pdf",
+      };
+      obtenerTerminosWompi.ejecutar.mockResolvedValue(terminos);
+
+      const resultado = await controller.wompiTerms();
+
+      expect(obtenerTerminosWompi.ejecutar).toHaveBeenCalledWith();
+      expect(resultado).toBe(terminos);
     });
   });
 

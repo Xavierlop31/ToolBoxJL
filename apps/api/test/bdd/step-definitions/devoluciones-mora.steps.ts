@@ -50,6 +50,8 @@ Given(
       clienteId,
       "cliente@example.com",
       "tarjeta",
+      undefined,
+      { acceptanceToken: "token-aceptacion-bdd", personalAuthToken: "token-autorizacion-datos-bdd" },
     );
 
     const shipments = await this.shipmentRepository.listarTodos();

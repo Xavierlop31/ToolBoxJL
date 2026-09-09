@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import type { PseBank } from "@toolboxjl/shared-types";
+import type { PseBank, WompiTerms } from "@toolboxjl/shared-types";
 import type {
   IniciarTransaccionInput,
   ResultadoSplitWompi,
@@ -48,5 +48,14 @@ export class InMemoryWompiGateway implements WompiGateway {
 
   async listarBancosPse(): Promise<PseBank[]> {
     return InMemoryWompiGateway.BANCOS_FAKE;
+  }
+
+  async obtenerTerminos(): Promise<WompiTerms> {
+    return {
+      acceptance_token: "token-aceptacion-fake",
+      accept_personal_auth: "token-autorizacion-datos-fake",
+      reglamento_url: "https://ejemplo.com/reglamento-fake.pdf",
+      politica_datos_url: "https://ejemplo.com/politica-datos-fake.pdf",
+    };
   }
 }

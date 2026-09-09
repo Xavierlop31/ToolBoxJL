@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { PseBank } from "@toolboxjl/shared-types";
+import type { PseBank, WompiTerms } from "@toolboxjl/shared-types";
 import type {
   IniciarTransaccionInput,
   ModoTransaccionWompi,
@@ -74,6 +74,8 @@ export class WompiGatewayService implements WompiGateway {
         reference: input.referencia,
         payment_method: paymentMethod,
         capture_method: input.modo === "hold" ? "manual" : "automatic",
+        acceptance_token: input.acceptanceToken,
+        accept_personal_auth: input.personalAuthToken,
       }),
     });
 
@@ -181,5 +183,50 @@ export class WompiGatewayService implements WompiGateway {
       codigo: banco.financial_institution_code,
       nombre: banco.financial_institution_name,
     }));
+  }
+
+  /**
+   * `GET /merchants/{public_key}` — endpoint público de Wompi (no exige la
+   * private key) que devuelve, entre otras cosas, los tokens presigned de
+   * aceptación del Reglamento y de la Política de Tratamiento de Datos —
+   * ver https://docs.wompi.co/en/docs/colombia/tokens-de-aceptacion/. Sin
+   * esto, `POST /transactions` rechaza con 422
+   * `{"acceptance_token":["No está presente"]}` (encontrado en producción).
+   */
+  async obtenerTerminos(): Promise<WompiTerms> {
+    const response = await fetch(`${WompiGatewayService.BASE_URL}/merchants/${this.publicKey}`);
+
+    if (!response.ok) {
+      let detalle = "(no se pudo leer el cuerpo de la respuesta)";
+      try {
+        detalle = await response.text();
+      } catch {
+        // se queda con el fallback de arriba — no tapar el error original por uno de logging.
+      }
+      throw new Error(
+        `Wompi sandbox respondió ${response.status} al obtener los términos de aceptación. Detalle: ${detalle}`,
+      );
+    }
+
+    const body = (await response.json()) as {
+      data?: {
+        presigned_acceptance?: { acceptance_token: string; permalink: string };
+        presigned_personal_data_auth?: { acceptance_token: string; permalink: string };
+      };
+    };
+    const aceptacion = body.data?.presigned_acceptance;
+    const autorizacionDatos = body.data?.presigned_personal_data_auth;
+    if (!aceptacion || !autorizacionDatos) {
+      throw new Error(
+        "Wompi sandbox no devolvió presigned_acceptance/presigned_personal_data_auth al obtener los términos.",
+      );
+    }
+
+    return {
+      acceptance_token: aceptacion.acceptance_token,
+      accept_personal_auth: autorizacionDatos.acceptance_token,
+      reglamento_url: aceptacion.permalink,
+      politica_datos_url: autorizacionDatos.permalink,
+    };
   }
 }
