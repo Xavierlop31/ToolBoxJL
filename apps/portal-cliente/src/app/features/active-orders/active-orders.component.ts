@@ -58,6 +58,13 @@ export class ActiveOrdersComponent implements OnInit {
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
   readonly selectedOrder = signal<Order | null>(null);
 
+  // HU-12.3: órdenes creadas por POST /orders/checkout-cart quedan en
+  // "pendiente_pago" sin que ese endpoint inicie el pago (ver
+  // CheckoutCartUseCase) — sin esta lista, no había ninguna pantalla donde
+  // completarlo. Se deriva del mismo GET /orders ya pedido para "activos"
+  // (sin filtro de estado), no hace falta una llamada aparte.
+  readonly pendingOrders = signal<Order[]>([]);
+
   readonly estadoLabel = ESTADO_LABEL;
   readonly returnModeLabel = RETURN_MODE_LABEL;
   readonly isAuthenticated = this.auth.isAuthenticated;
@@ -74,9 +81,15 @@ export class ActiveOrdersComponent implements OnInit {
     this.cargar();
   }
 
-  /** Botón de Estado en la fila — abre el detalle completo del pedido (solo lectura). */
+  /** Botón de Estado / "Pagar" en la fila — abre el detalle completo del pedido. */
   verDetalle(order: Order): void {
     this.selectedOrder.set(order);
+  }
+
+  /** El pago se completó desde el modal — refresca ambas listas (server truth). */
+  onOrderPaid(): void {
+    this.selectedOrder.set(null);
+    this.cargar();
   }
 
   private cargar(): void {
@@ -100,6 +113,13 @@ export class ActiveOrdersComponent implements OnInit {
         this.total.set(activos.length);
         const desde = (this.page() - 1) * PAGE_SIZE;
         this.orders.set(activos.slice(desde, desde + PAGE_SIZE));
+
+        this.pendingOrders.set(
+          items
+            .filter((order) => order.estado === 'pendiente_pago')
+            .sort((a, b) => (b.fecha_inicio ?? '').localeCompare(a.fecha_inicio ?? '')),
+        );
+
         this.loading.set(false);
       },
       error: () => {

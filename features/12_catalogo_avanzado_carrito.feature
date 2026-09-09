@@ -86,3 +86,10 @@ Característica: Catálogo Avanzado & Carrito de Compras
     Dado que tengo herramientas en el carrito
     Entonces el panel lateral de resumen muestra subtotal de alquileres, subtotal de ventas directas, recargo logístico consolidado, total de depósitos de garantía reembolsables y gran total a pagar
     Y un botón destacado "Proceder al Pago / Confirmar Orden".
+
+  @HU-12.3 @Sprint13 @CarritoCompras
+  Escenario: Completar el pago de las órdenes creadas desde el carrito
+    Dado que confirmé el checkout del carrito y se crearon órdenes en estado "pendiente_pago"
+    Cuando voy a la sección "Pedidos pendientes de pago" y presiono "Pagar" en una de ellas
+    Entonces se abre el detalle del pedido con el mismo selector de método de pago (PSE, Tarjeta, Contra Entrega) que usa la compra directa desde el catálogo
+    Y al completar el pago la orden pasa a "confirmada" y desaparece de "Pedidos pendientes de pago".
