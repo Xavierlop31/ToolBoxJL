@@ -80,6 +80,7 @@ export class ModelDetailComponent implements OnInit {
   // POST /orders/:id/pay respondía 422 "No se especificó método de pago").
   readonly pseBanks = signal<PseBank[]>([]);
   readonly pseBanksLoading = signal(false);
+  readonly pseBanksError = signal<string | null>(null);
   readonly pseForm = this.formBuilder.nonNullable.group({
     user_legal_id_type: ['CC' as const, Validators.required],
     user_legal_id: ['', Validators.required],
@@ -316,6 +317,7 @@ export class ModelDetailComponent implements OnInit {
 
   private cargarBancosPse(): void {
     this.pseBanksLoading.set(true);
+    this.pseBanksError.set(null);
     this.catalog.getPseBanks().subscribe({
       next: (bancos) => {
         this.pseBanks.set(bancos);
@@ -323,6 +325,7 @@ export class ModelDetailComponent implements OnInit {
       },
       error: () => {
         this.pseBanksLoading.set(false);
+        this.pseBanksError.set('No pudimos cargar la lista de bancos. Intenta de nuevo.');
       },
     });
   }
