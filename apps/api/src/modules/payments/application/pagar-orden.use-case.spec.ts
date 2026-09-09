@@ -87,10 +87,22 @@ describe("PagarOrdenUseCase", () => {
     expect(resultado.pagoDeposito?.estado).toBe("pendiente");
   });
 
+  const aceptacionWompiFake = {
+    acceptanceToken: "token-aceptacion-test",
+    personalAuthToken: "token-autorizacion-datos-test",
+  };
+
   it("paga con tarjeta: inicia transacción Wompi, el depósito queda en hold y devuelve el split simulado", async () => {
     const { orden } = await sembrarOrden({ depositoPct: 0.2 });
 
-    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "tarjeta");
+    const resultado = await useCase.ejecutar(
+      orden.id,
+      "cliente-1",
+      "cliente@example.com",
+      "tarjeta",
+      undefined,
+      aceptacionWompiFake,
+    );
 
     expect(resultado.pagoPrincipal.estado).toBe("capturado");
     expect(resultado.pagoPrincipal.wompi_transaction_id).toMatch(/^wompi-fake-/);
@@ -101,13 +113,24 @@ describe("PagarOrdenUseCase", () => {
   it("paga con pse: el depósito se captura de inmediato (no queda en hold)", async () => {
     const { orden } = await sembrarOrden({ depositoPct: 0.2 });
 
-    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "pse", {
-      userLegalIdType: "CC",
-      userLegalId: "123456789",
-      financialInstitutionCode: "1",
-    });
+    const resultado = await useCase.ejecutar(
+      orden.id,
+      "cliente-1",
+      "cliente@example.com",
+      "pse",
+      { userLegalIdType: "CC", userLegalId: "123456789", financialInstitutionCode: "1" },
+      aceptacionWompiFake,
+    );
 
     expect(resultado.pagoDeposito?.estado).toBe("capturado");
+  });
+
+  it("lanza un Error si se paga con pse/tarjeta sin aceptacionWompi (bug de programación, no debería llegar acá pasando por el DTO)", async () => {
+    const { orden } = await sembrarOrden();
+
+    await expect(
+      useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "tarjeta"),
+    ).rejects.toThrow(/falta aceptacionWompi/);
   });
 
   it("lanza OrdenNoEncontradaError si la orden no existe", async () => {

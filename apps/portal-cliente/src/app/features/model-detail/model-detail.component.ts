@@ -15,6 +15,7 @@ import {
   MetodoPago,
   PagarOrdenInput,
   PseBank,
+  WompiTerms,
 } from '../../core/models/order.models';
 import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
 
@@ -86,6 +87,17 @@ export class ModelDetailComponent implements OnInit {
     user_legal_id: ['', Validators.required],
     financial_institution_code: ['', Validators.required],
   });
+
+  // Términos de aceptación de Wompi (Reglamento + Política de Tratamiento de
+  // Datos) — Wompi exige acceptance_token/accept_personal_auth en toda
+  // transacción real (Habeas Data); sin esto, POST /orders/:id/pay
+  // respondía 422 "acceptance_token no está presente".
+  readonly wompiTerms = signal<WompiTerms | null>(null);
+  readonly wompiTermsLoading = signal(false);
+  readonly wompiTermsError = signal<string | null>(null);
+  readonly aceptaReglamento = signal(false);
+  readonly aceptaDatos = signal(false);
+  readonly consentimientoFaltante = signal(false);
 
   // HU-12.2: zonas reales por ciudad (GET /zones?ciudad=) — ya no un array
   // hardcodeado. El zonaId enviado a /orders/quote y /orders debe ser un
@@ -313,6 +325,9 @@ export class ModelDetailComponent implements OnInit {
     if (metodo === 'pse' && this.pseBanks().length === 0 && !this.pseBanksLoading()) {
       this.cargarBancosPse();
     }
+    if (metodo !== 'contra_entrega' && this.wompiTerms() === null && !this.wompiTermsLoading()) {
+      this.cargarWompiTerms();
+    }
   }
 
   private cargarBancosPse(): void {
@@ -330,6 +345,21 @@ export class ModelDetailComponent implements OnInit {
     });
   }
 
+  private cargarWompiTerms(): void {
+    this.wompiTermsLoading.set(true);
+    this.wompiTermsError.set(null);
+    this.catalog.getWompiTerms().subscribe({
+      next: (terminos) => {
+        this.wompiTerms.set(terminos);
+        this.wompiTermsLoading.set(false);
+      },
+      error: () => {
+        this.wompiTermsLoading.set(false);
+        this.wompiTermsError.set('No pudimos cargar los términos de Wompi. Intenta de nuevo.');
+      },
+    });
+  }
+
   confirmPayment(): void {
     const order = this.orderResult();
     if (!order) return;
@@ -339,12 +369,23 @@ export class ModelDetailComponent implements OnInit {
       this.pseForm.markAllAsTouched();
       return;
     }
+    if (metodo !== 'contra_entrega' && (!this.aceptaReglamento() || !this.aceptaDatos())) {
+      this.consentimientoFaltante.set(true);
+      return;
+    }
 
     this.paymentLoading.set(true);
     this.paymentError.set(null);
+    this.consentimientoFaltante.set(false);
 
-    const input: PagarOrdenInput =
-      metodo === 'pse' ? { metodo, ...this.pseForm.getRawValue() } : { metodo };
+    const terminos = this.wompiTerms();
+    const input: PagarOrdenInput = {
+      metodo,
+      ...(metodo === 'pse' ? this.pseForm.getRawValue() : {}),
+      ...(metodo !== 'contra_entrega' && terminos
+        ? { acceptance_token: terminos.acceptance_token, accept_personal_auth: terminos.accept_personal_auth }
+        : {}),
+    };
 
     this.catalog.payOrder(order.id, input).subscribe({
       next: (payment) => {
