@@ -1,4 +1,4 @@
-import type { MetodoPago, PseBank, TipoDocumentoPse } from "@toolboxjl/shared-types";
+import type { MetodoPago, PseBank, TipoDocumentoPse, WompiTerms } from "@toolboxjl/shared-types";
 
 /**
  * Puerto de gateway de pagos — mismo criterio de Clean Architecture que los
@@ -41,6 +41,14 @@ export interface IniciarTransaccionInput {
   customerEmail: string;
   /** Requerido si `metodo === "pse"`; ignorado para "tarjeta". */
   datosPse?: DatosPseWompi;
+  /**
+   * `presigned_acceptance.acceptance_token` de `GET /merchants/{public_key}`
+   * — Wompi lo exige en TODA transacción (Habeas Data), sin importar el
+   * método. Ver `WompiTerms`.
+   */
+  acceptanceToken: string;
+  /** `presigned_personal_data_auth.acceptance_token` del mismo endpoint. */
+  personalAuthToken: string;
 }
 
 export interface ResultadoTransaccionWompi {
@@ -87,4 +95,11 @@ export interface WompiGateway {
 
   /** `GET /payments/pse-banks` — bancos habilitados para PSE. */
   listarBancosPse(): Promise<PseBank[]>;
+
+  /**
+   * `GET /payments/wompi-terms` — tokens de aceptación (Reglamento +
+   * Política de Tratamiento de Datos) que el cliente debe aceptar antes de
+   * pagar con PSE o tarjeta. Ver `IniciarTransaccionInput.acceptanceToken`.
+   */
+  obtenerTerminos(): Promise<WompiTerms>;
 }

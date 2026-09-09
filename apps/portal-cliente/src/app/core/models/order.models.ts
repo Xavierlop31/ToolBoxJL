@@ -69,10 +69,22 @@ export interface PseBank {
 /**
  * `POST /orders/{id}/pay` — los 3 campos de PSE son requeridos solo cuando
  * metodo === 'pse' (Wompi los exige para armar payment_method).
+ * `acceptance_token`/`accept_personal_auth` son requeridos siempre que
+ * metodo !== 'contra_entrega' (Wompi los exige en toda transacción real).
  */
 export interface PagarOrdenInput {
   metodo: MetodoPago;
   user_legal_id_type?: TipoDocumentoPse;
   user_legal_id?: string;
   financial_institution_code?: string;
+  acceptance_token?: string;
+  accept_personal_auth?: string;
+}
+
+/** `GET /payments/wompi-terms` — tokens y links a los PDF de Wompi que el cliente debe aceptar. */
+export interface WompiTerms {
+  acceptance_token: string;
+  accept_personal_auth: string;
+  reglamento_url: string;
+  politica_datos_url: string;
 }

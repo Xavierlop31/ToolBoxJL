@@ -8,8 +8,17 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { ModelDetailComponent } from './model-detail.component';
 import { environment } from '../../../environments/environment';
-import { Order, Quote } from '../../core/models/order.models';
+import { Order, Quote, WompiTerms } from '../../core/models/order.models';
 import { AuthService } from '../../core/auth/auth.service';
+
+function wompiTermsFake(): WompiTerms {
+  return {
+    acceptance_token: 'tok-acept',
+    accept_personal_auth: 'tok-datos',
+    reglamento_url: 'https://wompi.co/reglamento.pdf',
+    politica_datos_url: 'https://wompi.co/politica-datos.pdf',
+  };
+}
 
 describe('ModelDetailComponent', () => {
   let fixture: ComponentFixture<ModelDetailComponent>;
@@ -357,9 +366,11 @@ describe('ModelDetailComponent', () => {
       expect(component.quoteResult()).toBeNull();
       expect(component.orderLoading()).toBe(false);
 
-      // pse queda seleccionado por default — precarga la lista de bancos.
+      // pse queda seleccionado por default — precarga bancos y términos de Wompi.
       const bancosReq = httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`);
       bancosReq.flush([{ codigo: '1', nombre: 'Banco A' }]);
+      const terminosReq = httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`);
+      terminosReq.flush(wompiTermsFake());
 
       fixture.detectChanges();
       const successText = (fixture.nativeElement as HTMLElement).querySelector(
@@ -406,9 +417,11 @@ describe('ModelDetailComponent', () => {
       component.setMetodoPago('tarjeta');
       expect(component.selectedMetodoPago()).toBe('tarjeta');
       httpMock.expectNone((r) => r.url.includes('/payments/pse-banks'));
+      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
 
       component.setMetodoPago('contra_entrega');
       expect(component.selectedMetodoPago()).toBe('contra_entrega');
+      httpMock.expectNone((r) => r.url.includes('/payments/wompi-terms'));
     });
 
     it('al elegir pse, carga los bancos una sola vez (no refetch en selecciones repetidas)', () => {
@@ -418,12 +431,27 @@ describe('ModelDetailComponent', () => {
       component.setMetodoPago('pse');
       const req = httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`);
       req.flush([{ codigo: '1', nombre: 'Banco A' }]);
+      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
 
       expect(component.pseBanks()).toEqual([{ codigo: '1', nombre: 'Banco A' }]);
 
       component.setMetodoPago('tarjeta');
       component.setMetodoPago('pse');
       httpMock.expectNone(`${environment.apiUrl}/payments/pse-banks`);
+      httpMock.expectNone(`${environment.apiUrl}/payments/wompi-terms`);
+    });
+
+    it('al elegir tarjeta, carga los términos de Wompi una sola vez (no refetch en selecciones repetidas)', () => {
+      loadModel();
+      const component = fixture.componentInstance;
+
+      component.setMetodoPago('tarjeta');
+      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
+      expect(component.wompiTerms()).toEqual(wompiTermsFake());
+
+      component.setMetodoPago('contra_entrega');
+      component.setMetodoPago('tarjeta');
+      httpMock.expectNone(`${environment.apiUrl}/payments/wompi-terms`);
     });
   });
 
@@ -466,6 +494,23 @@ describe('ModelDetailComponent', () => {
       expect(component.pseForm.touched).toBe(true);
     });
 
+    it('no confirma un pago pse/tarjeta si falta aceptar el Reglamento y la Política de Datos de Wompi', () => {
+      loadModel();
+      createOrderAndSetResult();
+      const component = fixture.componentInstance;
+      component.pseForm.setValue({
+        user_legal_id_type: 'CC',
+        user_legal_id: '123456789',
+        financial_institution_code: '1',
+      });
+      component.wompiTerms.set(wompiTermsFake());
+
+      component.confirmPayment();
+
+      httpMock.expectNone((r) => r.url.includes('/pay'));
+      expect(component.consentimientoFaltante()).toBe(true);
+    });
+
     it('confirma el pago exitosamente (pse) y actualiza el estado de la orden cuando queda "capturado"', () => {
       loadModel();
       createOrderAndSetResult();
@@ -475,6 +520,9 @@ describe('ModelDetailComponent', () => {
         user_legal_id: '123456789',
         financial_institution_code: '1',
       });
+      component.wompiTerms.set(wompiTermsFake());
+      component.aceptaReglamento.set(true);
+      component.aceptaDatos.set(true);
 
       component.confirmPayment();
       const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);
@@ -483,6 +531,8 @@ describe('ModelDetailComponent', () => {
         user_legal_id_type: 'CC',
         user_legal_id: '123456789',
         financial_institution_code: '1',
+        acceptance_token: 'tok-acept',
+        accept_personal_auth: 'tok-datos',
       });
 
       req.flush({
@@ -505,6 +555,9 @@ describe('ModelDetailComponent', () => {
       createOrderAndSetResult();
       const component = fixture.componentInstance;
       component.setMetodoPago('tarjeta');
+      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
+      component.aceptaReglamento.set(true);
+      component.aceptaDatos.set(true);
 
       component.confirmPayment();
       const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);

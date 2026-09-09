@@ -760,6 +760,17 @@ paths:
                   description: >
                     Código del banco elegido, de la lista que devuelve
                     GET /payments/pse-banks. Requerido solo si metodo=pse.
+                acceptance_token:
+                  type: string
+                  description: >
+                    Token de aceptación del Reglamento de Wompi, de
+                    GET /payments/wompi-terms. Requerido si metodo != contra_entrega
+                    (Wompi lo exige en toda transacción real, Habeas Data).
+                accept_personal_auth:
+                  type: string
+                  description: >
+                    Token de autorización de tratamiento de datos personales, de
+                    GET /payments/wompi-terms. Requerido si metodo != contra_entrega.
       responses:
         "200":
           description: >
@@ -791,6 +802,27 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/PseBank" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /payments/wompi-terms:
+    get:
+      operationId: getWompiTerms
+      summary: Tokens de aceptación de Wompi (Reglamento + Política de Datos)
+      description: >
+        Proxy de `GET /merchants/{public_key}` de Wompi — el frontend la usa
+        para mostrar los checkboxes de consentimiento (con links a los PDF
+        reales) antes de habilitar el pago con PSE o tarjeta
+        (`POST /orders/{id}/pay` con `acceptance_token`/`accept_personal_auth`).
+        Wompi exige estos tokens en toda transacción real, por regulación
+        colombiana de Habeas Data.
+      tags: ["Cotización, Órdenes y Pagos"]
+      x-roles: [cliente]
+      responses:
+        "200":
+          description: Tokens y links a los documentos legales vigentes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WompiTerms" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /orders/{id}/confirm-cod-payment:
@@ -1693,6 +1725,14 @@ components:
       properties:
         codigo: { type: string, description: "financial_institution_code de Wompi." }
         nombre: { type: string }
+
+    WompiTerms:
+      type: object
+      properties:
+        acceptance_token: { type: string }
+        accept_personal_auth: { type: string }
+        reglamento_url: { type: string, description: "Link al PDF del Reglamento vigente." }
+        politica_datos_url: { type: string, description: "Link al PDF de la Política de Tratamiento de Datos vigente." }
 
     Quote:
       type: object

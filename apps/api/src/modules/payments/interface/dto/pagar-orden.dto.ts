@@ -10,9 +10,12 @@ import type { MetodoPago, PagarOrdenInput, TipoDocumentoPse } from "@toolboxjl/s
  *
  * `user_legal_id_type`/`user_legal_id`/`financial_institution_code` solo
  * son requeridos si `metodo === "pse"` — Wompi los exige para armar
- * `payment_method` (ver WompiGatewayService.iniciarTransaccion). openapi.yaml
- * no puede expresar "requerido condicional", así que la validación real
- * vive acá vía `@ValidateIf`.
+ * `payment_method` (ver WompiGatewayService.iniciarTransaccion).
+ * `acceptance_token`/`accept_personal_auth` son requeridos siempre que
+ * `metodo !== "contra_entrega"` — Wompi los exige en toda transacción real
+ * (Habeas Data; ver GET /payments/wompi-terms). openapi.yaml no puede
+ * expresar "requerido condicional", así que la validación real vive acá vía
+ * `@ValidateIf`.
  */
 export class PagarOrdenDto implements PagarOrdenInput {
   @IsIn(["pse", "tarjeta", "contra_entrega"])
@@ -29,4 +32,12 @@ export class PagarOrdenDto implements PagarOrdenInput {
   @ValidateIf((dto: PagarOrdenDto) => dto.metodo === "pse")
   @IsString()
   financial_institution_code?: string;
+
+  @ValidateIf((dto: PagarOrdenDto) => dto.metodo !== "contra_entrega")
+  @IsString()
+  acceptance_token?: string;
+
+  @ValidateIf((dto: PagarOrdenDto) => dto.metodo !== "contra_entrega")
+  @IsString()
+  accept_personal_auth?: string;
 }
