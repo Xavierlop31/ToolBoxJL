@@ -46,6 +46,11 @@
     <dd>{{ order.direccion_entrega }}</dd>
   </dl>
 
+  @if (order.estado === 'pendiente_pago') {
+    <h3 class="items-title">Completar pago</h3>
+    <app-order-payment [order]="order" (paid)="onOrderPaid($event)" />
+  }
+
   <h3 class="items-title">Ítems del pedido</h3>
   @if (order.items && order.items.length > 0) {
     <ul class="order-items" data-testid="order-items">

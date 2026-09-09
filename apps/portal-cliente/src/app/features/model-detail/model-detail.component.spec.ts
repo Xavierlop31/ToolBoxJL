@@ -366,7 +366,10 @@ describe('ModelDetailComponent', () => {
       expect(component.quoteResult()).toBeNull();
       expect(component.orderLoading()).toBe(false);
 
-      // pse queda seleccionado por default — precarga bancos y términos de Wompi.
+      // Renderiza <app-order-payment>, cuyo ngOnInit precarga bancos PSE y
+      // términos de Wompi (default "pse" — mismo componente extraído, ver
+      // order-payment.component.spec.ts para esa cobertura detallada).
+      fixture.detectChanges();
       const bancosReq = httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`);
       bancosReq.flush([{ codigo: '1', nombre: 'Banco A' }]);
       const terminosReq = httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`);
@@ -408,54 +411,13 @@ describe('ModelDetailComponent', () => {
     });
   });
 
-  describe('setMetodoPago', () => {
-    it('actualiza el método de pago seleccionado', () => {
-      loadModel();
-      const component = fixture.componentInstance;
-      expect(component.selectedMetodoPago()).toBe('pse');
-
-      component.setMetodoPago('tarjeta');
-      expect(component.selectedMetodoPago()).toBe('tarjeta');
-      httpMock.expectNone((r) => r.url.includes('/payments/pse-banks'));
-      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
-
-      component.setMetodoPago('contra_entrega');
-      expect(component.selectedMetodoPago()).toBe('contra_entrega');
-      httpMock.expectNone((r) => r.url.includes('/payments/wompi-terms'));
-    });
-
-    it('al elegir pse, carga los bancos una sola vez (no refetch en selecciones repetidas)', () => {
-      loadModel();
-      const component = fixture.componentInstance;
-
-      component.setMetodoPago('pse');
-      const req = httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`);
-      req.flush([{ codigo: '1', nombre: 'Banco A' }]);
-      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
-
-      expect(component.pseBanks()).toEqual([{ codigo: '1', nombre: 'Banco A' }]);
-
-      component.setMetodoPago('tarjeta');
-      component.setMetodoPago('pse');
-      httpMock.expectNone(`${environment.apiUrl}/payments/pse-banks`);
-      httpMock.expectNone(`${environment.apiUrl}/payments/wompi-terms`);
-    });
-
-    it('al elegir tarjeta, carga los términos de Wompi una sola vez (no refetch en selecciones repetidas)', () => {
-      loadModel();
-      const component = fixture.componentInstance;
-
-      component.setMetodoPago('tarjeta');
-      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
-      expect(component.wompiTerms()).toEqual(wompiTermsFake());
-
-      component.setMetodoPago('contra_entrega');
-      component.setMetodoPago('tarjeta');
-      httpMock.expectNone(`${environment.apiUrl}/payments/wompi-terms`);
-    });
-  });
-
-  describe('confirmPayment', () => {
+  // El selector de método de pago, PSE, checkboxes de consentimiento y
+  // confirmación de pago viven en OrderPaymentComponent (extraído para
+  // reusarlo en el pago de órdenes creadas desde el carrito, HU-12.3) —
+  // ver order-payment.component.spec.ts para esa cobertura. Acá solo se
+  // verifica la integración: el componente se renderiza cuando hay una
+  // orden, y onOrderPaid() confirma la orden local.
+  describe('pago (delegado a OrderPaymentComponent)', () => {
     function createOrderAndSetResult(estadoInicial: Order['estado'] = 'pendiente_pago'): Order {
       const component = fixture.componentInstance;
       const order: Order = {
@@ -473,140 +435,28 @@ describe('ModelDetailComponent', () => {
       return order;
     }
 
-    it('no hace nada si no hay orden confirmada', () => {
-      loadModel();
-      const component = fixture.componentInstance;
-      component.confirmPayment();
-
-      expect(component.paymentResult()).toBeNull();
-      expect(component.paymentLoading()).toBe(false);
-      httpMock.expectNone((r) => r.url.includes('/pay'));
-    });
-
-    it('no confirma un pago PSE si falta el banco/documento — marca el form como touched', () => {
+    it('onOrderPaid confirma la orden local, sin importar el estado resultante del Payment', () => {
       loadModel();
       createOrderAndSetResult();
       const component = fixture.componentInstance;
 
-      component.confirmPayment();
+      component.onOrderPaid();
 
-      httpMock.expectNone((r) => r.url.includes('/pay'));
-      expect(component.pseForm.touched).toBe(true);
-    });
-
-    it('no confirma un pago pse/tarjeta si falta aceptar el Reglamento y la Política de Datos de Wompi', () => {
-      loadModel();
-      createOrderAndSetResult();
-      const component = fixture.componentInstance;
-      component.pseForm.setValue({
-        user_legal_id_type: 'CC',
-        user_legal_id: '123456789',
-        financial_institution_code: '1',
-      });
-      component.wompiTerms.set(wompiTermsFake());
-
-      component.confirmPayment();
-
-      httpMock.expectNone((r) => r.url.includes('/pay'));
-      expect(component.consentimientoFaltante()).toBe(true);
-    });
-
-    it('confirma el pago exitosamente (pse) y actualiza el estado de la orden cuando queda "capturado"', () => {
-      loadModel();
-      createOrderAndSetResult();
-      const component = fixture.componentInstance;
-      component.pseForm.setValue({
-        user_legal_id_type: 'CC',
-        user_legal_id: '123456789',
-        financial_institution_code: '1',
-      });
-      component.wompiTerms.set(wompiTermsFake());
-      component.aceptaReglamento.set(true);
-      component.aceptaDatos.set(true);
-
-      component.confirmPayment();
-      const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);
-      expect(req.request.body).toEqual({
-        metodo: 'pse',
-        user_legal_id_type: 'CC',
-        user_legal_id: '123456789',
-        financial_institution_code: '1',
-        acceptance_token: 'tok-acept',
-        accept_personal_auth: 'tok-datos',
-      });
-
-      req.flush({
-        id: 'pay-1',
-        order_id: 'order-1',
-        tipo: 'pago_alquiler',
-        metodo: 'pse',
-        estado: 'capturado',
-        monto: 125000,
-        wompi_transaction_id: 'wompi-tx-1',
-      });
-
-      expect(component.paymentResult()?.estado).toBe('capturado');
       expect(component.orderResult()?.estado).toBe('confirmada');
-      expect(component.paymentLoading()).toBe(false);
     });
 
-    it('actualiza el estado de la orden cuando el pago queda en "hold"', () => {
+    it('renderiza <app-order-payment> con la orden creada una vez confirmada', () => {
       loadModel();
       createOrderAndSetResult();
-      const component = fixture.componentInstance;
-      component.setMetodoPago('tarjeta');
+      fixture.detectChanges();
+
+      // ngOnInit de OrderPaymentComponent precarga bancos PSE + términos de
+      // Wompi (default "pse") — se drenan acá, no son objeto de este test.
+      httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`).flush([]);
       httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush(wompiTermsFake());
-      component.aceptaReglamento.set(true);
-      component.aceptaDatos.set(true);
 
-      component.confirmPayment();
-      const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);
-      req.flush({
-        id: 'pay-1',
-        order_id: 'order-1',
-        tipo: 'deposito_garantia',
-        metodo: 'tarjeta',
-        estado: 'hold',
-        monto: 20000,
-        wompi_transaction_id: 'wompi-tx-2',
-      });
-
-      expect(component.orderResult()?.estado).toBe('confirmada');
-    });
-
-    it('actualiza el estado de la orden a "confirmada" aunque el pago quede "pendiente" (PagarOrdenUseCase confirma la orden en toda respuesta 200, sin importar el método)', () => {
-      loadModel();
-      createOrderAndSetResult();
-      const component = fixture.componentInstance;
-      component.setMetodoPago('contra_entrega');
-
-      component.confirmPayment();
-      const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);
-      req.flush({
-        id: 'pay-1',
-        order_id: 'order-1',
-        tipo: 'pago_alquiler',
-        metodo: 'contra_entrega',
-        estado: 'pendiente',
-        monto: 125000,
-        wompi_transaction_id: null,
-      });
-
-      expect(component.orderResult()?.estado).toBe('confirmada');
-    });
-
-    it('setea un error si el pago falla', () => {
-      loadModel();
-      createOrderAndSetResult();
-      const component = fixture.componentInstance;
-      component.setMetodoPago('contra_entrega');
-
-      component.confirmPayment();
-      const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/pay`);
-      req.flush('error', { status: 500, statusText: 'Server Error' });
-
-      expect(component.paymentError()).toBe('No pudimos procesar el pago. Intenta de nuevo.');
-      expect(component.paymentLoading()).toBe(false);
+      const host = (fixture.nativeElement as HTMLElement).querySelector('app-order-payment');
+      expect(host).withContext('se esperaba que app-order-payment esté en el DOM').not.toBeNull();
     });
   });
 
