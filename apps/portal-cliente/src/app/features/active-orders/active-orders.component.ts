@@ -83,7 +83,16 @@ export class ActiveOrdersComponent implements OnInit {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.catalog.listMyOrders({ page: this.page(), pageSize: 100 }).subscribe({
+    // `page: 1` fijo a propósito: esta es LA única llamada al backend (ver
+    // comentario de cabecera de la clase) — pide hasta 100 órdenes de una
+    // vez y pagina 100% del lado del cliente con `this.page()` (slice más
+    // abajo). Pasarle `this.page()` acá en cambio le pedía al backend SU
+    // página 2/3 con pageSize=100 (skip=100/200) — con menos de 100 órdenes
+    // reales, el backend devolvía `items: []` y la sección mostraba "no hay
+    // pedidos activos" al navegar a la página 2, con la orden real igual
+    // en la página 1 del backend. Bug reportado por el Arquitecto
+    // (2026-09-09).
+    this.catalog.listMyOrders({ page: 1, pageSize: 100 }).subscribe({
       next: ({ items }) => {
         const activos = items
           .filter((order) => ESTADOS_ACTIVOS.includes(order.estado))

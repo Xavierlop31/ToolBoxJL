@@ -148,4 +148,55 @@ describe('ActiveOrdersComponent', () => {
     expect(itemsTexto).toContain('25,000');
     expect(itemsTexto).not.toContain('unidad-1');
   });
+
+  it('goToPage(2) sigue pidiéndole al backend su página 1 (no su página 2) — la paginación es solo del lado del cliente', () => {
+    configurar(true);
+    fixture.detectChanges();
+
+    // 12 órdenes activas — más de una PAGE_SIZE (5) del cliente, para que
+    // haya una página 2 real que probar.
+    const doceOrdenes = Array.from({ length: 12 }, (_, i) =>
+      ordenDe({
+        id: `orden-${i + 1}`,
+        estado: 'confirmada',
+        fecha_inicio: `2026-09-${String(i + 1).padStart(2, '0')}`,
+      }),
+    );
+
+    httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+      items: doceOrdenes,
+      total: 12,
+      page: 1,
+      pageSize: 100,
+    });
+    fixture.detectChanges();
+
+    // Página 1 (orden descendente por fecha_inicio): las 5 más recientes.
+    expect(fixture.componentInstance.orders().map((o) => o.id)).toEqual([
+      'orden-12',
+      'orden-11',
+      'orden-10',
+      'orden-9',
+      'orden-8',
+    ]);
+    expect(fixture.componentInstance.totalPages()).toBe(3);
+
+    fixture.componentInstance.goToPage(2);
+
+    // Bug real (2026-09-09): esto pedía page=2 al backend, que con
+    // pageSize=100 y menos de 100 órdenes totales devuelve items: [] —
+    // "no hay pedidos activos" en la página 2 aunque sí haya.
+    const segundaReq = httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`);
+    expect(segundaReq.request.params.get('page')).toBe('1');
+    segundaReq.flush({ items: doceOrdenes, total: 12, page: 1, pageSize: 100 });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.orders().map((o) => o.id)).toEqual([
+      'orden-7',
+      'orden-6',
+      'orden-5',
+      'orden-4',
+      'orden-3',
+    ]);
+  });
 });
