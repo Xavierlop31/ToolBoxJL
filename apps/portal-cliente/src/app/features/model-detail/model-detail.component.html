@@ -302,6 +302,9 @@
                       @if (pseBanksLoading()) {
                         <span class="hint-text">Cargando bancos…</span>
                       }
+                      @if (pseBanksError()) {
+                        <p class="form-error" role="alert">{{ pseBanksError() }}</p>
+                      }
                     </div>
                   </form>
                 }

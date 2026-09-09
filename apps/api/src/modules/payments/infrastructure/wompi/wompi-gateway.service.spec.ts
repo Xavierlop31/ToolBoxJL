@@ -205,7 +205,8 @@ describe("WompiGatewayService", () => {
       { codigo: "2", nombre: "Banco B" },
     ]);
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://sandbox.wompi.co/v1/pse/financial_institutions?public_key=pub_test_1234",
+      "https://sandbox.wompi.co/v1/pse/financial_institutions",
+      { headers: { Authorization: "Bearer pub_test_1234" } },
     );
   });
 
