@@ -391,11 +391,16 @@ export class ModelDetailComponent implements OnInit {
       next: (payment) => {
         this.paymentResult.set(payment);
         this.paymentLoading.set(false);
-        
-        // Actualizar el estado local de la orden si el pago fue exitoso
-        if (payment.estado === 'capturado' || payment.estado === 'hold') {
-          this.orderResult.update(current => current ? { ...current, estado: 'confirmada' } : null);
-        }
+
+        // PagarOrdenUseCase mueve la orden a "confirmada" siempre que la
+        // llamada de pago responde 200, sin importar el método ni el estado
+        // resultante del Payment (PSE queda "pendiente" hasta que el banco
+        // confirma por webhook, contra_entrega también queda "pendiente" —
+        // ninguno de los dos significa que la orden no se confirmó). Antes
+        // esto solo se reflejaba acá para "capturado"/"hold", dejando el
+        // badge de "Estado actual" desactualizado (mostraba
+        // "pendiente_pago") en cualquier pago real con PSE o contra entrega.
+        this.orderResult.update(current => current ? { ...current, estado: 'confirmada' } : null);
       },
       error: (err) => {
         this.paymentError.set(err?.error?.message || 'No pudimos procesar el pago. Intenta de nuevo.');
