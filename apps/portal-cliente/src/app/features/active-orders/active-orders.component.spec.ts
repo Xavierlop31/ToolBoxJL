@@ -148,4 +148,136 @@ describe('ActiveOrdersComponent', () => {
     expect(itemsTexto).toContain('25,000');
     expect(itemsTexto).not.toContain('unidad-1');
   });
+
+  it('goToPage(2) sigue pidiéndole al backend su página 1 (no su página 2) — la paginación es solo del lado del cliente', () => {
+    configurar(true);
+    fixture.detectChanges();
+
+    // 12 órdenes activas — más de una PAGE_SIZE (5) del cliente, para que
+    // haya una página 2 real que probar.
+    const doceOrdenes = Array.from({ length: 12 }, (_, i) =>
+      ordenDe({
+        id: `orden-${i + 1}`,
+        estado: 'confirmada',
+        fecha_inicio: `2026-09-${String(i + 1).padStart(2, '0')}`,
+      }),
+    );
+
+    httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+      items: doceOrdenes,
+      total: 12,
+      page: 1,
+      pageSize: 100,
+    });
+    fixture.detectChanges();
+
+    // Página 1 (orden descendente por fecha_inicio): las 5 más recientes.
+    expect(fixture.componentInstance.orders().map((o) => o.id)).toEqual([
+      'orden-12',
+      'orden-11',
+      'orden-10',
+      'orden-9',
+      'orden-8',
+    ]);
+    expect(fixture.componentInstance.totalPages()).toBe(3);
+
+    fixture.componentInstance.goToPage(2);
+
+    // Bug real (2026-09-09): esto pedía page=2 al backend, que con
+    // pageSize=100 y menos de 100 órdenes totales devuelve items: [] —
+    // "no hay pedidos activos" en la página 2 aunque sí haya.
+    const segundaReq = httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`);
+    expect(segundaReq.request.params.get('page')).toBe('1');
+    segundaReq.flush({ items: doceOrdenes, total: 12, page: 1, pageSize: 100 });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.orders().map((o) => o.id)).toEqual([
+      'orden-7',
+      'orden-6',
+      'orden-5',
+      'orden-4',
+      'orden-3',
+    ]);
+  });
+
+  // HU-12.3: órdenes creadas por POST /orders/checkout-cart quedan en
+  // "pendiente_pago" (ese endpoint no inicia el pago, ver CheckoutCartUseCase)
+  // — sin esta sección no había ninguna pantalla para completarlo.
+  describe('Pedidos pendientes de pago', () => {
+    it('lista las órdenes pendiente_pago del mismo GET /orders (sin llamada aparte)', () => {
+      configurar(true);
+      fixture.detectChanges();
+
+      httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+        items: [
+          ordenDe({ id: 'a', estado: 'confirmada' }),
+          ordenDe({ id: 'b', estado: 'pendiente_pago' }),
+        ],
+        total: 2,
+        page: 1,
+        pageSize: 100,
+      });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.pendingOrders().map((o) => o.id)).toEqual(['b']);
+      const nativeElement = fixture.nativeElement as HTMLElement;
+      const seccion = nativeElement.querySelector('[data-testid="pending-orders"]');
+      expect(seccion).not.toBeNull();
+      expect(seccion!.querySelector('[data-testid="pagar-pendiente"]')).not.toBeNull();
+    });
+
+    it('no muestra la sección si no hay pedidos pendientes de pago', () => {
+      configurar(true);
+      fixture.detectChanges();
+
+      httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+        items: [ordenDe({ id: 'a', estado: 'confirmada' })],
+        total: 1,
+        page: 1,
+        pageSize: 100,
+      });
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="pending-orders"]')).toBeNull();
+    });
+
+    it('el botón "Pagar" abre el modal con el pago embebido y, al completarse, refresca las listas', () => {
+      configurar(true);
+      fixture.detectChanges();
+
+      httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+        items: [ordenDe({ id: 'b', estado: 'pendiente_pago' })],
+        total: 1,
+        page: 1,
+        pageSize: 100,
+      });
+      fixture.detectChanges();
+
+      const nativeElement = fixture.nativeElement as HTMLElement;
+      nativeElement.querySelector<HTMLButtonElement>('[data-testid="pagar-pendiente"]')!.click();
+      fixture.detectChanges();
+
+      expect(nativeElement.querySelector('app-order-payment')).not.toBeNull();
+      // ngOnInit de OrderPaymentComponent precarga bancos PSE + términos de
+      // Wompi (default "pse") — no son objeto de este test.
+      httpMock.expectOne(`${environment.apiUrl}/payments/pse-banks`).flush([]);
+      httpMock.expectOne(`${environment.apiUrl}/payments/wompi-terms`).flush({
+        acceptance_token: 'tok-acept',
+        accept_personal_auth: 'tok-datos',
+        reglamento_url: 'https://wompi.co/reglamento.pdf',
+        politica_datos_url: 'https://wompi.co/politica-datos.pdf',
+      });
+
+      fixture.componentInstance.onOrderPaid();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.selectedOrder()).toBeNull();
+      httpMock.expectOne((r) => r.url === `${environment.apiUrl}/orders`).flush({
+        items: [ordenDe({ id: 'b', estado: 'confirmada' })],
+        total: 1,
+        page: 1,
+        pageSize: 100,
+      });
+    });
+  });
 });

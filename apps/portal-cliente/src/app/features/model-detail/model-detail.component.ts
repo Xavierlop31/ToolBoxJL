@@ -8,16 +8,9 @@ import { ReturnIntentService } from '../../core/auth/return-intent.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ToolModel, Zona } from '../../core/models/catalog.models';
-import {
-  Quote,
-  Order,
-  Payment,
-  MetodoPago,
-  PagarOrdenInput,
-  PseBank,
-  WompiTerms,
-} from '../../core/models/order.models';
+import { Quote, Order } from '../../core/models/order.models';
 import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
+import { OrderPaymentComponent } from '../order-payment/order-payment.component';
 
 /** Forma persistida del intento guardado antes de redirigir a /login (auth-wall, HU-11.1). */
 interface ReturnIntentData {
@@ -40,7 +33,7 @@ interface ReturnIntentData {
 @Component({
   selector: 'app-model-detail',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DecimalPipe],
+  imports: [ReactiveFormsModule, RouterLink, DecimalPipe, OrderPaymentComponent],
   templateUrl: './model-detail.component.html',
   styleUrl: './model-detail.component.scss',
 })
@@ -71,33 +64,11 @@ export class ModelDetailComponent implements OnInit {
   readonly orderError = signal<string | null>(null);
   readonly orderResult = signal<Order | null>(null);
 
-  // Estados de pago (Sprint 3)
-  readonly paymentLoading = signal(false);
-  readonly paymentError = signal<string | null>(null);
-  readonly paymentResult = signal<Payment | null>(null);
-  readonly selectedMetodoPago = signal<MetodoPago>('pse');
-
-  // Datos de PSE (Wompi los exige para armar payment_method — sin esto,
-  // POST /orders/:id/pay respondía 422 "No se especificó método de pago").
-  readonly pseBanks = signal<PseBank[]>([]);
-  readonly pseBanksLoading = signal(false);
-  readonly pseBanksError = signal<string | null>(null);
-  readonly pseForm = this.formBuilder.nonNullable.group({
-    user_legal_id_type: ['CC' as const, Validators.required],
-    user_legal_id: ['', Validators.required],
-    financial_institution_code: ['', Validators.required],
-  });
-
-  // Términos de aceptación de Wompi (Reglamento + Política de Tratamiento de
-  // Datos) — Wompi exige acceptance_token/accept_personal_auth en toda
-  // transacción real (Habeas Data); sin esto, POST /orders/:id/pay
-  // respondía 422 "acceptance_token no está presente".
-  readonly wompiTerms = signal<WompiTerms | null>(null);
-  readonly wompiTermsLoading = signal(false);
-  readonly wompiTermsError = signal<string | null>(null);
-  readonly aceptaReglamento = signal(false);
-  readonly aceptaDatos = signal(false);
-  readonly consentimientoFaltante = signal(false);
+  // El selector de método de pago, formulario PSE, checkboxes de
+  // consentimiento de Wompi, confirmación y mensaje de resultado viven en
+  // OrderPaymentComponent (Sprint 3, extraído para reusarlo también en el
+  // pago de órdenes creadas desde el carrito — HU-12.3, ver
+  // CheckoutCartUseCase).
 
   // HU-12.2: zonas reales por ciudad (GET /zones?ciudad=) — ya no un array
   // hardcodeado. El zonaId enviado a /orders/quote y /orders debe ser un
@@ -257,7 +228,6 @@ export class ModelDetailComponent implements OnInit {
     this.quoteError.set(null);
     this.quoteResult.set(null);
     this.orderResult.set(null);
-    this.paymentResult.set(null);
 
     const { tipo, fechaInicio, fechaFin, direccionEntrega, zonaId } = this.form.getRawValue();
 
@@ -311,7 +281,6 @@ export class ModelDetailComponent implements OnInit {
         this.orderResult.set(order);
         this.orderLoading.set(false);
         this.quoteResult.set(null); // Limpiar cotización al confirmar
-        this.setMetodoPago(this.selectedMetodoPago()); // precarga bancos PSE si aplica (default)
       },
       error: (err) => {
         this.orderError.set(err?.error?.message || 'No pudimos confirmar la orden. Intenta de nuevo.');
@@ -320,88 +289,15 @@ export class ModelDetailComponent implements OnInit {
     });
   }
 
-  setMetodoPago(metodo: MetodoPago): void {
-    this.selectedMetodoPago.set(metodo);
-    if (metodo === 'pse' && this.pseBanks().length === 0 && !this.pseBanksLoading()) {
-      this.cargarBancosPse();
-    }
-    if (metodo !== 'contra_entrega' && this.wompiTerms() === null && !this.wompiTermsLoading()) {
-      this.cargarWompiTerms();
-    }
-  }
-
-  private cargarBancosPse(): void {
-    this.pseBanksLoading.set(true);
-    this.pseBanksError.set(null);
-    this.catalog.getPseBanks().subscribe({
-      next: (bancos) => {
-        this.pseBanks.set(bancos);
-        this.pseBanksLoading.set(false);
-      },
-      error: () => {
-        this.pseBanksLoading.set(false);
-        this.pseBanksError.set('No pudimos cargar la lista de bancos. Intenta de nuevo.');
-      },
-    });
-  }
-
-  private cargarWompiTerms(): void {
-    this.wompiTermsLoading.set(true);
-    this.wompiTermsError.set(null);
-    this.catalog.getWompiTerms().subscribe({
-      next: (terminos) => {
-        this.wompiTerms.set(terminos);
-        this.wompiTermsLoading.set(false);
-      },
-      error: () => {
-        this.wompiTermsLoading.set(false);
-        this.wompiTermsError.set('No pudimos cargar los términos de Wompi. Intenta de nuevo.');
-      },
-    });
-  }
-
-  confirmPayment(): void {
-    const order = this.orderResult();
-    if (!order) return;
-
-    const metodo = this.selectedMetodoPago();
-    if (metodo === 'pse' && this.pseForm.invalid) {
-      this.pseForm.markAllAsTouched();
-      return;
-    }
-    if (metodo !== 'contra_entrega' && (!this.aceptaReglamento() || !this.aceptaDatos())) {
-      this.consentimientoFaltante.set(true);
-      return;
-    }
-
-    this.paymentLoading.set(true);
-    this.paymentError.set(null);
-    this.consentimientoFaltante.set(false);
-
-    const terminos = this.wompiTerms();
-    const input: PagarOrdenInput = {
-      metodo,
-      ...(metodo === 'pse' ? this.pseForm.getRawValue() : {}),
-      ...(metodo !== 'contra_entrega' && terminos
-        ? { acceptance_token: terminos.acceptance_token, accept_personal_auth: terminos.accept_personal_auth }
-        : {}),
-    };
-
-    this.catalog.payOrder(order.id, input).subscribe({
-      next: (payment) => {
-        this.paymentResult.set(payment);
-        this.paymentLoading.set(false);
-        
-        // Actualizar el estado local de la orden si el pago fue exitoso
-        if (payment.estado === 'capturado' || payment.estado === 'hold') {
-          this.orderResult.update(current => current ? { ...current, estado: 'confirmada' } : null);
-        }
-      },
-      error: (err) => {
-        this.paymentError.set(err?.error?.message || 'No pudimos procesar el pago. Intenta de nuevo.');
-        this.paymentLoading.set(false);
-      }
-    });
+  /**
+   * PagarOrdenUseCase mueve la orden a "confirmada" siempre que la llamada
+   * de pago responde 200, sin importar el método ni el estado resultante
+   * del Payment (PSE queda "pendiente" hasta que el banco confirma por
+   * webhook, contra_entrega también queda "pendiente" — ninguno de los dos
+   * significa que la orden no se confirmó).
+   */
+  onOrderPaid(): void {
+    this.orderResult.update(current => current ? { ...current, estado: 'confirmada' } : null);
   }
 
   /**
