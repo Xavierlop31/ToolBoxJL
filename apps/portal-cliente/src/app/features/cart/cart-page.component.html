@@ -8,6 +8,25 @@
 
   <h1 class="page-title">Mi Carrito</h1>
 
+  @if (pendingOrders().length > 0) {
+    <section id="pedidos-pendientes-pago" class="pending-orders card-industrial" data-testid="pending-orders">
+      <h2 class="section-title">Pedidos pendientes de pago</h2>
+      <ul class="orders-list">
+        @for (order of pendingOrders(); track order.id) {
+          <li class="order-row">
+            <div class="order-main">
+              <span class="order-date">{{ order.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
+              <span class="order-tipo">{{ order.tipo === 'alquiler' ? 'Alquiler' : 'Venta' }}</span>
+              <button type="button" class="btn-pay" data-testid="pagar-pendiente" (click)="verDetalle(order)">
+                Pagar
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   @if (loading()) {
     <div class="loading-state">
       <span class="material-symbols-outlined spin-icon">progress_activity</span>
@@ -205,7 +224,7 @@
             <strong>{{ resultado.ordenes_creadas.length }}</strong>
             {{ resultado.ordenes_creadas.length === 1 ? 'orden' : 'órdenes' }} exitosamente.
           </p>
-          <a routerLink="/catalogo" class="btn-primary" data-testid="ir-a-pagar">
+          <a href="#pedidos-pendientes-pago" class="btn-primary" data-testid="ir-a-pagar">
             Ir a pagar mis pedidos
           </a>
         </div>
@@ -221,5 +240,9 @@
         </div>
       }
     </div>
+  }
+
+  @if (selectedOrder(); as order) {
+    <app-order-detail-modal [order]="order" (closed)="selectedOrder.set(null)" (paid)="onOrderPaid()" />
   }
 </main>

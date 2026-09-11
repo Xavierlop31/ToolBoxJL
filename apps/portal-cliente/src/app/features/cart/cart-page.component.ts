@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -10,7 +10,9 @@ import { calcularSubtotalLinea, esLineaDeAlquiler, tarifaUnitariaLinea } from '.
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ToolModel, Zona } from '../../core/models/catalog.models';
 import { Cart, CartItem, CheckoutCartResult } from '../../core/models/cart.models';
+import { Order } from '../../core/models/order.models';
 import { getToolImageUrl, FALLBACK_TOOL_IMAGE } from '../../core/utils/tool-image.util';
+import { OrderDetailModalComponent } from '../active-orders/components/order-detail-modal/order-detail-modal.component';
 
 /** Vista enriquecida de una línea del carrito — el backend solo trae `CartItem` (modelo_id/cantidad/dias). */
 export interface CartLineView {
@@ -37,11 +39,21 @@ export interface CartLineView {
  * carrito todavía no tiene `zona_id`/`return_mode`, así que el recargo
  * logístico y el depósito de garantía NO se pueden calcular en este panel —
  * se muestran como "Se calcula al confirmar tu pedido" en vez de un monto.
+ *
+ * "Pedidos pendientes de pago" (movido acá desde el Home/Catálogo — pedido
+ * del Arquitecto, 2026-09-11: mezclada con el catálogo resultaba confusa, y
+ * tiene más sentido junto al resto del flujo de compra/pago). Lista las
+ * órdenes en `pendiente_pago` (creadas por `POST /orders/checkout-cart`, que
+ * no inicia el pago — ver `CheckoutCartUseCase`) vía una llamada propia a
+ * `GET /orders` — independiente de `GET /cart`, es un recurso distinto.
+ * Reusa `OrderDetailModalComponent` (antes solo importado por
+ * `ActiveOrdersComponent`) para el detalle + pago embebido, sin duplicar esa
+ * lógica.
  */
 @Component({
   selector: 'app-cart-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DecimalPipe],
+  imports: [ReactiveFormsModule, RouterLink, DecimalPipe, DatePipe, OrderDetailModalComponent],
   templateUrl: './cart-page.component.html',
   styleUrl: './cart-page.component.scss',
 })
@@ -49,6 +61,10 @@ export class CartPageComponent implements OnInit {
   private readonly cartService = inject(CartService);
   private readonly catalog = inject(CatalogService);
   private readonly formBuilder = inject(FormBuilder);
+
+  // "Pedidos pendientes de pago" (ver comentario de cabecera de la clase).
+  readonly pendingOrders = signal<Order[]>([]);
+  readonly selectedOrder = signal<Order | null>(null);
 
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -87,10 +103,22 @@ export class CartPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarCarrito();
+    this.cargarPendingOrders();
   }
 
   getToolImage(model: ToolModel): string {
     return getToolImageUrl(model);
+  }
+
+  /** Botón "Pagar" de una orden pendiente — abre el detalle con el pago embebido. */
+  verDetalle(order: Order): void {
+    this.selectedOrder.set(order);
+  }
+
+  /** El pago se completó desde el modal — refresca la lista (server truth). */
+  onOrderPaid(): void {
+    this.selectedOrder.set(null);
+    this.cargarPendingOrders();
   }
 
   onImageError(event: Event): void {
@@ -162,6 +190,10 @@ export class CartPageComponent implements OnInit {
         // El backend retira del carrito las líneas que sí se convirtieron en
         // orden; las que fallaron quedan. Refrescamos para reflejar eso.
         this.cargarCarrito();
+        // Las órdenes recién creadas quedan en pendiente_pago — refrescamos
+        // para que aparezcan de inmediato en la sección de acá arriba, sin
+        // recargar la página.
+        this.cargarPendingOrders();
       },
       error: (err) => {
         this.checkoutError.set(
@@ -253,6 +285,24 @@ export class CartPageComponent implements OnInit {
         this.zonas.set([]);
         this.zonasLoading.set(false);
       },
+    });
+  }
+
+  /** `GET /orders` sin filtro de estado, igual criterio que ActiveOrdersComponent (HU-12.1) — acá solo nos quedamos con pendiente_pago. */
+  private cargarPendingOrders(): void {
+    this.catalog.listMyOrders({ page: 1, pageSize: 100 }).subscribe({
+      next: ({ items }) => {
+        this.pendingOrders.set(
+          items
+            .filter((order) => order.estado === 'pendiente_pago')
+            .sort((a, b) => (b.fecha_inicio ?? '').localeCompare(a.fecha_inicio ?? '')),
+        );
+      },
+      // Fallo silencioso a propósito: no es la información principal de esta
+      // página (el carrito lo es, con su propio errorMessage) — mismo
+      // criterio que otras cargas secundarias de este componente
+      // (cargarZonas, arriba, también degrada en silencio).
+      error: () => this.pendingOrders.set([]),
     });
   }
 }
