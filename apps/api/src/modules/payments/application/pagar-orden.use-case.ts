@@ -55,6 +55,15 @@ export interface ResultadoPagoOrden {
  * `acceptance_token`/`accept_personal_auth` de Wompi es de un único uso;
  * reusarlo en la segunda transacción de una orden con depósito producía 422
  * "El token de aceptación ya fue usado" (encontrado en producción).
+ *
+ * Órdenes multi-ítem (HU-12.3, checkout consolidado del carrito, Sprint 13):
+ * `tarifa_base`/`deposito_garantia`/`recargo_logistico` se recotizan y SUMAN
+ * por cada `OrderItem` de la orden (antes solo se cotizaba `orden.items[0]`,
+ * correcto cuando toda orden tenía exactamente 1 ítem — ya no es el caso
+ * desde que `CheckoutCartUseCase` puede crear una orden con varios ítems).
+ * `tipo`/`fecha_inicio`/`fecha_fin`/`zona_id`/`return_mode` siguen siendo de
+ * CABECERA (compartidos por todos los ítems de la orden), así que cada
+ * cotización por ítem solo varía en `modeloId`.
  */
 @Injectable()
 export class PagarOrdenUseCase {
@@ -95,27 +104,36 @@ export class PagarOrdenUseCase {
       throw new OrdenNoPagableError(ordenId, orden.estado);
     }
 
-    const primerItem = orden.items[0];
-    const unidad = await this.unidades.buscarPorId(primerItem.unidad_id);
-    if (!unidad) {
-      throw new UnidadNoEncontradaError(primerItem.unidad_id);
-    }
-    const modelo = await this.modelos.buscarPorId(unidad.modelo_id);
-    if (!modelo) {
-      throw new ModeloNoEncontradoError(unidad.modelo_id);
-    }
+    let tarifaBaseTotal = 0;
+    let depositoTotal = 0;
+    let recargoLogisticoTotal = 0;
 
-    const cotizacion = await this.cotizarOrden.ejecutar({
-      modeloId: modelo.id,
-      tipo: orden.tipo,
-      fechaInicio: orden.fecha_inicio ?? undefined,
-      fechaFin: orden.fecha_fin ?? undefined,
-      zonaId: orden.zona_id,
-      returnMode: orden.return_mode,
-    });
+    for (const item of orden.items) {
+      const unidad = await this.unidades.buscarPorId(item.unidad_id);
+      if (!unidad) {
+        throw new UnidadNoEncontradaError(item.unidad_id);
+      }
+      const modelo = await this.modelos.buscarPorId(unidad.modelo_id);
+      if (!modelo) {
+        throw new ModeloNoEncontradoError(unidad.modelo_id);
+      }
+
+      const cotizacionItem = await this.cotizarOrden.ejecutar({
+        modeloId: modelo.id,
+        tipo: orden.tipo,
+        fechaInicio: orden.fecha_inicio ?? undefined,
+        fechaFin: orden.fecha_fin ?? undefined,
+        zonaId: orden.zona_id,
+        returnMode: orden.return_mode,
+      });
+
+      tarifaBaseTotal += cotizacionItem.tarifa_base;
+      depositoTotal += cotizacionItem.deposito_garantia;
+      recargoLogisticoTotal += cotizacionItem.recargo_logistico;
+    }
 
     const tipoPagoPrincipal = orden.tipo === "alquiler" ? "pago_alquiler" : "pago_venta";
-    const requiereDeposito = (modelo.deposito_pct ?? 0) > 0;
+    const requiereDeposito = depositoTotal > 0;
 
     let pagoPrincipal: Payment;
     let pagoDeposito: Payment | null = null;
@@ -127,7 +145,7 @@ export class PagarOrdenUseCase {
         tipo: tipoPagoPrincipal,
         metodo,
         estado: "pendiente",
-        monto: cotizacion.tarifa_base,
+        monto: tarifaBaseTotal,
         wompiTransactionId: null,
       });
       if (requiereDeposito) {
@@ -136,7 +154,7 @@ export class PagarOrdenUseCase {
           tipo: "deposito_garantia",
           metodo,
           estado: "pendiente",
-          monto: cotizacion.deposito_garantia,
+          monto: depositoTotal,
           wompiTransactionId: null,
         });
       }
@@ -165,7 +183,7 @@ export class PagarOrdenUseCase {
       }
       const terminosPrincipal = await this.wompi.obtenerTerminos();
       const transaccionPrincipal = await this.wompi.iniciarTransaccion({
-        monto: cotizacion.tarifa_base,
+        monto: tarifaBaseTotal,
         metodo,
         modo: "captura",
         referencia: `${orden.id}-principal-${randomUUID()}`,
@@ -179,7 +197,7 @@ export class PagarOrdenUseCase {
         tipo: tipoPagoPrincipal,
         metodo,
         estado: transaccionPrincipal.estado,
-        monto: cotizacion.tarifa_base,
+        monto: tarifaBaseTotal,
         wompiTransactionId: transaccionPrincipal.wompiTransactionId,
       });
 
@@ -190,7 +208,7 @@ export class PagarOrdenUseCase {
         // más arriba).
         const terminosDeposito = await this.wompi.obtenerTerminos();
         const transaccionDeposito = await this.wompi.iniciarTransaccion({
-          monto: cotizacion.deposito_garantia,
+          monto: depositoTotal,
           metodo,
           modo: modoDeposito,
           referencia: `${orden.id}-deposito-${randomUUID()}`,
@@ -204,7 +222,7 @@ export class PagarOrdenUseCase {
           tipo: "deposito_garantia",
           metodo,
           estado: transaccionDeposito.estado,
-          monto: cotizacion.deposito_garantia,
+          monto: depositoTotal,
           wompiTransactionId: transaccionDeposito.wompiTransactionId,
         });
       }
@@ -237,7 +255,7 @@ export class PagarOrdenUseCase {
     // y ningún endpoint de este sprint lo consulta de vuelta) — se loguea
     // acá, que es donde el Tech Lead pidió dejar registro simple de la
     // porción calculada.
-    const split = this.wompi.simularSplit(cotizacion.recargo_logistico);
+    const split = this.wompi.simularSplit(recargoLogisticoTotal);
     this.logger.log(
       `Split simulado para orden ${orden.id}: logística=${split.montoLogistica} COP, matriz=${split.montoMatriz} COP.`,
     );
