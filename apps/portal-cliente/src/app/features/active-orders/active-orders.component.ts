@@ -28,16 +28,20 @@ const RETURN_MODE_LABEL: Record<NonNullable<Order['return_mode']>, string> = {
 /**
  * "Mis Pedidos Activos" (HU-12.1, Fase 3) — sección inferior del Home/Catálogo,
  * solo visible con sesión activa. Consulta `GET /orders` sin filtro de
- * estado (una sola llamada) y filtra en el cliente a los dos estados que
- * cuentan como "activo" hoy en el modelo real de `Order` (`confirmada`,
- * `en_curso` — el Gherkin de origen usa nombres de estado que no existen en
- * el backend, ver la nota de Sprint 12 en el PR).
+ * estado y filtra en el cliente a los dos estados que cuentan como "activo"
+ * hoy en el modelo real de `Order` (`confirmada`, `en_curso` — el Gherkin de
+ * origen usa nombres de estado que no existen en el backend, ver la nota de
+ * Sprint 12 en el PR).
  *
  * La fila ya no muestra el UUID de la orden (poco legible para el cliente) y
  * el Estado pasó de badge puramente informativo a botón de acción: abre
  * `OrderDetailModalComponent` con el detalle completo + ítems, de solo
  * lectura (no permite editar nada desde acá — mismo criterio de
  * `GET /orders/:id`).
+ *
+ * "Pedidos pendientes de pago" (HU-12.3) vivía acá mezclado con el catálogo
+ * y resultaba confuso (pedido del Arquitecto, 2026-09-11) — se movió a
+ * `CartPageComponent` (`/carrito`), con su propia llamada a `GET /orders`.
  */
 @Component({
   selector: 'app-active-orders',
@@ -57,13 +61,6 @@ export class ActiveOrdersComponent implements OnInit {
   readonly total = signal(0);
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
   readonly selectedOrder = signal<Order | null>(null);
-
-  // HU-12.3: órdenes creadas por POST /orders/checkout-cart quedan en
-  // "pendiente_pago" sin que ese endpoint inicie el pago (ver
-  // CheckoutCartUseCase) — sin esta lista, no había ninguna pantalla donde
-  // completarlo. Se deriva del mismo GET /orders ya pedido para "activos"
-  // (sin filtro de estado), no hace falta una llamada aparte.
-  readonly pendingOrders = signal<Order[]>([]);
 
   readonly estadoLabel = ESTADO_LABEL;
   readonly returnModeLabel = RETURN_MODE_LABEL;
@@ -113,12 +110,6 @@ export class ActiveOrdersComponent implements OnInit {
         this.total.set(activos.length);
         const desde = (this.page() - 1) * PAGE_SIZE;
         this.orders.set(activos.slice(desde, desde + PAGE_SIZE));
-
-        this.pendingOrders.set(
-          items
-            .filter((order) => order.estado === 'pendiente_pago')
-            .sort((a, b) => (b.fecha_inicio ?? '').localeCompare(a.fecha_inicio ?? '')),
-        );
 
         this.loading.set(false);
       },
