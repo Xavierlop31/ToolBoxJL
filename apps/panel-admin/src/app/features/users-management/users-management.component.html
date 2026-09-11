@@ -1,0 +1,105 @@
+<section class="users-management">
+  <div class="toolbar">
+    <div class="filters">
+      <input
+        type="search"
+        placeholder="Buscar por nombre o email…"
+        [formControl]="searchControl"
+        data-testid="users-search"
+        aria-label="Buscar por nombre o email"
+      />
+      <select [formControl]="rolControl" data-testid="users-rol-filter" aria-label="Todos los roles">
+        <option value="">Todos los roles</option>
+        @for (rol of roles; track rol) {
+          <option [value]="rol">{{ rol }}</option>
+        }
+      </select>
+      <select [formControl]="activoControl" data-testid="users-activo-filter" aria-label="Todos los estados">
+        <option value="">Todos los estados</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <output>Cargando usuarios…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <div class="table-scroll">
+      <table class="users-table" data-testid="users-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Activo</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr data-testid="users-row">
+              <td>{{ row.nombre || '—' }}</td>
+              <td>{{ row.email }}</td>
+              <td>
+                <select
+                  (change)="onRolChange(row, $event)"
+                  [disabled]="savingRowId() === row.id"
+                  [attr.data-testid]="'rol-select-' + row.id"
+                >
+                  @for (rol of roles; track rol) {
+                    <option [value]="rol" [selected]="rol === row.pendingRol">{{ rol }}</option>
+                  }
+                </select>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  [checked]="row.pendingActivo"
+                  (change)="onActivoChange(row, $event)"
+                  [disabled]="savingRowId() === row.id"
+                  [attr.data-testid]="'activo-checkbox-' + row.id"
+                  [attr.aria-label]="'Activo: ' + row.nombre"
+                />
+              </td>
+              <td class="actions">
+                <button
+                  type="button"
+                  class="btn-primary"
+                  [disabled]="!hayCambiosPendientes(row) || savingRowId() === row.id"
+                  (click)="guardar(row)"
+                  [attr.data-testid]="'btn-guardar-' + row.id"
+                >
+                  {{ savingRowId() === row.id ? 'Guardando…' : 'Guardar' }}
+                </button>
+                @if (rowErrors()[row.id]) {
+                  <p class="form-error row-error" role="alert" [attr.data-testid]="'error-' + row.id">
+                    {{ rowErrors()[row.id] }}
+                  </p>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">No se encontraron usuarios con esos filtros.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <nav class="pagination" aria-label="Paginación de usuarios">
+        <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">Anterior</button>
+        <span>Página {{ page() }} de {{ totalPages }}</span>
+        <button type="button" [disabled]="page() >= totalPages" (click)="goToPage(page() + 1)">Siguiente</button>
+      </nav>
+    }
+  }
+</section>

@@ -8,7 +8,8 @@ rules:
   # openapi.yaml usa descripciones largas en español por diseño (documento SDD
   # de referencia, no solo contrato técnico) — no limitar longitud.
   info-description: off
-  # El esquema User documenta la entidad `users` del diccionario de datos
-  # (Esquema de Backend §3.2) aunque no hay CRUD propio: los usuarios se
-  # gestionan vía Supabase Auth, no por un endpoint REST del backend NestJS.
+  # Regla apagada originalmente porque el esquema User no tenía ningún
+  # endpoint que lo referenciara (Épica 16 lo conectó a GET/PATCH
+  # /admin/users*) — se deja off igual por si algún otro esquema documental
+  # del diccionario de datos queda sin endpoint propio en el futuro.
   oas3-unused-component: off

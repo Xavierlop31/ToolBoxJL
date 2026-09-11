@@ -17,6 +17,7 @@ import { WhatsAppWebhookModule } from "./modules/whatsapp-webhook/interface/what
 import { CartModule } from "./modules/cart/interface/cart.module";
 import { VoiceAgentModule } from "./modules/voice-agent/interface/voice-agent.module";
 import { ZonesModule } from "./modules/zones/interface/zones.module";
+import { UsersModule } from "./modules/users/interface/users.module";
 
 /**
  * AppModule raíz. `ConfigModule.forRoot` con `validate` hace que la app
@@ -69,16 +70,21 @@ import { ZonesModule } from "./modules/zones/interface/zones.module";
  * y campos nuevos de `POST /inventory/units`/`PATCH
  * /inventory/units/{id}/status` (cambios en CatalogInventoryModule, sin
  * módulo nuevo propio) + `GET /logistics/routes-today` (LogisticsModule,
- * que a partir de este sprint importa además CatalogInventoryModule y el
- * nuevo `UsersModule` — primer módulo que lee `public.users` desde código
- * Node, ver `users/domain/user.repository.ts`). `UsersModule` no se lista
- * acá como import directo de `AppModule` porque no expone controller propio
- * — solo lo consume `LogisticsModule` internamente.
+ * que a partir de este sprint importa además CatalogInventoryModule y
+ * `UsersModule` — primer módulo que lee `public.users` desde código Node,
+ * ver `users/domain/user.repository.ts`).
  * Sprint 15 (Issue #153 / HU-15.1, Épica 15): `GET /analytics/dashboard-kpis`
  * (dashboard ejecutivo consolidado + panel de Alertas Críticas) — cambio en
  * AnalyticsModule existente, que a partir de este sprint también importa
  * CatalogInventoryModule/OrdersModule/UsersModule (mismo criterio que
  * LogisticsModule en Sprint 14); sin módulo nuevo propio ni cambio acá.
+ * Épica 16 (Gestión de Usuarios y Roles, pedido directo del Arquitecto
+ * 2026-09-11, no viene del PRD original): `UsersModule` agrega su PRIMER
+ * controller propio (`AdminUsersController`, `GET`/`PATCH /admin/users*`,
+ * `@Roles("admin")` únicamente) — a diferencia de Sprint 14/15, donde solo
+ * lo consumían `LogisticsModule`/`AnalyticsModule` de forma transitiva, acá
+ * SÍ se agrega como import directo de `AppModule` para que sus rutas queden
+ * registradas sin depender de que otro módulo lo importe primero.
  *
  * Issue #187 (hardening de seguridad): `ThrottlerModule` + `APP_GUARD` global
  * con `UsuarioOIpThrottlerGuard` (partición por usuario autenticado o IP, ver
@@ -105,6 +111,7 @@ import { ZonesModule } from "./modules/zones/interface/zones.module";
     CartModule,
     VoiceAgentModule,
     ZonesModule,
+    UsersModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: UsuarioOIpThrottlerGuard }],
 })

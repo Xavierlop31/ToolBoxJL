@@ -523,11 +523,15 @@ model Zone {
 // Hasta acá `public.users` (creada por la migración
 // 20260823235900_supabase_users_bootstrap, ver su comentario de cabecera)
 // solo la leían las políticas RLS en SQL crudo — AuthModule verifica JWTs
-// directo contra el JWKS de Supabase, nunca consulta `users` vía Prisma. Este
-// modelo NO agrega una migración nueva (la tabla ya existe, creada por el
-// bootstrap) — es un mirror de SOLO LECTURA: ninguna implementación de
-// `UserRepository` (apps/api/src/modules/users) expone `crear`/`actualizar`,
-// la única fuente de escritura sigue siendo el trigger `handle_new_user`.
+// directo contra el JWKS de Supabase, nunca consulta `users` vía Prisma.
+//
+// Épica 16 (Gestión de Usuarios y Roles, pedido directo del Arquitecto
+// 2026-09-11, no viene del PRD original): PRIMER caso de uso que ESCRIBE
+// `public.users` desde código Node (`GET/PATCH /admin/users*`, solo rol
+// admin) — agrega la columna `activo` (migración
+// 20260911000000_users_admin_management) y deja de ser un mirror
+// exclusivamente de solo lectura. La única otra fuente de escritura de esta
+// tabla sigue siendo el trigger `handle_new_user` (altas).
 // ============================================================================
 
 enum RolUsuario {
@@ -540,14 +544,19 @@ enum RolUsuario {
   @@map("rol_usuario")
 }
 
-/// Mirror de solo lectura de `public.users` — ver comentario de la sección
-/// de arriba. Columnas idénticas a las de la migración bootstrap.
+/// `public.users` — lectura general de todos los módulos, escritura (rol,
+/// activo) reservada a UsersModule/AdminUsersController. Ver comentario de
+/// la sección de arriba.
 model User {
   id       String     @id @db.Uuid
   email    String
   fullName String?    @map("full_name")
   telefono String?
   rol      RolUsuario @default(cliente)
+  /// Épica 16: si es `false`, el custom_access_token_hook lo copia a
+  /// app_metadata.activo y VerificarAccesoUseCase rechaza el login (403) —
+  /// aplica desde el próximo login/refresh, no corta una sesión ya activa.
+  activo   Boolean    @default(true)
 
   @@map("users")
 }

@@ -1,6 +1,7 @@
-import { UnauthorizedException, type ExecutionContext } from "@nestjs/common";
+import { ForbiddenException, UnauthorizedException, type ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
+import { CuentaDesactivadaError } from "../../domain/errors/cuenta-desactivada.error";
 import { TokenInvalidoError } from "../../domain/errors/token-invalido.error";
 
 function contexto(): ExecutionContext {
@@ -46,6 +47,19 @@ describe("SupabaseAuthGuard.handleRequest", () => {
     expect(() =>
       guard.handleRequest(error, undefined, undefined, contexto()),
     ).toThrow(UnauthorizedException);
+    expect(() =>
+      guard.handleRequest(error, undefined, undefined, contexto()),
+    ).toThrow(error.message);
+  });
+
+  it("traduce un CuentaDesactivadaError de la estrategia en ForbiddenException (403), no 401 (Épica 16)", () => {
+    const reflector = {} as unknown as Reflector;
+    const guard = new SupabaseAuthGuard(reflector);
+    const error = new CuentaDesactivadaError();
+
+    expect(() =>
+      guard.handleRequest(error, undefined, undefined, contexto()),
+    ).toThrow(ForbiddenException);
     expect(() =>
       guard.handleRequest(error, undefined, undefined, contexto()),
     ).toThrow(error.message);
