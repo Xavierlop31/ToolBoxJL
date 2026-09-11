@@ -8,6 +8,12 @@ output {
   color: var(--tbjl-color-neutral-500, #757588);
 }
 
+.empty-hint {
+  color: var(--tbjl-color-neutral-500, #757588);
+  font-size: 14px;
+  margin: 8px 0;
+}
+
 .form-error {
   color: var(--tbjl-color-error, #ba1a1a);
   background-color: #ffdad6;
@@ -17,21 +23,44 @@ output {
   margin-bottom: 16px;
 }
 
-/* --- Tarjetas de KPIs (HU-13.1) — movidas acá desde el viejo InventoryPanelComponent (Issue #184) --- */
+/* --- Tarjetas de KPIs (HU-13.1) — re-estilo Issue #184-bis: barra de color
+   superior + ícono, mismo lenguaje visual que el mockup del Arquitecto. --- */
 
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
-  margin: 0 0 28px 0;
+  margin: 0 0 24px 0;
 }
 
 .metric-card {
+  position: relative;
   background: var(--tbjl-color-card, #ffffff);
   border: 1px solid var(--tbjl-color-border, #dce3ea);
   border-radius: var(--tbjl-radius-lg, 0.75rem);
   padding: 22px;
   box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
+  overflow: hidden;
+
+  .metric-top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--tbjl-color-primary-700, #0b0e3d);
+  }
+
+  .metric-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .material-symbols-outlined {
+      color: var(--tbjl-color-primary-700, #0b0e3d);
+      font-size: 22px;
+    }
+  }
 
   dt {
     font-size: 12px;
@@ -43,23 +72,167 @@ output {
 
   dd {
     margin: 10px 0 0;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 800;
+    font-style: italic;
     font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
     color: var(--tbjl-color-neutral-900, #161c21);
   }
 }
 
-.metric-operativas dd {
-  color: var(--tbjl-color-success, #1e9e5a);
+.metric-operativas {
+  .metric-top-bar {
+    background: var(--tbjl-color-success, #1e9e5a);
+  }
+  .metric-header .material-symbols-outlined,
+  dd {
+    color: var(--tbjl-color-success, #1e9e5a);
+  }
 }
 
-.metric-alquiler dd {
-  color: var(--tbjl-color-primary-500, #141cdb);
+.metric-alquiler {
+  .metric-top-bar {
+    background: var(--tbjl-color-primary-500, #141cdb);
+  }
+  .metric-header .material-symbols-outlined,
+  dd {
+    color: var(--tbjl-color-primary-500, #141cdb);
+  }
 }
 
-.metric-mantenimiento dd {
-  color: var(--tbjl-color-warning, #e0a400);
+.metric-mantenimiento {
+  .metric-top-bar {
+    background: var(--tbjl-color-warning, #e0a400);
+  }
+  .metric-header .material-symbols-outlined,
+  dd {
+    color: var(--tbjl-color-warning, #e0a400);
+  }
+}
+
+/* --- Widgets nuevos (Issue #184-bis): Ocupación de Almacén / Auditoría en Vivo --- */
+
+.widgets-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+
+  @media (min-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.widget {
+  background: var(--tbjl-color-card, #ffffff);
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  padding: 20px;
+  box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
+
+  .widget-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .material-symbols-outlined {
+      color: var(--tbjl-color-primary-500, #141cdb);
+      font-size: 20px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      font-style: italic;
+      text-transform: uppercase;
+      color: var(--tbjl-color-neutral-900, #161c21);
+    }
+  }
+
+  .widget-hint {
+    margin: 0 0 14px 0;
+    font-size: 12px;
+    color: var(--tbjl-color-neutral-500, #757588);
+  }
+}
+
+.occupancy-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.occupancy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--tbjl-color-neutral-100, #eef4fb);
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  font-size: 13px;
+
+  .occupancy-cantidad {
+    font-weight: 800;
+    color: var(--tbjl-color-primary-500, #141cdb);
+  }
+}
+
+.audit-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.audit-entry {
+  padding: 10px 12px;
+  border-left: 3px solid var(--tbjl-color-primary-500, #141cdb);
+  background: var(--tbjl-color-neutral-100, #eef4fb);
+  border-radius: 0 var(--tbjl-radius-md, 0.5rem) var(--tbjl-radius-md, 0.5rem) 0;
+
+  .audit-date {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--tbjl-color-neutral-500, #757588);
+    text-transform: uppercase;
+  }
+
+  .audit-unit {
+    margin: 2px 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--tbjl-color-neutral-900, #161c21);
+
+    .audit-serial {
+      font-weight: 400;
+      color: var(--tbjl-color-neutral-500, #757588);
+    }
+  }
+
+  .audit-transition {
+    margin: 0;
+    font-size: 12px;
+    color: var(--tbjl-color-neutral-700, #454556);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .material-symbols-outlined {
+      font-size: 14px;
+    }
+  }
 }
 
 /* --- Toolbar de acciones --- */
@@ -71,12 +244,18 @@ output {
   gap: 16px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  padding: 16px 20px;
 }
 
 .filters {
   display: flex;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+
+  .search-icon {
+    color: var(--tbjl-color-primary-500, #141cdb);
+  }
 
   input,
   select {
@@ -98,7 +277,7 @@ output {
   }
 }
 
-/* "Generar Nuevo QR" — botón de acción primaria (bg-brand-red del mockup Stitch). */
+/* "Registrar Unidad (QR)" — botón de acción primaria (bg-brand-red del mockup Stitch). */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -122,7 +301,7 @@ output {
   }
 }
 
-/* --- Layout maestro-detalle (Issue #184): tabla + panel docked de detalle, misma altura --- */
+/* --- Layout maestro-detalle (Issue #184): grid de tarjetas + panel docked de detalle, misma altura --- */
 
 .master-detail {
   display: grid;
@@ -152,6 +331,8 @@ output {
   overflow: auto;
   border: 1px solid var(--tbjl-color-border, #dce3ea);
   border-radius: var(--tbjl-radius-lg, 0.75rem);
+  background: var(--tbjl-color-background, #f5faff);
+  padding: 16px;
 }
 
 .detail-panel-slot {
@@ -159,63 +340,95 @@ output {
   height: 100%;
 }
 
-.inventory-table {
-  width: 100%;
-  border-collapse: collapse;
+/* --- Grid de tarjetas de unidades (Issue #184-bis, reemplaza la tabla) --- */
+
+.units-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.unit-card {
   background: var(--tbjl-color-card, #ffffff);
-  font-size: 14px;
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-lg, 0.75rem);
+  padding: 16px;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
 
-  th,
-  td {
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 1px solid var(--tbjl-color-border, #dce3ea);
+  &:hover {
+    box-shadow: var(--tbjl-shadow-sm, 0 1px 2px 0 rgba(17, 24, 39, 0.06));
   }
 
-  th {
-    position: sticky;
-    top: 0;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--tbjl-color-neutral-500, #757588);
-    background: var(--tbjl-color-neutral-100, #eef4fb);
+  &.selected {
+    border-color: var(--tbjl-color-primary-500, #141cdb);
+    background: var(--tbjl-color-primary-50, #e0e0ff);
   }
 
-  tr:last-child td {
-    border-bottom: none;
-  }
-
-  tbody tr {
-    cursor: pointer;
-
-    &:hover {
-      background: var(--tbjl-color-neutral-100, #eef4fb);
-    }
-
-    &.selected {
-      background: var(--tbjl-color-primary-50, #e0e0ff);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--tbjl-color-primary-500, #141cdb);
-      outline-offset: -2px;
-    }
+  &:focus-visible {
+    outline: 2px solid var(--tbjl-color-primary-500, #141cdb);
+    outline-offset: 2px;
   }
 }
 
-.qr-icon {
-  color: var(--tbjl-color-primary-500, #141cdb);
-  font-size: 22px;
+.unit-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+
+  .unit-card-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    .unit-categoria {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--tbjl-color-primary-500, #141cdb);
+    }
+
+    h3 {
+      margin: 2px 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--tbjl-color-neutral-900, #161c21);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .unit-serial {
+      font-size: 11px;
+      color: var(--tbjl-color-neutral-500, #757588);
+      font-family: monospace;
+    }
+  }
+
+  .qr-icon {
+    color: var(--tbjl-color-primary-500, #141cdb);
+    font-size: 26px;
+    flex-shrink: 0;
+  }
 }
 
-.badge {
-  display: inline-block;
-  padding: 4px 10px;
+.unit-status-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 8px 0;
+  padding: 5px 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 }
 
 .badge-operativo {
@@ -240,24 +453,53 @@ output {
   color: var(--tbjl-color-error, #ba1a1a);
 }
 
-.actions {
+.unit-ubicacion {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--tbjl-color-neutral-700, #454556);
+  margin-bottom: 12px;
+
+  .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--tbjl-color-neutral-500, #757588);
+  }
+}
+
+.unit-actions {
+  display: flex;
+  gap: 6px;
   flex-wrap: wrap;
 
   button {
-    padding: 6px 10px;
-    font-size: 12px;
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 11px;
     font-weight: 700;
+    text-transform: uppercase;
     border-radius: var(--tbjl-radius-md, 0.5rem);
     border: 1px solid var(--tbjl-color-border, #dce3ea);
     background: #ffffff;
     color: var(--tbjl-color-neutral-700, #454556);
     cursor: pointer;
+    white-space: nowrap;
 
     &:hover {
       background: var(--tbjl-color-neutral-100, #eef4fb);
       color: var(--tbjl-color-primary-500, #141cdb);
+    }
+  }
+
+  .btn-cambiar-estado {
+    background: var(--tbjl-color-primary-700, #0b0e3d);
+    border-color: var(--tbjl-color-primary-700, #0b0e3d);
+    color: #ffffff;
+
+    &:hover {
+      background: var(--tbjl-color-primary-500, #141cdb);
+      border-color: var(--tbjl-color-primary-500, #141cdb);
+      color: #ffffff;
     }
   }
 }

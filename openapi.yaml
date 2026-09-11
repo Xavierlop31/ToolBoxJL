@@ -484,6 +484,56 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /inventory/occupancy:
+    get:
+      operationId: getInventoryOccupancy
+      summary: Ocupación de bodega por ubicación (panel de Almacén)
+      description: >
+        Cuenta unidades físicas agrupadas por `ubicacion_bodega` (texto
+        libre, ver `ToolUnit`) — las unidades sin ubicación asignada se
+        agrupan bajo `"Sin ubicación asignada"`. NO incluye capacidad ni
+        porcentaje: el sistema no tiene ningún concepto de capacidad total
+        de bodega/estante, solo reporta el ocupado real.
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      responses:
+        "200":
+          description: Conteo de unidades por ubicación de bodega.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OcupacionUbicacion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inventory/audit-feed:
+    get:
+      operationId: getInventoryAuditFeed
+      summary: Últimos eventos de la hoja de vida de toda la flota (panel de Almacén)
+      description: >
+        Últimos `limit` (default 10, máx 50) eventos de
+        `tool_unit_status_log` de TODAS las unidades, orden cronológico
+        descendente, enriquecidos con `numero_serie`/`modelo_nombre`. GAP
+        documentado: solo cubre cambios de estado de unidad — NO incluye
+        despachos/recepciones de `Order`/`Shipment` (otro bounded context).
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200":
+          description: Últimos eventos de la hoja de vida de la flota.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditoriaEvento" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /inventory/units/{id}:
     get:
       operationId: getToolUnitById
@@ -1634,6 +1684,32 @@ components:
           type: string
           nullable: true
           description: "Sprint 14 (HU-13.3). Solo poblado cuando estado_nuevo = Dado de Baja."
+
+    OcupacionUbicacion:
+      type: object
+      properties:
+        ubicacion: { type: string, description: "'Sin ubicación asignada' si la unidad no tiene ubicacion_bodega." }
+        cantidad: { type: integer }
+
+    AuditoriaEvento:
+      type: object
+      description: "ToolUnitStatusLogEntry enriquecido con numero_serie/modelo_nombre, ver GET /inventory/audit-feed."
+      properties:
+        id: { type: string, format: uuid }
+        unidad_id: { type: string, format: uuid }
+        numero_serie: { type: string }
+        modelo_nombre: { type: string }
+        estado_anterior:
+          type: string
+          nullable: true
+          enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+        estado_nuevo:
+          type: string
+          enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+        created_at: { type: string, format: date-time }
+        autor_id: { type: string, format: uuid }
+        falla_reportada: { type: string, nullable: true }
+        motivo_baja: { type: string, nullable: true }
 
     User:
       type: object

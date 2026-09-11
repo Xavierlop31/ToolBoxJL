@@ -73,6 +73,14 @@ export class PrismaToolUnitStatusLogRepository
     return logs.map(aDominio);
   }
 
+  async listarRecientes(limit: number): Promise<ToolUnitStatusLogEntry[]> {
+    const logs = await this.prisma.toolUnitStatusLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+    return logs.map(aDominio);
+  }
+
   async contarTransicionesAMantenimiento(
     rango: RangoPeriodo,
   ): Promise<{ unidadId: string; cantidad: number }[]> {
