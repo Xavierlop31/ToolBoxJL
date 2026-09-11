@@ -7,6 +7,7 @@ import {
   tick,
 } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -67,18 +68,28 @@ class FakeLivekitSessionService {
   }
 }
 
+class FakeRouter {
+  readonly navigateByUrlSpy = jasmine.createSpy('navigateByUrl').and.returnValue(Promise.resolve(true));
+
+  navigateByUrl(url: string): Promise<boolean> {
+    return this.navigateByUrlSpy(url);
+  }
+}
+
 describe('VoiceWidgetComponent', () => {
   let fixture: ComponentFixture<VoiceWidgetComponent>;
   let auth: FakeAuthService;
   let cart: FakeCartService;
   let tokenService: FakeVoiceAgentTokenService;
   let session: FakeLivekitSessionService;
+  let router: FakeRouter;
 
   function setup(): void {
     auth = new FakeAuthService();
     cart = new FakeCartService();
     tokenService = new FakeVoiceAgentTokenService();
     session = new FakeLivekitSessionService();
+    router = new FakeRouter();
 
     TestBed.configureTestingModule({
       imports: [VoiceWidgetComponent],
@@ -87,6 +98,7 @@ describe('VoiceWidgetComponent', () => {
         { provide: CartService, useValue: cart },
         { provide: VoiceAgentTokenService, useValue: tokenService },
         { provide: LivekitSessionService, useValue: session },
+        { provide: Router, useValue: router },
       ],
     });
 
@@ -277,6 +289,68 @@ describe('VoiceWidgetComponent', () => {
       expect(chip.textContent.trim()).toContain('Agregando al carrito…');
 
       discardPeriodicTasks();
+    }),
+  );
+
+  it(
+    'refleja el diálogo completo (saludo + turnos de usuario/agente) en orden cronológico (HU-14.3)',
+    fakeAsync(() => {
+      openPanel();
+      session.events.set([
+        { type: 'greeting', text: '¡Hola! Soy tu Conserje de Voz.' },
+        { type: 'transcript', role: 'user', text: 'Busco un taladro percutor.' },
+        { type: 'tool_status', tool: 'search_catalog', label: 'Buscando en catálogo…', status: 'done' },
+        { type: 'transcript', role: 'agent', text: 'Tenemos un Bosch disponible, ¿te sirve?' },
+      ]);
+      fixture.detectChanges();
+
+      const mensajes = fixture.nativeElement.querySelectorAll('[data-testid^="voice-widget-message-"]');
+      expect(mensajes.length).toBe(3);
+      expect(mensajes[0].getAttribute('data-testid')).toBe('voice-widget-message-agent');
+      expect(mensajes[0].textContent.trim()).toBe('¡Hola! Soy tu Conserje de Voz.');
+      expect(mensajes[1].getAttribute('data-testid')).toBe('voice-widget-message-user');
+      expect(mensajes[1].textContent.trim()).toBe('Busco un taladro percutor.');
+      expect(mensajes[2].getAttribute('data-testid')).toBe('voice-widget-message-agent');
+      expect(mensajes[2].textContent.trim()).toBe('Tenemos un Bosch disponible, ¿te sirve?');
+
+      discardPeriodicTasks();
+    }),
+  );
+
+  it(
+    'al cerrar el panel, si el carrito creció durante la sesión, navega a /carrito para que el Cliente lo vea (HU-14.4)',
+    fakeAsync(() => {
+      cart.itemCount.set(0);
+      openPanel();
+      // El Agente 3 agregó 2 ítems durante la sesión (reflejado acá por el
+      // polling de `startCartPolling`, no por este test) — al cerrar, el
+      // refresh final de `closeWidget` lo confirma.
+      cart.itemCount.set(2);
+
+      const closeButton = fixture.nativeElement.querySelector(
+        '[data-testid="voice-widget-close"]',
+      ) as HTMLButtonElement;
+      closeButton.click();
+      tick();
+
+      expect(router.navigateByUrlSpy).toHaveBeenCalledWith('/carrito');
+    }),
+  );
+
+  it(
+    'al cerrar el panel sin que el carrito haya crecido en esta sesión, NO navega a /carrito',
+    fakeAsync(() => {
+      cart.itemCount.set(2); // ya tenía 2 ítems de antes de abrir el widget
+      openPanel();
+      // Sigue en 2: esta sesión no agregó nada nuevo (el Cliente solo preguntó).
+
+      const closeButton = fixture.nativeElement.querySelector(
+        '[data-testid="voice-widget-close"]',
+      ) as HTMLButtonElement;
+      closeButton.click();
+      tick();
+
+      expect(router.navigateByUrlSpy).not.toHaveBeenCalled();
     }),
   );
 });

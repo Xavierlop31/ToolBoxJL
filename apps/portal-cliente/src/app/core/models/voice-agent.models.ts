@@ -16,10 +16,11 @@ export interface VoiceAgentCredentials {
 
 /**
  * Eventos que el Agente 3 (`apps/voice-agent`, `voice-agent-event.ts`)
- * publica por el canal de DATOS de LiveKit — HU-14.1 (saludo proactivo) y
- * HU-14.2 (chips de tool-calling en vivo), Épica 14, Sprint 13 (Fase 3).
- * Espeja intencionalmente el contrato del backend (mismo criterio que
- * `VoiceAgentCredentials` arriba, que espeja `POST
+ * publica por el canal de DATOS de LiveKit — HU-14.1 (saludo proactivo),
+ * HU-14.2 (chips de tool-calling en vivo) y HU-14.3 (transcript
+ * conversacional completo, pedido directo del Arquitecto 2026-09-11), Épica
+ * 14, Sprint 13 (Fase 3). Espeja intencionalmente el contrato del backend
+ * (mismo criterio que `VoiceAgentCredentials` arriba, que espeja `POST
  * /voice-agent/livekit-token`): `apps/voice-agent` y `apps/portal-cliente`
  * son proyectos TS separados sin un paquete compartido para este canal
  * (a diferencia de DTOs de `apps/api`, que sí viven en
@@ -28,4 +29,5 @@ export interface VoiceAgentCredentials {
  */
 export type VoiceAgentEvent =
   | { type: 'greeting'; text: string }
-  | { type: 'tool_status'; tool: string; label: string; status: 'running' | 'done' };
+  | { type: 'tool_status'; tool: string; label: string; status: 'running' | 'done' }
+  | { type: 'transcript'; role: 'user' | 'agent'; text: string };

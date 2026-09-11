@@ -69,10 +69,18 @@
             </p>
           }
 
-          @if (greetingText(); as greeting) {
-            <p class="voice-widget__transcript" data-testid="voice-widget-transcript">
-              {{ greeting }}
-            </p>
+          @if (conversationMessages().length > 0) {
+            <ul class="voice-widget__transcript" data-testid="voice-widget-transcript" #transcriptList>
+              @for (mensaje of conversationMessages(); track $index) {
+                <li
+                  class="voice-widget__message"
+                  [class.voice-widget__message--user]="mensaje.role === 'user'"
+                  [attr.data-testid]="'voice-widget-message-' + mensaje.role"
+                >
+                  {{ mensaje.text }}
+                </li>
+              }
+            </ul>
           }
 
           @if (toolChips().length > 0) {
