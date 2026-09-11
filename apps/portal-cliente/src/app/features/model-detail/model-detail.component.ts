@@ -319,6 +319,22 @@ export class ModelDetailComponent implements OnInit {
     const dias =
       tipo === 'alquiler' ? this.calcularDias(fechaInicio, fechaFin) : undefined;
 
+    // Bug reportado por el Arquitecto (2026-09-10): `CartItem` no tiene un
+    // campo `tipo` propio (openapi.yaml) — el carrito y el checkout infieren
+    // "alquiler" únicamente de que la línea traiga `dias` (ver
+    // cart-page.component.html). Si tipo=alquiler pero las fechas están
+    // vacías/inválidas, `dias` da `undefined` y la línea se agregaba como
+    // venta silenciosamente, aunque el radio de "Alquiler" estuviera
+    // seleccionado.
+    if (tipo === 'alquiler' && !dias) {
+      this.form.get('fechaInicio')?.markAsTouched();
+      this.form.get('fechaFin')?.markAsTouched();
+      this.addToCartError.set(
+        'Selecciona un rango de fechas válido para agregar el alquiler al carrito.',
+      );
+      return;
+    }
+
     this.addToCartLoading.set(true);
     this.addToCartError.set(null);
 

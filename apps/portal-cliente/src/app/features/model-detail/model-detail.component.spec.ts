@@ -461,21 +461,51 @@ describe('ModelDetailComponent', () => {
   });
 
   describe('addItem', () => {
-    it('agrega el ítem y muestra el diálogo de confirmación (ir al carrito / seguir viendo)', () => {
+    it('con tipo=alquiler y fechas válidas, manda dias al backend y muestra el diálogo de confirmación', () => {
       loadModel();
       const component = fixture.componentInstance;
+      fillValidRentalForm();
 
       component.addItem();
       const req = httpMock.expectOne(`${environment.apiUrl}/cart/add-item`);
+      expect(req.request.body.dias).toBe(4);
       req.flush({ items: [], total: 0 });
 
       expect(component.addToCartLoading()).toBe(false);
       expect(component.mostrarConfirmacionCarrito()).toBe(true);
     });
 
+    it('con tipo=venta, agrega el ítem sin exigir fechas', () => {
+      loadModel();
+      const component = fixture.componentInstance;
+      component.form.get('tipo')?.setValue('venta');
+
+      component.addItem();
+      const req = httpMock.expectOne(`${environment.apiUrl}/cart/add-item`);
+      expect(req.request.body.dias).toBeUndefined();
+      req.flush({ items: [], total: 0 });
+
+      expect(component.mostrarConfirmacionCarrito()).toBe(true);
+    });
+
+    it('bug reportado por el Arquitecto (2026-09-10): con tipo=alquiler seleccionado pero sin fechas, NO agrega el ítem como venta silenciosa — muestra error y no llama al backend', () => {
+      loadModel();
+      const component = fixture.componentInstance;
+      // Estado por defecto del form: tipo='alquiler', fechaInicio/fechaFin vacías.
+
+      component.addItem();
+
+      httpMock.expectNone(`${environment.apiUrl}/cart/add-item`);
+      expect(component.addToCartError()).toBe(
+        'Selecciona un rango de fechas válido para agregar el alquiler al carrito.',
+      );
+      expect(component.mostrarConfirmacionCarrito()).toBe(false);
+    });
+
     it('setea un error si falla y no muestra el diálogo de confirmación', () => {
       loadModel();
       const component = fixture.componentInstance;
+      fillValidRentalForm();
 
       component.addItem();
       const req = httpMock.expectOne(`${environment.apiUrl}/cart/add-item`);
@@ -488,6 +518,7 @@ describe('ModelDetailComponent', () => {
     it('irAlCarrito: cierra el diálogo y navega a /carrito', async () => {
       loadModel();
       const component = fixture.componentInstance;
+      fillValidRentalForm();
       component.addItem();
       httpMock.expectOne(`${environment.apiUrl}/cart/add-item`).flush({ items: [], total: 0 });
 
@@ -503,6 +534,7 @@ describe('ModelDetailComponent', () => {
     it('seguirViendoHerramientas: cierra el diálogo sin navegar', () => {
       loadModel();
       const component = fixture.componentInstance;
+      fillValidRentalForm();
       component.addItem();
       httpMock.expectOne(`${environment.apiUrl}/cart/add-item`).flush({ items: [], total: 0 });
 
