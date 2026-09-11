@@ -60,24 +60,42 @@ export class EjecutarMoraCalculatorUseCase {
         continue;
       }
 
-      const primerItem = orden.items[0];
-      const unidad = await this.unidades.buscarPorId(primerItem.unidad_id);
-      if (!unidad) {
-        this.logger.warn(`Orden ${orden.id}: unidad ${primerItem.unidad_id} no encontrada, se omite.`);
-        continue;
-      }
-      const modelo = await this.modelos.buscarPorId(unidad.modelo_id);
-      if (!modelo) {
-        this.logger.warn(`Orden ${orden.id}: modelo ${unidad.modelo_id} no encontrado, se omite.`);
-        continue;
+      // Órdenes multi-ítem (HU-12.3, checkout consolidado): la mora se cobra
+      // por CADA herramienta vencida de la orden, sumando el monto de cada
+      // una según la tarifa/interés de su propio modelo — antes solo se
+      // calculaba sobre `items[0]`, correcto cuando toda orden tenía
+      // exactamente 1 ítem. Si algún ítem no resuelve su unidad/modelo, se
+      // omite la orden ENTERA (mismo criterio previo: mejor no emitir un
+      // comprobante parcial/incorrecto que emitir uno de menos).
+      let montoMoraTotal = 0;
+      let huboItemNoResuelto = false;
+
+      for (const item of orden.items) {
+        const unidad = await this.unidades.buscarPorId(item.unidad_id);
+        if (!unidad) {
+          this.logger.warn(`Orden ${orden.id}: unidad ${item.unidad_id} no encontrada, se omite.`);
+          huboItemNoResuelto = true;
+          break;
+        }
+        const modelo = await this.modelos.buscarPorId(unidad.modelo_id);
+        if (!modelo) {
+          this.logger.warn(`Orden ${orden.id}: modelo ${unidad.modelo_id} no encontrado, se omite.`);
+          huboItemNoResuelto = true;
+          break;
+        }
+
+        const { montoMora } = calcularMora(
+          modelo.tarifa_dia,
+          modelo.interes_mora_dia ?? 0,
+          new Date(orden.fecha_fin),
+          ahora,
+        );
+        montoMoraTotal += montoMora;
       }
 
-      const { montoMora } = calcularMora(
-        modelo.tarifa_dia,
-        modelo.interes_mora_dia ?? 0,
-        new Date(orden.fecha_fin),
-        ahora,
-      );
+      if (huboItemNoResuelto) {
+        continue;
+      }
 
       const comprobante = await this.pagos.crear({
         orderId: orden.id,
@@ -87,7 +105,7 @@ export class EjecutarMoraCalculatorUseCase {
         // no hay endpoint para eso en openapi.yaml.
         metodo: "contra_entrega",
         estado: "pendiente",
-        monto: montoMora,
+        monto: montoMoraTotal,
         wompiTransactionId: null,
       });
       comprobantesEmitidos.push(comprobante);

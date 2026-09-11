@@ -22,10 +22,12 @@ import { CartController } from "./cart.controller";
  * nada de CartModule — no hace falta `forwardRef`.
  *
  * `OrdersModule` se importa acá (Sprint 13) para que `CheckoutCartUseCase`
- * pueda inyectar `CrearOrdenUseCase` y reusar su lógica de creación de
- * orden una vez por línea del carrito — sin `forwardRef`: OrdersModule
- * nunca necesita nada de CartModule, así que no hay ciclo (a diferencia del
- * ciclo genuino OrdersModule↔CatalogInventoryModule).
+ * pueda inyectar `CrearOrdenUseCase.resolverItem` (selección de unidad +
+ * tarifa por ítem) y `ORDER_REPOSITORY` (para persistir UNA orden por grupo
+ * de líneas compatibles — ver comentario de cabecera de
+ * `CheckoutCartUseCase`) — sin `forwardRef`: OrdersModule nunca necesita
+ * nada de CartModule, así que no hay ciclo (a diferencia del ciclo genuino
+ * OrdersModule↔CatalogInventoryModule).
  *
  * Wiring de producción por defecto: `PrismaCartRepository` (requiere
  * `DATABASE_URL`). Los tests/BDD arman su propio `TestingModule` con

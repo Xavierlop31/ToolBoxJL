@@ -9,6 +9,12 @@ import { SinUnidadesDisponiblesError } from "../domain/errors/sin-unidades-dispo
 import { CotizarOrdenUseCase } from "./cotizar-orden.use-case";
 import type { Order, OrderInput } from "@toolboxjl/shared-types";
 
+/** Un ítem ya resuelto (unidad física + tarifa fijada) listo para persistir en una orden. */
+export interface ItemDeOrdenResuelto {
+  unidadId: string;
+  tarifaAplicada: number;
+}
+
 @Injectable()
 export class CrearOrdenUseCase {
   constructor(
@@ -22,6 +28,38 @@ export class CrearOrdenUseCase {
   ) {}
 
   async ejecutar(clienteId: string, input: OrderInput): Promise<Order> {
+    const item = await this.resolverItem(input, new Set());
+
+    return this.ordenes.crear({
+      clienteId,
+      tipo: input.tipo,
+      fechaInicio: input.fecha_inicio ?? null,
+      fechaFin: input.fecha_fin ?? null,
+      returnMode: input.return_mode,
+      direccionEntrega: input.direccion_entrega,
+      zonaId: input.zona_id,
+      items: [item],
+    });
+  }
+
+  /**
+   * Selecciona una unidad física disponible del modelo + fija su tarifa
+   * (misma lógica que antes vivía inline en `ejecutar`), sin persistir nada
+   * todavía. Extraído (HU-12.3, checkout consolidado) para que
+   * `CheckoutCartUseCase` pueda resolver varios ítems de un mismo `modelo_id`
+   * — o de modelos distintos — ANTES de persistirlos juntos en una sola
+   * orden.
+   *
+   * `excluirUnidadIds` cubre unidades ya comprometidas dentro del MISMO
+   * checkout en curso (ej. `cantidad: 2` del mismo modelo, o dos líneas del
+   * mismo modelo) — la DB todavía no las ve como reservadas/con orden activa
+   * porque la orden real recién se persiste al final, así que sin este
+   * filtro dos ítems del mismo modelo podrían elegir la misma unidad física.
+   */
+  async resolverItem(
+    input: Pick<OrderInput, "modelo_id" | "tipo" | "fecha_inicio" | "fecha_fin" | "zona_id" | "return_mode">,
+    excluirUnidadIds: Set<string>,
+  ): Promise<ItemDeOrdenResuelto> {
     const modelo = await this.modelos.buscarPorId(input.modelo_id);
     if (!modelo) {
       throw new ModeloNoEncontradoError(input.modelo_id);
@@ -30,7 +68,10 @@ export class CrearOrdenUseCase {
     // 1. Obtener unidades físicas del modelo que no estén dadas de baja ni en mantenimiento
     const todasLasUnidades = await this.unidades.listarPorModelo(input.modelo_id);
     const unidadesFisicamenteDisponibles = todasLasUnidades.filter(
-      (u) => u.estado !== "En Mantenimiento" && u.estado !== "Dado de Baja"
+      (u) =>
+        u.estado !== "En Mantenimiento" &&
+        u.estado !== "Dado de Baja" &&
+        !excluirUnidadIds.has(u.id),
     );
 
     if (unidadesFisicamenteDisponibles.length === 0) {
@@ -74,21 +115,6 @@ export class CrearOrdenUseCase {
       returnMode: input.return_mode,
     });
 
-    // 3. Persistir la orden
-    return this.ordenes.crear({
-      clienteId,
-      tipo: input.tipo,
-      fechaInicio: input.fecha_inicio ?? null,
-      fechaFin: input.fecha_fin ?? null,
-      returnMode: input.return_mode,
-      direccionEntrega: input.direccion_entrega,
-      zonaId: input.zona_id,
-      items: [
-        {
-          unidadId: unidadElegidaId,
-          tarifaAplicada: cotizacion.tarifa_base,
-        },
-      ],
-    });
+    return { unidadId: unidadElegidaId, tarifaAplicada: cotizacion.tarifa_base };
   }
 }

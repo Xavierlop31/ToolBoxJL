@@ -64,26 +64,48 @@ export class ConsultarMoraUseCase {
       throw new MoraNoEncontradaError(orderId);
     }
 
-    const primerItem = orden.items[0];
-    const unidad = await this.unidades.buscarPorId(primerItem.unidad_id);
-    const modelo = unidad ? await this.modelos.buscarPorId(unidad.modelo_id) : null;
-    if (!unidad || !modelo) {
-      throw new MoraNoEncontradaError(orderId);
-    }
+    // Órdenes multi-ítem (HU-12.3, checkout consolidado): `monto_mora` suma
+    // la mora de CADA ítem de la orden (mismo criterio que
+    // `EjecutarMoraCalculatorUseCase`) — antes solo se calculaba sobre
+    // `items[0]`. `dias_retraso` es igual para todos los ítems (comparten
+    // `fecha_fin` de cabecera); `interes_mora_dia` en la respuesta queda
+    // como el del primer ítem resuelto — es solo informativo (no se usa
+    // para calcular `monto_mora`, que sí suma el interés real de cada
+    // modelo), simplificación razonable para el alcance de este sprint si
+    // los modelos de una misma orden llegaran a tener interés distinto.
+    let diasRetrasoRespuesta = 0;
+    let interesMoraDiaRespuesta = 0;
+    let montoMoraTotal = 0;
+    let esPrimerItemResuelto = true;
 
-    const interesMoraDia = modelo.interes_mora_dia ?? 0;
-    const { diasRetraso, montoMora } = calcularMora(
-      modelo.tarifa_dia,
-      interesMoraDia,
-      new Date(orden.fecha_fin),
-      new Date(),
-    );
+    for (const item of orden.items) {
+      const unidad = await this.unidades.buscarPorId(item.unidad_id);
+      const modelo = unidad ? await this.modelos.buscarPorId(unidad.modelo_id) : null;
+      if (!unidad || !modelo) {
+        throw new MoraNoEncontradaError(orderId);
+      }
+
+      const interesMoraDia = modelo.interes_mora_dia ?? 0;
+      const { diasRetraso, montoMora } = calcularMora(
+        modelo.tarifa_dia,
+        interesMoraDia,
+        new Date(orden.fecha_fin),
+        new Date(),
+      );
+
+      diasRetrasoRespuesta = diasRetraso;
+      if (esPrimerItemResuelto) {
+        interesMoraDiaRespuesta = interesMoraDia;
+        esPrimerItemResuelto = false;
+      }
+      montoMoraTotal += montoMora;
+    }
 
     return {
       order_id: orderId,
-      dias_retraso: diasRetraso,
-      interes_mora_dia: interesMoraDia,
-      monto_mora: montoMora,
+      dias_retraso: diasRetrasoRespuesta,
+      interes_mora_dia: interesMoraDiaRespuesta,
+      monto_mora: montoMoraTotal,
     };
   }
 }

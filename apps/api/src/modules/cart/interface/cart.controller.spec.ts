@@ -42,7 +42,7 @@ describe("CartController", () => {
       new AgregarItemCarritoUseCase(carritos, modelos),
       new ActualizarCantidadCarritoUseCase(carritos, modelos),
       eliminarItemCarrito,
-      new CheckoutCartUseCase(carritos, crearOrden, eliminarItemCarrito),
+      new CheckoutCartUseCase(carritos, ordenes, crearOrden, eliminarItemCarrito),
     );
   });
 

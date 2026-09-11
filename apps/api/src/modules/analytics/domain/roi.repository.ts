@@ -32,15 +32,13 @@ export interface ModeloConIngresos {
  * `GET /analytics/revenue`), y el Gherkin de HU-7.2 dice "Ingresos
  * Acumulados", no "ingresos del periodo".
  *
- * *** GAP DE ATRIBUCIÓN DOCUMENTADO ***: cada `Payment` se atribuye al
- * modelo de la unidad del PRIMER `OrderItem` de su `Order`. Esto es exacto
- * hoy porque `CrearOrdenUseCase` (Sprint 2) SIEMPRE crea una orden con
- * exactamente un `OrderItem` (ver `orders/application/crear-orden.use-case.ts`)
- * — no existe todavía un flujo de checkout que arme una orden multi-modelo
- * desde el carrito (`CartModule`, Sprint 9, no tiene endpoint de checkout
- * propio). Si un sprint futuro agrega órdenes con ítems de más de un
- * modelo, este repositorio necesitará prorratear el monto del pago entre
- * los modelos de esa orden en vez de atribuirlo entero al primero.
+ * *** GAP DE ATRIBUCIÓN, RESUELTO (HU-12.3, checkout consolidado) ***: desde
+ * que `CheckoutCartUseCase` puede crear una orden con `OrderItem`s de más de
+ * un modelo, cada `Payment` se prorratea entre TODOS los modelos de su
+ * `Order`, proporcional al `tarifaAplicada` de cada ítem (el mismo peso con
+ * el que se fijó la tarifa al crear la orden). Antes de este cambio se
+ * atribuía entero al modelo del primer `OrderItem`, exacto solo porque
+ * `CrearOrdenUseCase` (Sprint 2) siempre creaba órdenes de 1 solo ítem.
  */
 export interface RoiRepository {
   /** Todos los modelos, o solo `modeloId` si se pasa (query param de `GET /analytics/roi`). */

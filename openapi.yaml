@@ -1248,14 +1248,20 @@ paths:
         A diferencia de `POST /orders` (una orden, un `modelo_id`), este
         endpoint procesa TODAS las líneas del carrito activo del cliente de
         una sola vez, con la misma zona/dirección de entrega para todas
-        (checkout consolidado, botón "Proceder al Pago" del carrito). Crea
-        una orden independiente por cada línea del carrito (reutiliza la
-        misma lógica de `CrearOrdenUseCase`, una vez por línea) — best
-        effort: una línea que falle (ej. sin unidades disponibles) no
-        cancela las demás. Las líneas creadas exitosamente se retiran del
+        (checkout consolidado, botón "Proceder al Pago" del carrito).
+        Consolida las líneas en la MENOR cantidad de órdenes posible: todas
+        las líneas de venta van a una única orden de venta, y las líneas de
+        alquiler se agrupan en una orden por cada rango de fechas distinto
+        (una orden solo puede tener un `tipo`/`fecha_inicio`/`fecha_fin` de
+        cabecera para todos sus ítems) — un carrito típico (todo venta, o
+        alquileres con la misma duración) genera exactamente 1 orden, no una
+        por herramienta. Best effort por LÍNEA: si algún ítem de una línea
+        falla (ej. sin unidades disponibles), esa línea completa se excluye
+        de su orden y se reporta en `fallos`; el resto de líneas y órdenes
+        sigue su curso. Las líneas incluidas con éxito se retiran del
         carrito; las que fallaron quedan para que el cliente las reintente o
         elimine. No inicia el pago (eso sigue siendo `POST /orders/{id}/pay`
-        por cada orden resultante, igual que el flujo de un solo ítem).
+        por cada orden resultante).
       tags: [Carrito y Conserje de Voz]
       x-roles: [cliente]
       requestBody:

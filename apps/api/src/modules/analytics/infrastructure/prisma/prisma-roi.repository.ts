@@ -20,9 +20,10 @@ export class PrismaRoiRepository implements RoiRepository {
       return [];
     }
 
-    // Ver GAP de atribución documentado en domain/roi.repository.ts: cada
-    // Payment se atribuye al modelo del PRIMER OrderItem de su Order (`take:
-    // 1`) — hoy siempre hay exactamente uno.
+    // Ver domain/roi.repository.ts: cada Payment se prorratea entre TODOS
+    // los modelos de su Order, proporcional al tarifaAplicada de cada ítem
+    // (antes se atribuía entero al primer OrderItem — exacto solo mientras
+    // toda orden tenía 1 solo ítem).
     const pagos = await this.prisma.payment.findMany({
       where: {
         estado: "capturado",
@@ -31,24 +32,39 @@ export class PrismaRoiRepository implements RoiRepository {
       },
       select: {
         monto: true,
-        order: { select: { items: { take: 1, select: { unidad: { select: { modeloId: true } } } } } },
+        order: {
+          select: {
+            items: { select: { tarifaAplicada: true, unidad: { select: { modeloId: true } } } },
+          },
+        },
       },
     });
 
     const ingresosPorModelo = new Map<string, number>();
     for (const pago of pagos) {
-      const primerItem = pago.order.items[0];
-      if (!primerItem) {
+      const items = pago.order.items;
+      if (items.length === 0) {
         continue;
       }
-      const mId = primerItem.unidad.modeloId;
-      ingresosPorModelo.set(mId, (ingresosPorModelo.get(mId) ?? 0) + pago.monto);
+      const tarifaTotal = items.reduce((suma, item) => suma + item.tarifaAplicada, 0);
+      for (const item of items) {
+        // Peso proporcional a la tarifa del ítem; si tarifaTotal es 0
+        // (caso degenerado, ej. todas las tarifas en 0), se reparte el pago
+        // en partes iguales entre los ítems en vez de dividir por 0.
+        const peso = tarifaTotal > 0 ? item.tarifaAplicada / tarifaTotal : 1 / items.length;
+        const mId = item.unidad.modeloId;
+        ingresosPorModelo.set(mId, (ingresosPorModelo.get(mId) ?? 0) + pago.monto * peso);
+      }
     }
 
     return modelos.map((m) => ({
       modeloId: m.id,
       costoCompra: m.costoCompra !== null ? Dinero.pesos(m.costoCompra) : null,
-      ingresosAcumulados: Dinero.pesos(ingresosPorModelo.get(m.id) ?? 0),
+      // Math.round: el prorrateo por peso puede dejar centavos fraccionarios
+      // (Dinero.pesos exige enteros) — se redondea recién acá, al final de
+      // sumar todos los pagos de este modelo, para no arrastrar error de
+      // redondeo pago-por-pago.
+      ingresosAcumulados: Dinero.pesos(Math.round(ingresosPorModelo.get(m.id) ?? 0)),
     }));
   }
 }
