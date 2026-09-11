@@ -126,7 +126,10 @@ async function prepararClienteAutenticado(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        items: [{ modelo_id: '123e4567-e89b-12d3-a456-426614174000', cantidad: 1, dias: 4 }],
+        // `id` de línea (no solo `modelo_id`) porque `CartPageComponent`
+        // (destino de la navegación de HU-14.4) descarta cualquier línea sin
+        // `id` — ver `construirLineasDesdeCarrito`.
+        items: [{ id: 'cart-item-e2e-001', modelo_id: '123e4567-e89b-12d3-a456-426614174000', cantidad: 1, dias: 4 }],
         total: 100000,
       }),
     });
@@ -235,4 +238,53 @@ Then('confirma verbalmente que el artículo fue agregado a mi carrito', async ({
   // `LivekitSessionService` vía el track de audio remoto, no verificable
   // acá sin audio real).
   await expect(page.locator('[data-testid="voice-widget-cart-badge"]')).toHaveText('1');
+});
+
+// ============================================================================
+// Escenario: Al cerrar el widget tras agregar artículos, el Cliente es
+// llevado a ver su carrito (HU-14.4, pedido directo del Arquitecto
+// 2026-09-11, features/14_conserje_voz_avanzado.feature)
+// ============================================================================
+
+Given(
+  'que el Agente 3 agregó al menos un artículo a mi carrito durante la sesión de voz',
+  async ({ page }) => {
+    // `prepararClienteAutenticado` ya mockea `GET /cart` devolviendo 1 ítem —
+    // se reusa tal cual: el refresh inicial que dispara `openWidget()` deja
+    // `cartItemCount()` en 1, por ENCIMA del snapshot en 0 que
+    // `VoiceWidgetComponent` toma justo antes de conectar (`cartCountAtOpen`).
+    await prepararClienteAutenticado(page);
+    // El carrito mockeado trae este modelo_id — hace falta mockear
+    // `GET /catalog/models/:id` para que `CartPageComponent` (destino de la
+    // navegación) pueda enriquecer y renderizar la línea sin pegarle a un
+    // backend real.
+    await page.route('**/catalog/models/123e4567-e89b-12d3-a456-426614174000', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          nombre: 'Taladro Percutor Bosch',
+          marca: 'Bosch',
+          categoria: 'percutor',
+          tarifa_dia: 20000,
+        }),
+      });
+    });
+
+    await page.click('[data-testid="voice-widget-button"]');
+    await expect(page.locator('[data-testid="voice-widget-panel"]')).toBeVisible();
+  },
+);
+
+When('cierro el widget de voz porque no voy a agregar nada más', async ({ page }) => {
+  await page.click('[data-testid="voice-widget-close"]');
+});
+
+Then('se me navega a la página {string}', async ({ page }, ruta: string) => {
+  await page.waitForURL((url) => url.pathname === ruta, { timeout: 10_000 });
+});
+
+Then('puedo visualizar ahí los artículos que el agente agregó.', async ({ page }) => {
+  await expect(page.getByText('Taladro Percutor Bosch')).toBeVisible();
 });

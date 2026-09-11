@@ -198,7 +198,10 @@ describe("ejecutarTurnoAgente3 — emisión de tool_status por deps.emitirEvento
     // Ambas tool calls de la misma respuesta se despachan en orden — cada
     // una emite su running/done ANTES de pasar a la siguiente (no hay
     // interleaving, ver `ejecutarToolCalls`: loop secuencial con `await`).
-    expect(eventos).toEqual([
+    // Se filtra a tool_status: `eventos` también trae los transcript/user y
+    // transcript/agent del turno (HU-14.3), cubiertos en su propio describe.
+    const chips = eventos.filter((e) => (e as { type: string }).type === "tool_status");
+    expect(chips).toEqual([
       { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "running" },
       { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "done" },
       { type: "tool_status", tool: "check_availability", label: "Verificando disponibilidad…", status: "running" },
@@ -235,7 +238,8 @@ describe("ejecutarTurnoAgente3 — emisión de tool_status por deps.emitirEvento
       "Sí, agregalo.",
     );
 
-    expect(eventos).toEqual([
+    const chips = eventos.filter((e) => (e as { type: string }).type === "tool_status");
+    expect(chips).toEqual([
       { type: "tool_status", tool: "add_to_cart", label: "Agregando al carrito…", status: "running" },
       { type: "tool_status", tool: "add_to_cart", label: "Agregando al carrito…", status: "done" },
     ]);
@@ -254,6 +258,120 @@ describe("ejecutarTurnoAgente3 — emisión de tool_status por deps.emitirEvento
         { anthropic, model: "claude-haiku-4-5", apiBaseUrl: "https://api.example.com", jwt: "jwt-cliente", fetchImpl, maxIteraciones: 1 },
         [],
         "Busco un taladro.",
+      ),
+    ).resolves.toBeDefined();
+  });
+});
+
+describe("ejecutarTurnoAgente3 — emisión de transcript por deps.emitirEvento (HU-14.3)", () => {
+  it("emite transcript/user con la transcripción ANTES de invocar a Claude, y transcript/agent con la respuesta final al terminar", async () => {
+    const { fetchImpl } = mockFetch({});
+    const anthropic: AnthropicMessagesClient = {
+      create: async () => mensajeAssistant([textoBlock("Tenemos un taladro Bosch disponible.")]),
+    };
+
+    const eventos: unknown[] = [];
+    const resultado = await ejecutarTurnoAgente3(
+      {
+        anthropic,
+        model: "claude-haiku-4-5",
+        apiBaseUrl: "https://api.example.com",
+        jwt: "jwt-cliente",
+        fetchImpl,
+        emitirEvento: (evento) => eventos.push(evento),
+      },
+      [],
+      "Busco un taladro percutor.",
+    );
+
+    expect(eventos).toEqual([
+      { type: "transcript", role: "user", text: "Busco un taladro percutor." },
+      { type: "transcript", role: "agent", text: "Tenemos un taladro Bosch disponible." },
+    ]);
+    expect(resultado.respuestaTexto).toBe("Tenemos un taladro Bosch disponible.");
+  });
+
+  it("intercala transcript/user, los chips de tool-calling y transcript/agent en el orden real del turno", async () => {
+    const { fetchImpl } = mockFetch({
+      "/catalog/search": () => ({
+        status: 200,
+        body: [{ id: "m1", nombre: "Taladro Percutor", marca: "Bosch", categoria: "percutor", tarifa_dia: 15000, tarifa_semana: 90000 }],
+      }),
+    });
+    let llamada = 0;
+    const anthropic: AnthropicMessagesClient = {
+      create: async () => {
+        llamada++;
+        if (llamada === 1) {
+          return mensajeAssistant([toolUseBlock("t1", "search_catalog", { q: "taladro percutor" })]);
+        }
+        return mensajeAssistant([textoBlock("Te recomiendo el Taladro Percutor Bosch.")]);
+      },
+    };
+
+    const eventos: unknown[] = [];
+    await ejecutarTurnoAgente3(
+      {
+        anthropic,
+        model: "claude-haiku-4-5",
+        apiBaseUrl: "https://api.example.com",
+        jwt: "jwt-cliente",
+        fetchImpl,
+        emitirEvento: (evento) => eventos.push(evento),
+      },
+      [],
+      "Busco un taladro percutor.",
+    );
+
+    expect(eventos).toEqual([
+      { type: "transcript", role: "user", text: "Busco un taladro percutor." },
+      { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "running" },
+      { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "done" },
+      { type: "transcript", role: "agent", text: "Te recomiendo el Taladro Percutor Bosch." },
+    ]);
+  });
+
+  it("emite transcript/agent con el mensaje de fallback si Claude no devuelve texto en ningún bloque", async () => {
+    const { fetchImpl } = mockFetch({});
+    const anthropic: AnthropicMessagesClient = {
+      // `content: []` fuerza `stop_reason: "end_turn"` sin bloques de texto
+      // ni tool_use — el mismo caso límite que ya cubre `respuestaTexto` con
+      // el fallback fijo, ahora también verificado en lo que se emite.
+      create: async () => mensajeAssistant([]),
+    };
+
+    const eventos: unknown[] = [];
+    await ejecutarTurnoAgente3(
+      {
+        anthropic,
+        model: "claude-haiku-4-5",
+        apiBaseUrl: "https://api.example.com",
+        jwt: "jwt-cliente",
+        fetchImpl,
+        emitirEvento: (evento) => eventos.push(evento),
+      },
+      [],
+      "...",
+    );
+
+    expect(eventos[eventos.length - 1]).toEqual({
+      type: "transcript",
+      role: "agent",
+      text: "Perdón, no pude procesar tu pedido. ¿Podés repetirlo?",
+    });
+  });
+
+  it("no falla si emitirEvento no se pasa (deps.emitirEvento undefined)", async () => {
+    const { fetchImpl } = mockFetch({});
+    const anthropic: AnthropicMessagesClient = {
+      create: async () => mensajeAssistant([textoBlock("Ok.")]),
+    };
+
+    await expect(
+      ejecutarTurnoAgente3(
+        { anthropic, model: "claude-haiku-4-5", apiBaseUrl: "https://api.example.com", jwt: "jwt-cliente", fetchImpl },
+        [],
+        "Hola.",
       ),
     ).resolves.toBeDefined();
   });

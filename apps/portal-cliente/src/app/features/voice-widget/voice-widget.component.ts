@@ -1,4 +1,5 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subject, Subscription, firstValueFrom, interval, takeUntil } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -6,6 +7,7 @@ import { CartService } from '../../core/cart/cart.service';
 import { LivekitSessionService, VoiceAgentUiState } from '../../core/voice-agent/livekit-session.service';
 import { VoiceAgentTokenService } from '../../core/voice-agent/voice-agent-token.service';
 import { buildToolChips, ToolChip } from './tool-chips';
+import { buildTranscriptMessages, TranscriptMessage } from './transcript-messages';
 
 const ESTADO_LABELS: Record<VoiceAgentUiState, string> = {
   idle: 'Listo',
@@ -42,6 +44,12 @@ const CART_POLL_INTERVAL_MS = 10_000;
  * (`cartItemCount()`) — si Sprint 10 (rediseño visual + posible header con
  * carrito) agrega un ícono de carrito real, este mismo `CartService` ya
  * expone `itemCount`/`cart` como signals listos para reutilizar ahí.
+ *
+ * HU-14.3/14.4 (pedido directo del Arquitecto 2026-09-11): el panel muestra
+ * la conversación completa (no solo el saludo, ver `conversationMessages`) y,
+ * al cerrar, navega a `/carrito` si esta sesión agregó ítems nuevos (ver
+ * `closeWidget`) — antes había que confiar solo en el badge del botón
+ * flotante para notar que el agente había agregado algo.
  */
 @Component({
   selector: 'app-voice-widget',
@@ -55,9 +63,12 @@ export class VoiceWidgetComponent implements OnDestroy {
   private readonly tokenService = inject(VoiceAgentTokenService);
   private readonly session = inject(LivekitSessionService);
   private readonly cartService = inject(CartService);
+  private readonly router = inject(Router);
 
   private readonly destroyed$ = new Subject<void>();
   private cartPollSubscription: Subscription | null = null;
+  /** Cantidad de ítems del carrito al abrir el panel — ver `closeWidget` (HU-14.4). */
+  private cartCountAtOpen = 0;
 
   /** El widget solo se muestra si hay un Cliente autenticado (ver ADR arriba). */
   readonly isAuthenticated = this.authService.isAuthenticated;
@@ -84,15 +95,20 @@ export class VoiceWidgetComponent implements OnDestroy {
   readonly statusLabel = computed(() => ESTADO_LABELS[this.displayState()]);
 
   /**
-   * Texto del saludo proactivo (HU-14.1) — se busca el primer evento
-   * `greeting` recibido por el canal de datos de LiveKit en la sesión
-   * actual (`LivekitSessionService.events()`). El Agente 3 solo publica UNO
-   * por sesión (`room-session.ts`, `reproducirSaludoDeBienvenida`), así que
-   * "el primero" y "el único" coinciden.
+   * Conversación completa mostrada en el widget (HU-14.3, pedido directo del
+   * Arquitecto 2026-09-11) — el saludo proactivo (HU-14.1) más cada turno de
+   * diálogo (`transcript`/`user` y `transcript`/`agent`) del canal de datos
+   * de LiveKit, en el orden en que llegaron (`LivekitSessionService.events()`
+   * ya es un log ordenado). Antes de esto el widget solo mostraba el saludo;
+   * nunca lo que decía el Cliente ni las respuestas posteriores del agente.
+   * Ver `transcript-messages.ts` para la función pura que arma esta lista.
    */
-  readonly greetingText = computed(
-    () => this.session.events().find((evento) => evento.type === 'greeting')?.text ?? null,
+  readonly conversationMessages = computed<TranscriptMessage[]>(() =>
+    buildTranscriptMessages(this.session.events()),
   );
+
+  /** `<ul>` del transcript en el template — se usa para autoscrollear al último mensaje. */
+  private readonly transcriptListRef = viewChild<ElementRef<HTMLElement>>('transcriptList');
 
   /**
    * Chips de tool-calling en vivo (HU-14.2), derivados del mismo log de
@@ -115,6 +131,21 @@ export class VoiceWidgetComponent implements OnDestroy {
       : 'Hablar con el conserje de voz',
   );
 
+  constructor() {
+    // Autoscroll al último mensaje (HU-14.3) — se re-ejecuta cada vez que
+    // `conversationMessages()` cambia porque el `effect` lee ese signal.
+    // `queueMicrotask` porque el `<li>` nuevo recién existe en el DOM
+    // después de que Angular termina de aplicar este ciclo de detección.
+    effect(() => {
+      this.conversationMessages();
+      const lista = this.transcriptListRef()?.nativeElement;
+      if (!lista) return;
+      queueMicrotask(() => {
+        lista.scrollTop = lista.scrollHeight;
+      });
+    });
+  }
+
   /**
    * Abre el panel y arranca la sesión: pide el token de sala
    * (`POST /voice-agent/livekit-token`) y conecta con `livekit-client`.
@@ -127,6 +158,10 @@ export class VoiceWidgetComponent implements OnDestroy {
 
     this.panelOpen.set(true);
     this.tokenErrorMessage.set(null);
+    // Snapshot para `closeWidget` (HU-14.4): navegar al carrito solo si esta
+    // sesión efectivamente agregó ítems, no cada vez que hay algo en el
+    // carrito de una sesión anterior.
+    this.cartCountAtOpen = this.cartItemCount();
 
     try {
       const credentials = await firstValueFrom(this.tokenService.issueLiveKitToken());
@@ -157,13 +192,25 @@ export class VoiceWidgetComponent implements OnDestroy {
    * "confirma verbalmente" lo hace el TTS del agente (ya reproducido por
    * `LivekitSessionService`); este refresh es la confirmación visual del lado
    * del frontend.
+   *
+   * HU-14.4 (pedido directo del Arquitecto 2026-09-11): cerrar el widget es
+   * la señal de "no voy a agregar más" — si el refresh muestra que el
+   * carrito CRECIÓ durante esta sesión (contra el snapshot de `openWidget`),
+   * se navega a `/carrito` para que el Cliente vea lo que el agente agregó,
+   * en vez de dejarlo solo como un número en el badge del botón flotante.
+   * No navega si el carrito ya tenía esos ítems de antes (sesión en la que
+   * el Cliente solo preguntó cosas, sin agregar nada nuevo).
    */
   async closeWidget(): Promise<void> {
     this.stopCartPolling();
     await this.session.disconnect();
     this.panelOpen.set(false);
     this.tokenErrorMessage.set(null);
-    this.cartService.refresh().subscribe();
+    this.cartService.refresh().subscribe(() => {
+      if (this.cartItemCount() > this.cartCountAtOpen) {
+        void this.router.navigateByUrl('/carrito');
+      }
+    });
   }
 
   private startCartPolling(): void {

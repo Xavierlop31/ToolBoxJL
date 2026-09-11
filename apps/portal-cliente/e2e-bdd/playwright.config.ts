@@ -5,10 +5,11 @@ import { defineBddConfig } from 'playwright-bdd';
 /**
  * Conecta features/01_catalogo_inventario.feature (Sprint 1),
  * features/02_cotizacion_alquiler_venta.feature (Sprint 2),
- * features/03_pagos_garantia.feature (Sprint 3) y
- * features/10_agente_conserje_voz.feature (Sprint 9) a un runner real
- * (Playwright-BDD), per PROMPT_IMPLEMENTACION.md A.2 (Definition de Done
- * ampliada por SDD, Sprint 1 en adelante).
+ * features/03_pagos_garantia.feature (Sprint 3),
+ * features/10_agente_conserje_voz.feature (Sprint 9) y
+ * features/14_conserje_voz_avanzado.feature (solo @HU-14.4, ver abajo) a un
+ * runner real (Playwright-BDD), per PROMPT_IMPLEMENTACION.md A.2 (Definition
+ * de Done ampliada por SDD, Sprint 1 en adelante).
  *
  * Alcance de portal-cliente:
  * - RF-1.4 (Sprint 1): "Cliente consulta disponibilidad real de una
@@ -28,6 +29,15 @@ import { defineBddConfig } from 'playwright-bdd';
  *   cuáles NO lo son sin un servidor LiveKit + el proceso del Agente 3
  *   reales (interpretación de la solicitud hablada, latencia, el propio
  *   `POST /cart/add-item` que invoca el agente).
+ * - HU-14.4 (pedido directo del Arquitecto 2026-09-11): navegación a
+ *   `/carrito` al cerrar el widget con ítems nuevos — el resto de
+ *   `14_conserje_voz_avanzado.feature` (HU-14.1/14.2/14.3) NO se incluye acá
+ *   a propósito: esos 3 escenarios dependen de la reproducción real del
+ *   canal de datos de LiveKit, ya cubiertos por Karma
+ *   (`voice-widget.component.spec.ts`) y por el Cucumber de
+ *   `apps/voice-agent` (`agente-voz-avanzado.steps.ts`) — agregar el archivo
+ *   completo acá los dejaría con pasos indefinidos en este runner. El tag
+ *   filtra a SOLO ese escenario aunque el archivo entero esté en `features`.
  *
  * RF-1.1 (alta de modelo, panel-admin) y RF-2.4 (split de pagos,
  * backend-only) quedan fuera de alcance de este remote — no se incluyen.
@@ -39,9 +49,10 @@ const testDir = defineBddConfig({
     path.join(__dirname, '../../../features/02_cotizacion_alquiler_venta.feature'),
     path.join(__dirname, '../../../features/03_pagos_garantia.feature'),
     path.join(__dirname, '../../../features/10_agente_conserje_voz.feature'),
+    path.join(__dirname, '../../../features/14_conserje_voz_avanzado.feature'),
   ],
   steps: path.join(__dirname, 'steps/*.steps.ts'),
-  tags: '@RF-1.4 or @RF-2.1 or @RF-2.2 or @Epica10',
+  tags: '@RF-1.4 or @RF-2.1 or @RF-2.2 or @Epica10 or @HU-14.4',
 });
 
 export default defineConfig({

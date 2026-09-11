@@ -151,14 +151,36 @@
   font-weight: 600;
 }
 
+// HU-14.3: la conversación completa (saludo + cada turno), no solo el
+// saludo — lista con scroll propio para no estirar el panel indefinidamente
+// a medida que la sesión avanza (`voice-widget.component.ts` autoscrollea al
+// último mensaje vía `transcriptListRef`).
 .voice-widget__transcript {
+  list-style: none;
   margin: 12px 0 0;
-  padding: 10px 12px;
+  padding: 0;
+  max-height: 12rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.voice-widget__message {
+  align-self: flex-start;
+  max-width: 85%;
+  padding: 8px 12px;
   border-radius: var(--tbjl-radius-md, 0.5rem);
   background-color: var(--tbjl-color-neutral-100, #eef4fb);
   color: var(--tbjl-color-neutral-900, #161c21);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.voice-widget__message--user {
+  align-self: flex-end;
+  background-color: var(--tbjl-color-primary-500, #141cdb);
+  color: #ffffff;
 }
 
 .voice-widget__chips {

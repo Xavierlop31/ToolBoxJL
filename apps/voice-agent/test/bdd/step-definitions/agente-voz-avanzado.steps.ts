@@ -29,6 +29,18 @@ import type { Agente3World } from "../support/world";
  *   capturando los `VoiceAgentEvent` que emite `deps.emitirEvento` — valida
  *   la secuencia running→done de los chips, no la reproducción visual en el
  *   widget (eso es Angular, fuera del alcance de este proceso).
+ * - Escenario 3 (HU-14.3): reusa el mismo `ejecutarTurnoAgente3` real del
+ *   escenario 2 — valida que los eventos `transcript`/user y
+ *   `transcript`/agent efectivamente se emiten y en el orden correcto
+ *   (antes del turno / después de los chips), no la reproducción visual en
+ *   el widget.
+ * - Escenario 4 (HU-14.4, "navega a /carrito al cerrar el widget"): NO
+ *   TESTEABLE desde este proceso — es una decisión de `Router` de Angular
+ *   (`voice-widget.component.ts#closeWidget`, portal-cliente), no hay nada
+ *   de este lado (`apps/voice-agent`) que ejercitar. Se deja como no-op
+ *   documentado (mismo criterio que usa `apps/portal-cliente/e2e-bdd/steps/
+ *   voice-agent.steps.ts` a la inversa, para pasos que son 100% de este
+ *   proceso). La cobertura real está en ese mismo archivo (Playwright).
  */
 
 function textoBlock(text: string): Anthropic.TextBlock {
@@ -207,4 +219,75 @@ Then(/^el agente responde por voz con los datos exactos\.$/, function (this: Age
   assert.ok(this.resultado, "No hay resultado del turno para validar");
   assert.ok(this.resultado!.respuestaTexto.length > 0, "La respuesta hablada no puede estar vacía");
   assert.match(this.resultado!.respuestaTexto, /Cortadora de Concreto Husqvarna/);
+});
+
+// --- HU-14.3: transcript conversacional completo -------------------------
+// Reusa el Given/When de HU-14.2 ("que le pido al agente..." / "el agente
+// procesa el turno...") — el mismo turno real de `ejecutarTurnoAgente3` ya
+// deja `this.eventosEmitidos` poblado con TODOS los `VoiceAgentEvent`
+// (transcript + tool_status intercalados), no hace falta un When propio.
+
+Then(
+  /^mi turno queda registrado en el transcript del widget apenas se transcribe, antes de que el agente termine de responder$/,
+  function (this: Agente3World) {
+    const primerEvento = this.eventosEmitidos[0];
+    assert.equal(primerEvento?.type, "transcript", "El primer evento emitido del turno debe ser el transcript del Cliente");
+    if (primerEvento?.type === "transcript") {
+      assert.equal(primerEvento.role, "user");
+      assert.equal(primerEvento.text, this.mensajeCliente, "El texto del transcript debe ser exactamente lo que dijo el Cliente");
+    }
+  },
+);
+
+Then(
+  /^la respuesta final del agente también aparece en el transcript, en orden después de mi turno y de los chips de acción\.$/,
+  function (this: Agente3World) {
+    const ultimoEvento = this.eventosEmitidos.at(-1);
+    assert.equal(ultimoEvento?.type, "transcript", "El último evento emitido del turno debe ser el transcript del agente");
+    if (ultimoEvento?.type === "transcript") {
+      assert.equal(ultimoEvento.role, "agent");
+      assert.equal(ultimoEvento.text, this.resultado?.respuestaTexto);
+    }
+
+    // `findLastIndex` es ES2023 — este proyecto compila contra lib ES2022
+    // (`tsconfig.json`), así que se busca a mano desde el final.
+    let indiceUltimoChip = -1;
+    for (let i = this.eventosEmitidos.length - 1; i >= 0; i--) {
+      if (this.eventosEmitidos[i].type === "tool_status") {
+        indiceUltimoChip = i;
+        break;
+      }
+    }
+    assert.ok(indiceUltimoChip >= 0, "Se esperaba al menos un chip de tool-calling antes de la respuesta final");
+    assert.equal(
+      indiceUltimoChip,
+      this.eventosEmitidos.length - 2,
+      'El transcript final del agente debe venir DESPUÉS del último chip "tool_status", no antes ni mezclado',
+    );
+  },
+);
+
+// --- HU-14.4: navegación a /carrito al cerrar el widget -------------------
+// NO TESTEABLE desde este proceso — ver el comentario de cabecera de este
+// archivo ("Escenario 4"). La cobertura real vive en
+// `apps/portal-cliente/e2e-bdd/steps/voice-agent.steps.ts` (Playwright).
+
+Given(/^que el Agente 3 agregó al menos un artículo a mi carrito durante la sesión de voz$/, function () {
+  // No-op documentado: en `apps/portal-cliente` esto se simula mockeando
+  // `GET /cart` para que devuelva ítems (ver `prepararClienteAutenticado`).
+});
+
+When(/^cierro el widget de voz porque no voy a agregar nada más$/, function () {
+  // No-op documentado: en `apps/portal-cliente` esto es un click real sobre
+  // `[data-testid="voice-widget-close"]`.
+});
+
+Then(/^se me navega a la página "\/carrito"$/, function () {
+  // No-op documentado: en `apps/portal-cliente` se verifica con
+  // `page.waitForURL('**/carrito')`.
+});
+
+Then(/^puedo visualizar ahí los artículos que el agente agregó\.$/, function () {
+  // No-op documentado: en `apps/portal-cliente` se verifica que
+  // `/carrito` renderiza las líneas del carrito mockeado.
 });

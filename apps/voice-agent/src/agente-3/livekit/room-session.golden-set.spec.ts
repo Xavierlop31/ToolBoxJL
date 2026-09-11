@@ -314,9 +314,14 @@ describe("Golden set — Agente 3 (Conserje de voz, loop de tool calling REAL)",
     const eventosPublicados = room.localParticipant.publishData.mock.calls.map(([data]: [Uint8Array]) =>
       JSON.parse(new TextDecoder().decode(data)),
     );
+    // HU-14.3: además de los chips de tool-calling, el turno completo (lo
+    // que dijo el Cliente + la respuesta final del agente) se publica como
+    // eventos "transcript", uno antes de arrancar el loop y otro al terminar.
     expect(eventosPublicados).toEqual([
+      { type: "transcript", role: "user", text: "busco un taladro percutor para concreto" },
       { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "running" },
       { type: "tool_status", tool: "search_catalog", label: "Buscando en catálogo…", status: "done" },
+      { type: "transcript", role: "agent", text: "Tenemos un Taladro Percutor Bosch disponible, ¿te sirve?" },
     ]);
   });
 
