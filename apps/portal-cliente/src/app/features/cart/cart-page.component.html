@@ -205,6 +205,9 @@
             <strong>{{ resultado.ordenes_creadas.length }}</strong>
             {{ resultado.ordenes_creadas.length === 1 ? 'orden' : 'órdenes' }} exitosamente.
           </p>
+          <a routerLink="/catalogo" class="btn-primary" data-testid="ir-a-pagar">
+            Ir a pagar mis pedidos
+          </a>
         </div>
       }
       @if (resultado.fallos.length > 0) {

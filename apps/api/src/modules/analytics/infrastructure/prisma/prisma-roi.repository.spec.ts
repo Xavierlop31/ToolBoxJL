@@ -22,14 +22,14 @@ describe("PrismaRoiRepository", () => {
     expect(prisma.payment.findMany).not.toHaveBeenCalled();
   });
 
-  it("acumula los ingresos capturados por modelo (atribuidos al modelo del primer item de la orden)", async () => {
+  it("acumula los ingresos capturados por modelo (órdenes de 1 solo ítem: todo el pago va a ese modelo)", async () => {
     prisma.toolModel.findMany.mockResolvedValueOnce([
       { id: "modelo-1", costoCompra: 300_000 },
       { id: "modelo-2", costoCompra: null },
     ]);
     prisma.payment.findMany.mockResolvedValueOnce([
-      { monto: 40_000, order: { items: [{ unidad: { modeloId: "modelo-1" } }] } },
-      { monto: 20_000, order: { items: [{ unidad: { modeloId: "modelo-1" } }] } },
+      { monto: 40_000, order: { items: [{ tarifaAplicada: 40_000, unidad: { modeloId: "modelo-1" } }] } },
+      { monto: 20_000, order: { items: [{ tarifaAplicada: 20_000, unidad: { modeloId: "modelo-1" } }] } },
       { monto: 100_000, order: { items: [] } }, // sin items: se ignora
     ]);
 
@@ -45,6 +45,33 @@ describe("PrismaRoiRepository", () => {
     expect(modelo1.costoCompra?.valor).toBe(300_000);
     expect(modelo2.ingresosAcumulados.valor).toBe(0);
     expect(modelo2.costoCompra).toBeNull();
+  });
+
+  it("orden multi-ítem (checkout consolidado, HU-12.3): prorratea el pago entre los modelos de la orden según su tarifaAplicada", async () => {
+    prisma.toolModel.findMany.mockResolvedValueOnce([
+      { id: "modelo-1", costoCompra: null },
+      { id: "modelo-2", costoCompra: null },
+    ]);
+    // 1 pago de 100.000 sobre una orden con 2 ítems: modelo-1 pesó 40.000 de
+    // tarifa, modelo-2 pesó 60.000 -> se reparte 40%/60% -> 40.000/60.000.
+    prisma.payment.findMany.mockResolvedValueOnce([
+      {
+        monto: 100_000,
+        order: {
+          items: [
+            { tarifaAplicada: 40_000, unidad: { modeloId: "modelo-1" } },
+            { tarifaAplicada: 60_000, unidad: { modeloId: "modelo-2" } },
+          ],
+        },
+      },
+    ]);
+
+    const resultado = await repo.listarConIngresos();
+
+    const modelo1 = resultado.find((m) => m.modeloId === "modelo-1")!;
+    const modelo2 = resultado.find((m) => m.modeloId === "modelo-2")!;
+    expect(modelo1.ingresosAcumulados.valor).toBe(40_000);
+    expect(modelo2.ingresosAcumulados.valor).toBe(60_000);
   });
 
   it("filtra por modeloId cuando se provee, incluyendo el where en toolModel y payment", async () => {

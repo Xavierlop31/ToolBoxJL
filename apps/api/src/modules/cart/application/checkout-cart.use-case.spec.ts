@@ -31,7 +31,7 @@ describe("CheckoutCartUseCase", () => {
     const cotizarOrden = new CotizarOrdenUseCase(modelos);
     const crearOrden = new CrearOrdenUseCase(ordenes, modelos, unidades, cotizarOrden);
     const eliminarItemCarrito = new EliminarItemCarritoUseCase(carritos, modelos);
-    useCase = new CheckoutCartUseCase(carritos, crearOrden, eliminarItemCarrito);
+    useCase = new CheckoutCartUseCase(carritos, ordenes, crearOrden, eliminarItemCarrito);
   });
 
   it("caso carrito vacío: devuelve ordenes_creadas y fallos vacíos, sin llamar a CrearOrdenUseCase", async () => {
@@ -101,6 +101,84 @@ describe("CheckoutCartUseCase", () => {
     const carritoFinal = await carritos.obtenerOCrearPorClienteId("cliente-1");
     expect(carritoFinal.items).toHaveLength(1);
     expect(carritoFinal.items[0].modelo_id).toBe(modeloSinUnidades.id);
+  });
+
+  it("bug reportado por el Arquitecto (2026-09-11): 3 líneas de venta consolidan en 1 sola orden con 3 items, no en 3 órdenes", async () => {
+    const modelos3 = await Promise.all(
+      ["Detector", "Multicortadora", "Medidor"].map((nombre) =>
+        modelos.crear({ nombre, marca: "Stanley", categoria: "Herramientas", tarifa_dia: 1_000 }),
+      ),
+    );
+    await Promise.all(
+      modelos3.map((m, i) => unidades.crear({ modeloId: m.id, numeroSerie: `SN-${i}` })),
+    );
+    // Secuencial a propósito: agregarItem hace read-then-write sobre el
+    // MISMO carrito (obtenerOCrearPorClienteId + guardarItems) sin locking —
+    // en paralelo (Promise.all) las 3 llamadas se pisan entre sí y solo 1
+    // línea sobrevive.
+    for (const m of modelos3) {
+      await agregarItem.ejecutar("cliente-1", { modelo_id: m.id, cantidad: 1 });
+    }
+
+    const resultado = await useCase.ejecutar("cliente-1", checkoutInput);
+
+    expect(resultado.ordenes_creadas).toHaveLength(1);
+    expect(resultado.ordenes_creadas[0].tipo).toBe("venta");
+    expect(resultado.ordenes_creadas[0].items).toHaveLength(3);
+    expect(resultado.fallos).toEqual([]);
+
+    const carritoFinal = await carritos.obtenerOCrearPorClienteId("cliente-1");
+    expect(carritoFinal.items).toEqual([]);
+  });
+
+  it("una línea con cantidad 2 aporta 2 items (2 unidades físicas distintas) a la orden consolidada", async () => {
+    const modelo = await modelos.crear({
+      nombre: "Taladro Percutor",
+      marca: "Bosch",
+      categoria: "Taladros",
+      tarifa_dia: 10_000,
+    });
+    await unidades.crear({ modeloId: modelo.id, numeroSerie: "SN-1" });
+    await unidades.crear({ modeloId: modelo.id, numeroSerie: "SN-2" });
+
+    await agregarItem.ejecutar("cliente-1", { modelo_id: modelo.id, cantidad: 2 });
+
+    const resultado = await useCase.ejecutar("cliente-1", checkoutInput);
+
+    expect(resultado.ordenes_creadas).toHaveLength(1);
+    expect(resultado.ordenes_creadas[0].items).toHaveLength(2);
+    const unidadesUsadas = new Set(resultado.ordenes_creadas[0].items.map((i) => i.unidad_id));
+    expect(unidadesUsadas.size).toBe(2); // no repite la misma unidad física
+
+    const carritoFinal = await carritos.obtenerOCrearPorClienteId("cliente-1");
+    expect(carritoFinal.items).toEqual([]);
+  });
+
+  it("dos líneas de alquiler con distinta duración (dias) generan 2 órdenes de alquiler separadas, no 1", async () => {
+    const modelo3dias = await modelos.crear({
+      nombre: "Taladro 3 días",
+      marca: "Bosch",
+      categoria: "Taladros",
+      tarifa_dia: 10_000,
+    });
+    await unidades.crear({ modeloId: modelo3dias.id, numeroSerie: "SN-1" });
+
+    const modelo5dias = await modelos.crear({
+      nombre: "Rotomartillo 5 días",
+      marca: "Makita",
+      categoria: "Rotomartillos",
+      tarifa_dia: 8_000,
+    });
+    await unidades.crear({ modeloId: modelo5dias.id, numeroSerie: "SN-2" });
+
+    await agregarItem.ejecutar("cliente-1", { modelo_id: modelo3dias.id, cantidad: 1, dias: 3 });
+    await agregarItem.ejecutar("cliente-1", { modelo_id: modelo5dias.id, cantidad: 1, dias: 5 });
+
+    const resultado = await useCase.ejecutar("cliente-1", checkoutInput);
+
+    expect(resultado.ordenes_creadas).toHaveLength(2);
+    expect(resultado.ordenes_creadas.every((o) => o.tipo === "alquiler")).toBe(true);
+    expect(resultado.ordenes_creadas.every((o) => o.items.length === 1)).toBe(true);
   });
 
   it("caso con 1 fallo por ModeloNoEncontradoError: reporta el motivo y no interrumpe las demás líneas", async () => {

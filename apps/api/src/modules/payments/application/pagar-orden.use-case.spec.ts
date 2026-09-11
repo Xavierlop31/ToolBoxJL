@@ -166,6 +166,63 @@ describe("PagarOrdenUseCase", () => {
     await expect(useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "contra_entrega")).rejects.toThrow(OrdenNoPagableError);
   });
 
+  it("orden multi-ítem (checkout consolidado, HU-12.3): cobra la SUMA de tarifa_base de todos los ítems, no solo el primero", async () => {
+    const modeloA = await modelos.crear({
+      nombre: "Taladro Percutor",
+      marca: "Bosch",
+      categoria: "Taladros",
+      tarifa_dia: 10_000,
+    });
+    const modeloB = await modelos.crear({
+      nombre: "Rotomartillo",
+      marca: "Makita",
+      categoria: "Rotomartillos",
+      tarifa_dia: 15_000,
+    });
+    const unidadA = await unidades.crear({ modeloId: modeloA.id, numeroSerie: "SN-A" });
+    const unidadB = await unidades.crear({ modeloId: modeloB.id, numeroSerie: "SN-B" });
+
+    const zonaId = randomUUID();
+    const orden = await ordenes.crear({
+      clienteId: "cliente-1",
+      tipo: "alquiler",
+      fechaInicio: "2026-09-01",
+      fechaFin: "2026-09-05",
+      returnMode: "en_sede",
+      direccionEntrega: "Calle 1",
+      zonaId,
+      items: [
+        { unidadId: unidadA.id, tarifaAplicada: 40_000 },
+        { unidadId: unidadB.id, tarifaAplicada: 60_000 },
+      ],
+    });
+
+    // Monto esperado: SUMA de cotizar cada modelo por separado (misma
+    // cabecera tipo/fechas/zona/returnMode) — no un valor hardcodeado, para
+    // no reimplementar PricingCalculatorService acá.
+    const cotizacionA = await cotizarOrden.ejecutar({
+      modeloId: modeloA.id,
+      tipo: "alquiler",
+      fechaInicio: "2026-09-01",
+      fechaFin: "2026-09-05",
+      zonaId,
+      returnMode: "en_sede",
+    });
+    const cotizacionB = await cotizarOrden.ejecutar({
+      modeloId: modeloB.id,
+      tipo: "alquiler",
+      fechaInicio: "2026-09-01",
+      fechaFin: "2026-09-05",
+      zonaId,
+      returnMode: "en_sede",
+    });
+    const tarifaBaseEsperada = cotizacionA.tarifa_base + cotizacionB.tarifa_base;
+
+    const resultado = await useCase.ejecutar(orden.id, "cliente-1", "cliente@example.com", "contra_entrega");
+
+    expect(resultado.pagoPrincipal.monto).toBe(tarifaBaseEsperada);
+  });
+
   it("lanza UnidadNoEncontradaError si la unidad reservada por la orden ya no existe", async () => {
     const modelo = await modelos.crear({
       nombre: "Sierra",

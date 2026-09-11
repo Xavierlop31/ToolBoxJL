@@ -224,6 +224,30 @@ describe('CartPageComponent', () => {
       expect(component.lineas()).toEqual([]);
     });
 
+    it('bug reportado por el Arquitecto (2026-09-11): tras el checkout exitoso, muestra un link para ir a pagar (antes no había forma de continuar)', () => {
+      component.abrirCheckout();
+      httpMock.expectOne((r) => r.url === `${environment.apiUrl}/zones`).flush([]);
+
+      component.checkoutForm.setValue({
+        direccionEntrega: 'Calle Falsa 123',
+        zonaId: 'zona-1',
+      });
+      component.confirmarCheckout();
+
+      httpMock.expectOne(`${environment.apiUrl}/orders/checkout-cart`).flush({
+        ordenes_creadas: [{ id: 'order-1' }],
+        fallos: [],
+      });
+      httpMock.expectOne(`${environment.apiUrl}/cart`).flush({ items: [] });
+      fixture.detectChanges();
+
+      const link = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+        '[data-testid="ir-a-pagar"]',
+      );
+      expect(link).withContext('se esperaba un link para ir a pagar tras el checkout').not.toBeNull();
+      expect(link!.getAttribute('href')).toBe('/catalogo');
+    });
+
     it('con fallo parcial, muestra el motivo y las líneas fallidas siguen en el carrito', () => {
       component.abrirCheckout();
       httpMock.expectOne((r) => r.url === `${environment.apiUrl}/zones`).flush([]);
