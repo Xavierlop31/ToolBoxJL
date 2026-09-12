@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  AuditFeedEntry,
   CreateToolUnitInput,
   InventoryMetrics,
   ListToolUnitsParams,
@@ -13,6 +14,7 @@ import {
   ToolUnit,
   ToolUnitStatusLogEntry,
   UpdateToolUnitStatusInput,
+  WarehouseOccupancy,
 } from '../models/inventory.models';
 
 /**
@@ -96,6 +98,20 @@ export class InventoryService {
   /** `GET /inventory/maintenance` (HU-13.3) — pestaña "Mantenimiento & Taller". */
   listMaintenance(): Observable<MaintenanceUnit[]> {
     return this.http.get<MaintenanceUnit[]>(`${this.baseUrl}/inventory/maintenance`);
+  }
+
+  /** `GET /inventory/occupancy` — widget "Ocupación de Almacén" (Issue #184-bis). */
+  getOccupancy(): Observable<WarehouseOccupancy[]> {
+    return this.http.get<WarehouseOccupancy[]>(`${this.baseUrl}/inventory/occupancy`);
+  }
+
+  /** `GET /inventory/audit-feed` — widget "Auditoría en Vivo" (Issue #184-bis). */
+  getAuditFeed(limit?: number): Observable<AuditFeedEntry[]> {
+    let httpParams = new HttpParams();
+    if (limit) httpParams = httpParams.set('limit', limit);
+    return this.http.get<AuditFeedEntry[]>(`${this.baseUrl}/inventory/audit-feed`, {
+      params: httpParams,
+    });
   }
 
   /**

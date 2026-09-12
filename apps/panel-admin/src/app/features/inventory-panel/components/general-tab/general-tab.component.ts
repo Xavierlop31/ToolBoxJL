@@ -1,13 +1,16 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
 import { InventoryService } from '../../../../core/inventory/inventory.service';
 import {
+  AuditFeedEntry,
   ESTADOS_VISUALIZACION,
   EstadoVisualizacion,
   InventoryMetrics,
   ToolUnitListItem,
+  WarehouseOccupancy,
   estadoVisualizacionBadgeClass,
 } from '../../../../core/models/inventory.models';
 import { RegisterUnitModalComponent } from '../register-unit-modal/register-unit-modal.component';
@@ -45,6 +48,7 @@ const PAGE_SIZE = 20;
   selector: 'app-general-tab',
   standalone: true,
   imports: [
+    DatePipe,
     ReactiveFormsModule,
     RegisterUnitModalComponent,
     StatusChangeModalComponent,
@@ -77,9 +81,20 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
   readonly selectedUnit = signal<ToolUnitListItem | null>(null);
   readonly statusChangeUnit = signal<ToolUnitListItem | null>(null);
 
+  // Widgets "Ocupación de Almacén"/"Auditoría en Vivo" (Issue #184-bis,
+  // redseño visual del panel). Se cargan en paralelo a las métricas/tabla —
+  // fallos acá no bloquean el resto de la página (mismo criterio que
+  // `loadMetrics`: son datos complementarios, no la tabla principal).
+  readonly loadingOccupancy = signal(true);
+  readonly occupancy = signal<WarehouseOccupancy[]>([]);
+  readonly loadingAuditFeed = signal(true);
+  readonly auditFeed = signal<AuditFeedEntry[]>([]);
+
   ngOnInit(): void {
     this.loadMetrics();
     this.load();
+    this.loadOccupancy();
+    this.loadAuditFeed();
 
     this.searchControl.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
@@ -136,6 +151,28 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
       });
   }
 
+  loadOccupancy(): void {
+    this.loadingOccupancy.set(true);
+    this.inventory.getOccupancy().subscribe({
+      next: (occupancy) => {
+        this.occupancy.set(occupancy);
+        this.loadingOccupancy.set(false);
+      },
+      error: () => this.loadingOccupancy.set(false),
+    });
+  }
+
+  loadAuditFeed(): void {
+    this.loadingAuditFeed.set(true);
+    this.inventory.getAuditFeed().subscribe({
+      next: (feed) => {
+        this.auditFeed.set(feed);
+        this.loadingAuditFeed.set(false);
+      },
+      error: () => this.loadingAuditFeed.set(false),
+    });
+  }
+
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.total() / this.pageSize));
   }
@@ -163,6 +200,7 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
     this.page.set(1);
     this.load();
     this.loadMetrics();
+    this.loadOccupancy();
   }
 
   /** Selecciona una fila — pilotea el panel docked de detalle (reemplaza a los viejos "Ver QR"/"Historial" con modal). */
@@ -178,6 +216,7 @@ export class GeneralTabComponent implements OnInit, OnDestroy {
     this.statusChangeUnit.set(null);
     this.load();
     this.loadMetrics();
+    this.loadAuditFeed();
   }
 
   estadoBadgeClass(estado: EstadoVisualizacion): string {

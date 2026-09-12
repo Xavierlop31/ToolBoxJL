@@ -141,4 +141,46 @@ describe('InMemoryToolUnitStatusLogRepository', () => {
       expect(resultado).toEqual([]);
     });
   });
+
+  describe('listarRecientes', () => {
+    it('devuelve como mucho `limit` entradas, ordenadas por created_at descendente', async () => {
+      await repo.crear({
+        unidadId: 'unidad-1',
+        estadoAnterior: 'Nuevo',
+        estadoNuevo: 'Operativo',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+      await repo.crear({
+        unidadId: 'unidad-2',
+        estadoAnterior: 'Nuevo',
+        estadoNuevo: 'Operativo',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+      await repo.crear({
+        unidadId: 'unidad-3',
+        estadoAnterior: 'Nuevo',
+        estadoNuevo: 'Operativo',
+        fotosUrls: [],
+        autorId: 'usuario-1',
+      });
+
+      const recientes = await repo.listarRecientes(2);
+
+      // `crear()` sella con el reloj real (mismo criterio que el resto de
+      // este archivo) — en ejecución rápida los 3 timestamps pueden empatar
+      // al milisegundo, así que la aserción robusta es "viene ordenado
+      // descendente" y "respeta el límite", no "es EXACTAMENTE esta entrada
+      // la primera".
+      expect(recientes).toHaveLength(2);
+      expect(recientes[0].created_at >= recientes[1].created_at).toBe(true);
+    });
+
+    it('devuelve un arreglo vacío si no hay entradas', async () => {
+      const recientes = await repo.listarRecientes(10);
+
+      expect(recientes).toEqual([]);
+    });
+  });
 });

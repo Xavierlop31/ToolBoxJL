@@ -49,4 +49,12 @@ export interface ToolUnitStatusLogRepository {
   contarTransicionesAMantenimiento(
     rango: RangoPeriodo,
   ): Promise<{ unidadId: string; cantidad: number }[]>;
+  /**
+   * Widget "Auditoría en Vivo" del panel de Almacén (`/admin/almacen`,
+   * Issue #184-bis) — últimos `limit` eventos de TODAS las unidades
+   * (`orderBy createdAt desc`), a diferencia de `listarPorUnidad` que filtra
+   * por una sola. Sigue siendo de solo lectura sobre la misma tabla
+   * append-only.
+   */
+  listarRecientes(limit: number): Promise<ToolUnitStatusLogEntry[]>;
 }

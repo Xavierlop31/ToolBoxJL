@@ -144,3 +144,41 @@ export interface UnidadMantenimiento extends ToolUnit {
   modelo_nombre: string;
   ultimo_evento_mantenimiento?: ToolUnitStatusLogEntry;
 }
+
+/**
+ * Fila de `GET /inventory/occupancy` — widget "Ocupación de Almacén" del
+ * panel de Almacén. Agrupa unidades por `ubicacion_bodega` (texto libre,
+ * sin estructura de estantes/slots). Sin capacidad: `cantidad` es el
+ * ocupado real, no hay denominador — no existe ningún concepto de
+ * capacidad total de bodega en el sistema (decisión del Arquitecto,
+ * 2026-09-11: no inventar ese número).
+ */
+export interface OcupacionUbicacion {
+  /** `"Sin ubicación asignada"` para unidades con `ubicacion_bodega: null`. */
+  ubicacion: string;
+  cantidad: number;
+}
+
+/**
+ * Fila de `GET /inventory/audit-feed` — widget "Auditoría en Vivo" del
+ * panel de Almacén. `ToolUnitStatusLogEntry` enriquecido con datos de la
+ * unidad/modelo (evita N+1 en el frontend, mismo criterio que
+ * `ToolUnitListado`).
+ *
+ * GAP documentado (2026-09-11): solo cubre cambios de estado de unidad
+ * (`tool_unit_status_log`) — NO incluye despachos/recepciones de
+ * `Order`/`Shipment` (otro bounded context). Cruzarlos en un timeline
+ * unificado queda fuera de este alcance.
+ */
+export interface AuditoriaEvento {
+  id: string;
+  unidad_id: string;
+  numero_serie: string;
+  modelo_nombre: string;
+  estado_anterior: EstadoUnidad | null;
+  estado_nuevo: EstadoUnidad;
+  created_at: string;
+  autor_id: string;
+  falla_reportada: string | null;
+  motivo_baja: string | null;
+}
