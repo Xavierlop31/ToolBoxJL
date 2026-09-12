@@ -27,6 +27,7 @@ describe('AdminShellComponent', () => {
           { path: 'admin/envios', component: StubComponent },
           { path: 'admin/utilizacion-productividad', component: StubComponent },
           { path: 'admin/vehiculos/nuevo', component: StubComponent },
+          { path: 'admin/usuarios', component: StubComponent },
         ]),
       ],
     }).compileComponents();
@@ -36,7 +37,7 @@ describe('AdminShellComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('Issue #184: expone los 9 ítems de navegación en el orden acordado', () => {
+  it('Issue #184/Épica 16: expone los 10 ítems de navegación en el orden acordado', () => {
     expect(component.navItems.map((item) => item.path)).toEqual([
       '/admin/dashboard-kpis',
       '/admin/almacen',
@@ -47,15 +48,17 @@ describe('AdminShellComponent', () => {
       '/admin/envios',
       '/admin/utilizacion-productividad',
       '/admin/vehiculos/nuevo',
+      '/admin/usuarios',
     ]);
   });
 
-  it('renderiza los 9 links del sidenav con su routerLink', () => {
+  it('renderiza los 10 links del sidenav con su routerLink', () => {
     fixture.detectChanges();
 
     const links = fixture.debugElement.queryAll(By.css('.sidenav-items a'));
-    expect(links.length).toBe(9);
+    expect(links.length).toBe(10);
     expect(links[1].nativeElement.getAttribute('data-testid')).toBe('sidenav-almacen');
+    expect(links[9].nativeElement.getAttribute('data-testid')).toBe('sidenav-usuarios');
   });
 
   it('marca como activo el ítem que corresponde a la ruta actual', async () => {

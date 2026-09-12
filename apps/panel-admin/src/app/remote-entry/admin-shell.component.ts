@@ -17,12 +17,14 @@ interface AdminNavItem {
  * fijo de 256px, igual que el mockup HTML/Tailwind que compartió el
  * Arquitecto (`bg-deep-navy`, ítem activo con `bg-primary-container`).
  *
- * Los 9 ítems cubren TODAS las secciones reales del remote — el mockup de
- * Stitch original solo mostraba 4-5 (más "Auditoría", que se omite acá por
- * no tener HU/endpoint que lo respalde todavía). "Almacén"/"Mantenimiento"/
- * "Rutas" reemplazan a las 3 pestañas que antes vivían dentro de
- * `/admin/inventario` (`InventoryPanelComponent`, ahora eliminado) — ver
- * `entry.routes.ts`.
+ * Los primeros 9 ítems cubren TODAS las secciones reales del remote al
+ * momento del Issue #184 — el mockup de Stitch original solo mostraba 4-5
+ * (más "Auditoría", que se omite acá por no tener HU/endpoint que lo
+ * respalde todavía). "Almacén"/"Mantenimiento"/"Rutas" reemplazan a las 3
+ * pestañas que antes vivían dentro de `/admin/inventario`
+ * (`InventoryPanelComponent`, ahora eliminado) — ver `entry.routes.ts`.
+ * "Usuarios" (10mo ítem) se agrega en Épica 16 (Gestión de Usuarios y
+ * Roles) — ver doc-comment sobre por qué no está oculto para gerente.
  *
  * El `<h1>` del `TopAppBar` refleja la sección activa derivándola de la URL
  * (no hay Input/servicio adicional: es la forma más simple dado que este
@@ -307,6 +309,14 @@ export class AdminShellComponent implements OnInit, OnDestroy {
       icon: 'directions_car',
       testId: 'alta-vehiculo',
     },
+    // Épica 16 (pedido directo del Arquitecto 2026-09-11): a diferencia de
+    // los otros 9 ítems, esta pantalla es solo-admin (el backend rechaza
+    // con 403 a cualquier otro rol) — se muestra igual acá para todos los
+    // que ya llegan a panel-admin (admin/gerente), mismo criterio que el
+    // resto de esta lista: sin un servicio de sesión/rol propio en este
+    // remote, un gerente que entre ve un error 403 inline en la pantalla,
+    // no un ítem oculto (ver doc-comment de `UsersManagementComponent`).
+    { path: '/admin/usuarios', label: 'Usuarios', icon: 'group', testId: 'usuarios' },
   ];
 
   readonly activeTitle = signal('Panel de Control');

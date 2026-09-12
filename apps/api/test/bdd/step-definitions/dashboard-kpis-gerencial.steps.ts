@@ -158,6 +158,7 @@ Given(
       email: "mora-media@example.com",
       telefono: null,
       rol: "cliente",
+      activo: true,
     });
     const ordenMedia = await this.orderRepository.crear({
       clienteId: clienteMedia,
@@ -179,6 +180,7 @@ Given(
       email: "mora-alta@example.com",
       telefono: null,
       rol: "cliente",
+      activo: true,
     });
     const ordenAlta = await this.orderRepository.crear({
       clienteId: clienteAlta,

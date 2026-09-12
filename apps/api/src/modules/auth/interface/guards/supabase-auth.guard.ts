@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
   type ExecutionContext,
@@ -6,6 +7,7 @@ import {
 import { AuthGuard } from "@nestjs/passport";
 import { Reflector } from "@nestjs/core";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+import { CuentaDesactivadaError } from "../../domain/errors/cuenta-desactivada.error";
 import { TokenInvalidoError } from "../../domain/errors/token-invalido.error";
 
 /**
@@ -44,6 +46,11 @@ export class SupabaseAuthGuard extends AuthGuard("supabase-jwt") {
   ): TUser {
     if (err instanceof TokenInvalidoError) {
       throw new UnauthorizedException(err.message);
+    }
+    // 403, no 401: el token en sí es válido (firma, rol, sub) — es la cuenta
+    // la que no tiene permiso de acceso (Épica 16, cuenta desactivada).
+    if (err instanceof CuentaDesactivadaError) {
+      throw new ForbiddenException(err.message);
     }
     return super.handleRequest(err, user, info, context);
   }

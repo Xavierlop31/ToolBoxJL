@@ -36,6 +36,16 @@ export const ROLES = [...ROLES_HUMANOS, "agente-1", "agente-2"] as const;
 
 export type Rol = (typeof ROLES)[number];
 
+/**
+ * Los 5 roles humanos como TYPE (no solo el array `ROLES_HUMANOS`) — para
+ * cualquier contrato que deba excluir a nivel de tipos los roles de servicio
+ * de Agentes de IA, no solo a nivel de validación en runtime. Primer uso:
+ * `PATCH /admin/users/{id}` (Épica 16) — un admin nunca debería poder
+ * asignarle "agente-1"/"agente-2" a un usuario humano desde ese endpoint, ni
+ * siquiera como error de tipos en el propio backend.
+ */
+export type RolHumano = (typeof ROLES_HUMANOS)[number];
+
 /** Type guard: valida que un valor arbitrario (ej. un claim de JWT) sea un Rol conocido. */
 export function esRolValido(valor: unknown): valor is Rol {
   return (

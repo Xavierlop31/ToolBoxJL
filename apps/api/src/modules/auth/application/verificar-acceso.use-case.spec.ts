@@ -1,3 +1,4 @@
+import { CuentaDesactivadaError } from "../domain/errors/cuenta-desactivada.error";
 import { TokenInvalidoError } from "../domain/errors/token-invalido.error";
 import type { SupabaseJwtPayload } from "./supabase-jwt-payload";
 import { VerificarAccesoUseCase } from "./verificar-acceso.use-case";
@@ -89,5 +90,43 @@ describe("VerificarAccesoUseCase", () => {
     expect(() =>
       useCase.ejecutar(payloadBase({ app_metadata: { rol: "superadmin" } })),
     ).toThrow(/rol de negocio reconocido/);
+  });
+
+  describe("cuenta activa/desactivada (Épica 16)", () => {
+    it("acepta un payload sin claim activo (JWT emitido antes de la migración) — se asume activo", () => {
+      const usuario = useCase.ejecutar(payloadBase({ app_metadata: { rol: "cliente" } }));
+      expect(usuario.rol).toBe("cliente");
+    });
+
+    it("acepta un payload con app_metadata.activo = true", () => {
+      expect(() =>
+        useCase.ejecutar(payloadBase({ app_metadata: { rol: "cliente", activo: true } })),
+      ).not.toThrow();
+    });
+
+    it("lanza CuentaDesactivadaError si app_metadata.activo es false", () => {
+      expect(() =>
+        useCase.ejecutar(payloadBase({ app_metadata: { rol: "cliente", activo: false } })),
+      ).toThrow(CuentaDesactivadaError);
+    });
+
+    it("acepta el fallback en user_metadata.activo si app_metadata no lo trae", () => {
+      expect(() =>
+        useCase.ejecutar(
+          payloadBase({ app_metadata: { rol: "cliente" }, user_metadata: { activo: false } }),
+        ),
+      ).toThrow(CuentaDesactivadaError);
+    });
+
+    it("prioriza app_metadata.activo por sobre user_metadata.activo si ambos están presentes", () => {
+      expect(() =>
+        useCase.ejecutar(
+          payloadBase({
+            app_metadata: { rol: "cliente", activo: true },
+            user_metadata: { activo: false },
+          }),
+        ),
+      ).not.toThrow();
+    });
   });
 });

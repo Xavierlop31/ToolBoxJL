@@ -127,6 +127,9 @@ import {
 
 import { USER_REPOSITORY } from "../../../src/modules/users/infrastructure/users.tokens";
 import { InMemoryUserRepository } from "../../../src/modules/users/infrastructure/in-memory/in-memory-user.repository";
+import { ListarUsuariosUseCase, type ListarUsuariosResultado } from "../../../src/modules/users/application/listar-usuarios.use-case";
+import { ActualizarUsuarioUseCase } from "../../../src/modules/users/application/actualizar-usuario.use-case";
+import type { UsuarioBasico } from "../../../src/modules/users/domain/user.repository";
 
 import { CART_REPOSITORY } from "../../../src/modules/cart/infrastructure/cart.tokens";
 import { InMemoryCartRepository } from "../../../src/modules/cart/infrastructure/in-memory/in-memory-cart.repository";
@@ -159,8 +162,14 @@ export class ToolboxWorld extends CucumberWorld {
   consultarDisponibilidad!: ConsultarDisponibilidadUseCase;
   /** Sprint 14 (HU-13.3, Issues #147-#150) — GET /inventory/maintenance. */
   listarMantenimiento!: ListarMantenimientoUseCase;
-  /** Sprint 14 — puerto de solo lectura de `public.users`, sembrado directo en los steps que lo necesiten. */
+  /** Sprint 14 — puerto de lectura/escritura de `public.users`, sembrado directo en los steps que lo necesiten. */
   userRepository!: InMemoryUserRepository;
+  /** Épica 16 (Gestión de Usuarios y Roles) — GET/PATCH /admin/users*. */
+  listarUsuarios!: ListarUsuariosUseCase;
+  actualizarUsuario!: ActualizarUsuarioUseCase;
+  ultimaListaUsuarios?: ListarUsuariosResultado;
+  ultimoUsuarioActualizado?: UsuarioBasico;
+  errorActualizarUsuario?: Error;
 
   cotizarOrden!: CotizarOrdenUseCase;
   crearOrden!: CrearOrdenUseCase;
@@ -348,6 +357,8 @@ export class ToolboxWorld extends CucumberWorld {
         AgregarItemCarritoUseCase,
         ActualizarCantidadCarritoUseCase,
         EliminarItemCarritoUseCase,
+        ListarUsuariosUseCase,
+        ActualizarUsuarioUseCase,
       ],
     }).compile();
 
@@ -362,6 +373,8 @@ export class ToolboxWorld extends CucumberWorld {
     );
     this.listarMantenimiento = this.moduleRef.get(ListarMantenimientoUseCase);
     this.userRepository = this.moduleRef.get(USER_REPOSITORY);
+    this.listarUsuarios = this.moduleRef.get(ListarUsuariosUseCase);
+    this.actualizarUsuario = this.moduleRef.get(ActualizarUsuarioUseCase);
 
     this.cotizarOrden = this.moduleRef.get(CotizarOrdenUseCase);
     this.crearOrden = this.moduleRef.get(CrearOrdenUseCase);

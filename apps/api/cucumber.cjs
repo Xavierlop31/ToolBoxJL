@@ -57,7 +57,15 @@ module.exports = {
       // `dashboard-kpis-gerencial.steps.ts` (ver el header de ese archivo).
       // Tagueado `@Fase3` (no `@Fase2`), así que ya queda incluido por el
       // filtro `not @Fase2` de abajo sin necesitar una excepción propia.
-      "../../features/15_dashboard_kpis_gerencial.feature"
+      "../../features/15_dashboard_kpis_gerencial.feature",
+      // `16_gestion_usuarios_roles.feature` (Épica 16 — Gestión de Usuarios
+      // y Roles, pedido directo del Arquitecto 2026-09-11, no viene del PRD
+      // original): mismo criterio que `15_...` arriba — archivo COMPLETO,
+      // sus 4 escenarios están TODOS conectados en
+      // `gestion-usuarios-roles.steps.ts`. Tageado `@Fase3`, ya queda
+      // incluido por el filtro `not @Fase2` de abajo sin necesitar una
+      // excepción propia.
+      "../../features/16_gestion_usuarios_roles.feature"
     ],
     require: ["test/bdd/support/**/*.ts", "test/bdd/step-definitions/**/*.ts"],
     requireModule: ["ts-node/register"],
