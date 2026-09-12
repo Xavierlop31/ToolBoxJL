@@ -42,6 +42,7 @@ describe("RutasHoyUseCase", () => {
       email: "carlos@toolboxjl.test",
       telefono: null,
       rol: "repartidor",
+      activo: true,
     });
     usuarios.sembrar({
       id: "cliente-1",
@@ -49,6 +50,7 @@ describe("RutasHoyUseCase", () => {
       email: "ana@toolboxjl.test",
       telefono: null,
       rol: "cliente",
+      activo: true,
     });
 
     const modelo = await modelos.crear({
@@ -168,6 +170,7 @@ describe("RutasHoyUseCase", () => {
       email: "luis@toolboxjl.test",
       telefono: null,
       rol: "repartidor",
+      activo: true,
     });
     const orden = await ordenes.crear({
       clienteId: "cliente-2",

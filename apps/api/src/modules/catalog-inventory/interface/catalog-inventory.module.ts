@@ -6,9 +6,11 @@ import { BuscarCatalogoUseCase } from "../application/buscar-catalogo.use-case";
 import { ConsultarDisponibilidadUseCase } from "../application/consultar-disponibilidad.use-case";
 import { ListarMantenimientoUseCase } from "../application/listar-mantenimiento.use-case";
 import { ListarUnidadesUseCase } from "../application/listar-unidades.use-case";
+import { ObtenerAuditoriaRecienteUseCase } from "../application/obtener-auditoria-reciente.use-case";
 import { ObtenerHistorialUnidadUseCase } from "../application/obtener-historial-unidad.use-case";
 import { ObtenerMetricasInventarioUseCase } from "../application/obtener-metricas-inventario.use-case";
 import { ObtenerModeloPorIdUseCase } from "../application/obtener-modelo-por-id.use-case";
+import { ObtenerOcupacionAlmacenUseCase } from "../application/obtener-ocupacion-almacen.use-case";
 import { ObtenerUnidadUseCase } from "../application/obtener-unidad.use-case";
 import { RegistrarModeloUseCase } from "../application/registrar-modelo.use-case";
 import { RegistrarUnidadUseCase } from "../application/registrar-unidad.use-case";
@@ -75,6 +77,8 @@ import { InventoryController } from "./inventory.controller";
     ObtenerMetricasInventarioUseCase,
     ListarMantenimientoUseCase,
     ObtenerHistorialUnidadUseCase,
+    ObtenerOcupacionAlmacenUseCase,
+    ObtenerAuditoriaRecienteUseCase,
   ],
   exports: [
     TOOL_MODEL_REPOSITORY,
@@ -92,6 +96,8 @@ import { InventoryController } from "./inventory.controller";
     ObtenerMetricasInventarioUseCase,
     ListarMantenimientoUseCase,
     ObtenerHistorialUnidadUseCase,
+    ObtenerOcupacionAlmacenUseCase,
+    ObtenerAuditoriaRecienteUseCase,
   ],
 })
 export class CatalogInventoryModule {}

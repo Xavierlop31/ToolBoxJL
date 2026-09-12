@@ -21,10 +21,19 @@ export interface SupabaseJwtPayload {
   iat: number;
   app_metadata?: {
     rol?: unknown;
+    /**
+     * Épica 16 (Gestión de Usuarios y Roles): `false` si un admin desactivó
+     * la cuenta desde `public.users.activo` — ver `custom_access_token_hook`
+     * (migración `20260911000000_users_admin_management`). Ausente en
+     * cualquier JWT emitido antes de esa migración: `VerificarAccesoUseCase`
+     * lo trata como `true` (activo) en ese caso, nunca lo exige como el rol.
+     */
+    activo?: unknown;
     [clave: string]: unknown;
   };
   user_metadata?: {
     rol?: unknown;
+    activo?: unknown;
     [clave: string]: unknown;
   };
   [clave: string]: unknown;

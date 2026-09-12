@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { esRolValido, type UsuarioAutenticado } from "@toolboxjl/shared-types";
+import { CuentaDesactivadaError } from "../domain/errors/cuenta-desactivada.error";
 import { TokenInvalidoError } from "../domain/errors/token-invalido.error";
 import type { SupabaseJwtPayload } from "./supabase-jwt-payload";
 
@@ -41,6 +42,15 @@ export class VerificarAccesoUseCase {
           `Token Hook de Supabase esté configurado para poblar ese claim desde ` +
           `public.users.rol (docs/DESIGN.md §3, punto 7).`,
       );
+    }
+
+    // Épica 16: `false` explícito rechaza el acceso — ausente (JWT emitido
+    // antes de que existiera este claim) o `true` deja pasar. A diferencia
+    // del rol, NO se exige que el claim esté presente (ver doc-comment de
+    // `SupabaseJwtPayload.app_metadata.activo`).
+    const activoCrudo = payload.app_metadata?.activo ?? payload.user_metadata?.activo;
+    if (activoCrudo === false) {
+      throw new CuentaDesactivadaError();
     }
 
     const email = typeof payload.email === "string" ? payload.email : null;

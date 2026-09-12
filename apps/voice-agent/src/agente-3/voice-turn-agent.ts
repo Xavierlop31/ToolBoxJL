@@ -254,6 +254,13 @@ export async function ejecutarTurnoAgente3(
   const fetchImpl = deps.fetchImpl ?? fetch;
   const maxIteraciones = deps.maxIteraciones ?? 6;
 
+  // HU-14.3 (transcript conversacional en vivo, pedido directo del
+  // Arquitecto 2026-09-11): el turno del Cliente aparece en el widget apenas
+  // arranca este turno, sin esperar a la respuesta — mismo `emitirEvento` que
+  // ya usa `despacharToolUse` para los chips de HU-14.2, así toda la emisión
+  // de `VoiceAgentEvent` de un turno vive en este único lugar.
+  deps.emitirEvento?.({ type: "transcript", role: "user", text: transcripcionUsuario });
+
   let messages: Anthropic.MessageParam[] = [...mensajesPrevios, { role: "user", content: transcripcionUsuario }];
 
   let respuestaTexto = "";
@@ -284,9 +291,15 @@ export async function ejecutarTurnoAgente3(
     messages = [...messages, { role: "user", content: resultadoToolCalls.toolResults }];
   }
 
+  const respuestaFinal = respuestaTexto.trim() || "Perdón, no pude procesar tu pedido. ¿Podés repetirlo?";
+  // La respuesta del agente se emite ANTES de que `room-session.ts` la
+  // sintetice por TTS — el Cliente ve el texto en el widget mientras arranca
+  // el audio, no recién cuando termina de sonar.
+  deps.emitirEvento?.({ type: "transcript", role: "agent", text: respuestaFinal });
+
   return {
     mensajes: messages,
-    respuestaTexto: respuestaTexto.trim() || "Perdón, no pude procesar tu pedido. ¿Podés repetirlo?",
+    respuestaTexto: respuestaFinal,
     carritoActualizado,
     ultimaBusqueda,
     ultimaDisponibilidad,

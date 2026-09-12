@@ -66,23 +66,6 @@
   }
 }
 
-.btn-pay {
-  margin-left: auto;
-  padding: 6px 16px;
-  border: none;
-  border-radius: var(--tbjl-radius-md, 0.5rem);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  background-color: var(--tbjl-color-secondary-500, #e70012);
-  color: #ffffff;
-
-  &:hover {
-    background-color: var(--tbjl-color-secondary-600, #bc000c);
-  }
-}
-
 .pagination {
   display: flex;
   align-items: center;

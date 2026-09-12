@@ -165,3 +165,32 @@ export interface ToolModelOption {
   marca: string;
   categoria: string;
 }
+
+/**
+ * Fila de `GET /inventory/occupancy` — widget "Ocupación de Almacén" del
+ * rediseño del panel de Almacén (Issue #184-bis). Sin capacidad ni
+ * porcentaje: `cantidad` es el ocupado real, agrupado por
+ * `ToolUnit.ubicacion_bodega` (texto libre).
+ */
+export interface WarehouseOccupancy {
+  ubicacion: string;
+  cantidad: number;
+}
+
+/**
+ * Fila de `GET /inventory/audit-feed` — widget "Auditoría en Vivo". GAP
+ * documentado: solo cubre cambios de estado de unidad (`tool_unit_status_log`),
+ * no despachos/recepciones de Orders/Shipments.
+ */
+export interface AuditFeedEntry {
+  id: string;
+  unidad_id: string;
+  numero_serie: string;
+  modelo_nombre: string;
+  estado_anterior: EstadoUnidad | null;
+  estado_nuevo: EstadoUnidad;
+  created_at: string;
+  autor_id: string;
+  falla_reportada: string | null;
+  motivo_baja: string | null;
+}

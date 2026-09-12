@@ -1,23 +1,4 @@
 @if (isAuthenticated()) {
-  @if (pendingOrders().length > 0) {
-    <section class="active-orders card-industrial" data-testid="pending-orders">
-      <h2 class="section-title">Pedidos pendientes de pago</h2>
-      <ul class="orders-list">
-        @for (order of pendingOrders(); track order.id) {
-          <li class="order-row">
-            <div class="order-main">
-              <span class="order-date">{{ order.fecha_inicio | date: 'dd/MM/yyyy' }}</span>
-              <span class="order-tipo">{{ order.tipo === 'alquiler' ? 'Alquiler' : 'Venta' }}</span>
-              <button type="button" class="btn-pay" data-testid="pagar-pendiente" (click)="verDetalle(order)">
-                Pagar
-              </button>
-            </div>
-          </li>
-        }
-      </ul>
-    </section>
-  }
-
   <section class="active-orders card-industrial" data-testid="active-orders">
     <h2 class="section-title">Mis Pedidos Activos</h2>
 

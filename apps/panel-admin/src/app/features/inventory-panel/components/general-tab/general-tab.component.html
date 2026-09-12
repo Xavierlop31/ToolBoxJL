@@ -5,27 +5,93 @@
 
   @if (metrics(); as m) {
     <dl class="metrics-grid" data-testid="inventory-metrics">
-      <div class="metric-card" data-testid="metric-total">
-        <dt>Total Unidades Registradas</dt>
+      <div class="metric-card metric-total" data-testid="metric-total">
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>Total Unidades</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">precision_manufacturing</span>
+        </div>
         <dd>{{ m.total_unidades }}</dd>
       </div>
       <div class="metric-card metric-operativas" data-testid="metric-operativas">
-        <dt>Unidades Operativas</dt>
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>Operativas</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+        </div>
         <dd>{{ m.operativas }}</dd>
       </div>
       <div class="metric-card metric-alquiler" data-testid="metric-en-alquiler">
-        <dt>Unidades en Alquiler</dt>
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>En Alquiler</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+        </div>
         <dd>{{ m.en_alquiler }}</dd>
       </div>
       <div class="metric-card metric-mantenimiento" data-testid="metric-mantenimiento-baja">
-        <dt>Unidades en Mantenimiento/Baja</dt>
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>Mantenimiento / Baja</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">build</span>
+        </div>
         <dd>{{ m.en_mantenimiento_o_baja }}</dd>
       </div>
     </dl>
   }
 
-  <div class="toolbar">
+  <div class="widgets-row">
+    <div class="widget card-industrial" data-testid="occupancy-widget">
+      <div class="widget-title">
+        <span class="material-symbols-outlined" aria-hidden="true">warehouse</span>
+        <h2>Ocupación de Almacén</h2>
+      </div>
+      <p class="widget-hint">Unidades por ubicación registrada — sin capacidad total (no hay ese dato en el sistema).</p>
+      @if (loadingOccupancy()) {
+        <output>Cargando…</output>
+      }
+      @if (!loadingOccupancy() && occupancy().length === 0) {
+        <p class="empty-hint">Todavía no hay unidades con ubicación de bodega asignada.</p>
+      }
+      <ul class="occupancy-list">
+        @for (fila of occupancy(); track fila.ubicacion) {
+          <li class="occupancy-row" data-testid="occupancy-row">
+            <span class="occupancy-ubicacion">{{ fila.ubicacion }}</span>
+            <span class="occupancy-cantidad">{{ fila.cantidad }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="widget card-industrial" data-testid="audit-feed-widget">
+      <div class="widget-title">
+        <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
+        <h2>Auditoría en Vivo</h2>
+      </div>
+      <p class="widget-hint">Últimos cambios de estado de la flota. No incluye despachos/recepciones de pedidos.</p>
+      @if (loadingAuditFeed()) {
+        <output>Cargando…</output>
+      }
+      @if (!loadingAuditFeed() && auditFeed().length === 0) {
+        <p class="empty-hint">Sin eventos recientes.</p>
+      }
+      <ul class="audit-timeline">
+        @for (evento of auditFeed(); track evento.id) {
+          <li class="audit-entry" data-testid="audit-entry">
+            <span class="audit-date">{{ evento.created_at | date: 'dd/MM HH:mm' }}</span>
+            <p class="audit-unit">{{ evento.modelo_nombre }} <span class="audit-serial">({{ evento.numero_serie }})</span></p>
+            <p class="audit-transition">
+              {{ evento.estado_anterior || '—' }} <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span> {{ evento.estado_nuevo }}
+            </p>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="toolbar card-industrial">
     <div class="filters">
+      <span class="material-symbols-outlined search-icon" aria-hidden="true">qr_code_scanner</span>
       <input
         type="search"
         placeholder="Buscar por código QR, serial o modelo…"
@@ -47,7 +113,7 @@
 
     <button type="button" class="btn-primary" (click)="openRegisterModal()" data-testid="btn-registrar-unidad">
       <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
-      Generar Nuevo QR
+      Registrar Unidad (QR)
     </button>
   </div>
 
@@ -63,62 +129,56 @@
 
       @if (!loading() && !errorMessage()) {
         <div class="table-scroll">
-          <table class="inventory-table" data-testid="inventory-table">
-            <thead>
-              <tr>
-                <th>Código QR</th>
-                <th>Serial Fabricante</th>
-                <th>Modelo</th>
-                <th>Categoría</th>
-                <th>Estado</th>
-                <th>Ubicación en Bodega</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (unit of items(); track unit.id) {
-                <tr
-                  data-testid="inventory-row"
-                  [class.selected]="selectedUnit()?.id === unit.id"
-                  tabindex="0"
-                  (click)="selectUnit(unit)"
-                  (keydown.enter)="selectUnit(unit)"
-                >
-                  <td>
-                    <span class="material-symbols-outlined qr-icon" aria-hidden="true">qr_code_2</span>
-                  </td>
-                  <td>{{ unit.numero_serie }}</td>
-                  <td>{{ unit.modelo_nombre }}</td>
-                  <td>{{ unit.modelo_categoria }}</td>
-                  <td>
-                    <span class="badge" [class]="estadoBadgeClass(unit.estado_visualizacion)">
-                      {{ unit.estado_visualizacion }}
-                    </span>
-                  </td>
-                  <td>{{ unit.ubicacion_bodega || '—' }}</td>
-                  <td class="actions">
-                    <button type="button" (click)="$event.stopPropagation(); selectUnit(unit)" data-testid="btn-ver-qr">
-                      Ver QR
-                    </button>
-                    <button type="button" (click)="$event.stopPropagation(); selectUnit(unit)" data-testid="btn-historial">
-                      Historial
-                    </button>
-                    <button
-                      type="button"
-                      (click)="$event.stopPropagation(); cambiarEstado(unit)"
-                      data-testid="btn-cambiar-estado"
-                    >
-                      Cambiar Estado
-                    </button>
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="7">No se encontraron unidades con esos filtros.</td>
-                </tr>
-              }
-            </tbody>
-          </table>
+          <div class="units-grid" data-testid="inventory-table">
+            @for (unit of items(); track unit.id) {
+              <article
+                class="unit-card card-industrial"
+                data-testid="inventory-row"
+                [class.selected]="selectedUnit()?.id === unit.id"
+                tabindex="0"
+                (click)="selectUnit(unit)"
+                (keydown.enter)="selectUnit(unit)"
+              >
+                <div class="unit-card-header">
+                  <div class="unit-card-info">
+                    <span class="unit-categoria">{{ unit.modelo_categoria }}</span>
+                    <h3>{{ unit.modelo_nombre }}</h3>
+                    <span class="unit-serial">S/N: {{ unit.numero_serie }}</span>
+                  </div>
+                  <span class="material-symbols-outlined qr-icon" aria-hidden="true">qr_code_2</span>
+                </div>
+
+                <div class="unit-status-banner" [class]="estadoBadgeClass(unit.estado_visualizacion)">
+                  <span class="status-dot"></span>
+                  {{ unit.estado_visualizacion }}
+                </div>
+
+                <div class="unit-ubicacion">
+                  <span class="material-symbols-outlined" aria-hidden="true">place</span>
+                  {{ unit.ubicacion_bodega || 'Sin ubicación asignada' }}
+                </div>
+
+                <div class="unit-actions">
+                  <button type="button" (click)="$event.stopPropagation(); selectUnit(unit)" data-testid="btn-ver-qr">
+                    Ver QR
+                  </button>
+                  <button type="button" (click)="$event.stopPropagation(); selectUnit(unit)" data-testid="btn-historial">
+                    Hoja de Vida
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-cambiar-estado"
+                    (click)="$event.stopPropagation(); cambiarEstado(unit)"
+                    data-testid="btn-cambiar-estado"
+                  >
+                    Cambiar Estado
+                  </button>
+                </div>
+              </article>
+            } @empty {
+              <p class="empty-hint">No se encontraron unidades con esos filtros.</p>
+            }
+          </div>
         </div>
 
         @if (totalPages > 1) {

@@ -192,7 +192,7 @@ export class LivekitSessionService {
   private esVoiceAgentEvent(value: unknown): value is VoiceAgentEvent {
     if (typeof value !== 'object' || value === null || !('type' in value)) return false;
     const candidato = value as { type: unknown };
-    return candidato.type === 'greeting' || candidato.type === 'tool_status';
+    return candidato.type === 'greeting' || candidato.type === 'tool_status' || candidato.type === 'transcript';
   }
 
   private async teardown(): Promise<void> {

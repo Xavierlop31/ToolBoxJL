@@ -45,6 +45,12 @@ export class InMemoryToolUnitStatusLogRepository
     return this.entradas.filter((e) => e.unidad_id === unidadId);
   }
 
+  async listarRecientes(limit: number): Promise<ToolUnitStatusLogEntry[]> {
+    return [...this.entradas]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit);
+  }
+
   async contarTransicionesAMantenimiento(
     rango: RangoPeriodo,
   ): Promise<{ unidadId: string; cantidad: number }[]> {

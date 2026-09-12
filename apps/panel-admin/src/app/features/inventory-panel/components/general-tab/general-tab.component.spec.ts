@@ -4,9 +4,11 @@ import { of } from 'rxjs';
 import { GeneralTabComponent } from './general-tab.component';
 import { InventoryService } from '../../../../core/inventory/inventory.service';
 import {
+  AuditFeedEntry,
   InventoryMetrics,
   ListToolUnitsResult,
   ToolUnitListItem,
+  WarehouseOccupancy,
 } from '../../../../core/models/inventory.models';
 
 describe('GeneralTabComponent', () => {
@@ -40,6 +42,23 @@ describe('GeneralTabComponent', () => {
     en_mantenimiento_o_baja: 10,
   };
 
+  const mockOccupancy: WarehouseOccupancy[] = [{ ubicacion: 'Estante A', cantidad: 5 }];
+
+  const mockAuditFeed: AuditFeedEntry[] = [
+    {
+      id: 'log1',
+      unidad_id: 'u1',
+      numero_serie: 'SN-001',
+      modelo_nombre: 'Taladro Percutor',
+      estado_anterior: 'Nuevo',
+      estado_nuevo: 'Operativo',
+      created_at: '2026-09-11T10:00:00Z',
+      autor_id: 'a1',
+      falla_reportada: null,
+      motivo_baja: null,
+    },
+  ];
+
   beforeEach(() => {
     inventorySpy = jasmine.createSpyObj('InventoryService', [
       'listUnits',
@@ -49,9 +68,13 @@ describe('GeneralTabComponent', () => {
       'getUnitHistory',
       'updateUnitStatus',
       'createUnit',
+      'getOccupancy',
+      'getAuditFeed',
     ]);
     inventorySpy.listUnits.and.returnValue(of(mockResult));
     inventorySpy.getMetrics.and.returnValue(of(mockMetrics));
+    inventorySpy.getOccupancy.and.returnValue(of(mockOccupancy));
+    inventorySpy.getAuditFeed.and.returnValue(of(mockAuditFeed));
 
     TestBed.configureTestingModule({
       imports: [GeneralTabComponent],
@@ -60,6 +83,22 @@ describe('GeneralTabComponent', () => {
 
     fixture = TestBed.createComponent(GeneralTabComponent);
     component = fixture.componentInstance;
+  });
+
+  it('Issue #184-bis: carga la ocupación de almacén al iniciar', () => {
+    fixture.detectChanges();
+
+    expect(inventorySpy.getOccupancy).toHaveBeenCalled();
+    expect(component.occupancy()).toEqual(mockOccupancy);
+    expect(component.loadingOccupancy()).toBe(false);
+  });
+
+  it('Issue #184-bis: carga el feed de auditoría al iniciar', () => {
+    fixture.detectChanges();
+
+    expect(inventorySpy.getAuditFeed).toHaveBeenCalled();
+    expect(component.auditFeed()).toEqual(mockAuditFeed);
+    expect(component.loadingAuditFeed()).toBe(false);
   });
 
   it('HU-13.1: carga las 4 tarjetas de KPIs al iniciar', () => {
@@ -131,6 +170,7 @@ describe('GeneralTabComponent', () => {
       fixture.detectChanges();
       inventorySpy.listUnits.calls.reset();
       inventorySpy.getMetrics.calls.reset();
+      inventorySpy.getOccupancy.calls.reset();
 
       component.openRegisterModal();
       component.onUnitRegistered();
@@ -138,6 +178,9 @@ describe('GeneralTabComponent', () => {
       expect(component.showRegisterModal()).toBe(true);
       expect(inventorySpy.listUnits).toHaveBeenCalled();
       expect(inventorySpy.getMetrics).toHaveBeenCalled();
+      // Una unidad nueva puede traer ubicacion_bodega — refresca el widget
+      // de ocupación (Issue #184-bis).
+      expect(inventorySpy.getOccupancy).toHaveBeenCalled();
     },
   );
 
@@ -155,6 +198,7 @@ describe('GeneralTabComponent', () => {
     fixture.detectChanges();
     inventorySpy.listUnits.calls.reset();
     inventorySpy.getMetrics.calls.reset();
+    inventorySpy.getAuditFeed.calls.reset();
 
     component.cambiarEstado(mockUnit);
     expect(component.statusChangeUnit()).toEqual(mockUnit);
@@ -163,6 +207,9 @@ describe('GeneralTabComponent', () => {
     expect(component.statusChangeUnit()).toBeNull();
     expect(inventorySpy.listUnits).toHaveBeenCalled();
     expect(inventorySpy.getMetrics).toHaveBeenCalled();
+    // Un cambio de estado genera una entrada nueva en la hoja de vida —
+    // refresca el widget de auditoría (Issue #184-bis).
+    expect(inventorySpy.getAuditFeed).toHaveBeenCalled();
   });
 
   it('pagina hacia adelante y hacia atrás dentro del rango válido', () => {

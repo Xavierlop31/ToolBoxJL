@@ -13,8 +13,10 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type {
+  AuditoriaEvento,
   InventoryMetrics,
   ListarUnidadesResultado,
+  OcupacionUbicacion,
   ToolModel,
   ToolUnit,
   ToolUnitStatusLogEntry,
@@ -32,8 +34,10 @@ import {
 } from "../application/consultar-disponibilidad.use-case";
 import { ListarMantenimientoUseCase } from "../application/listar-mantenimiento.use-case";
 import { ListarUnidadesUseCase } from "../application/listar-unidades.use-case";
+import { ObtenerAuditoriaRecienteUseCase } from "../application/obtener-auditoria-reciente.use-case";
 import { ObtenerHistorialUnidadUseCase } from "../application/obtener-historial-unidad.use-case";
 import { ObtenerMetricasInventarioUseCase } from "../application/obtener-metricas-inventario.use-case";
+import { ObtenerOcupacionAlmacenUseCase } from "../application/obtener-ocupacion-almacen.use-case";
 import { ObtenerUnidadUseCase } from "../application/obtener-unidad.use-case";
 import { RegistrarModeloUseCase } from "../application/registrar-modelo.use-case";
 import { RegistrarUnidadUseCase } from "../application/registrar-unidad.use-case";
@@ -44,6 +48,7 @@ import { CheckAvailabilityQueryDto } from "./dto/check-availability.query.dto";
 import { CrearModeloDto } from "./dto/crear-modelo.dto";
 import { CrearUnidadDto } from "./dto/crear-unidad.dto";
 import { ListarUnidadesQueryDto } from "./dto/listar-unidades.query.dto";
+import { ObtenerAuditoriaRecienteQueryDto } from "./dto/obtener-auditoria-reciente.query.dto";
 
 /**
  * `/inventory/*` — todos protegidos por JWT de Supabase (`SupabaseAuthGuard`)
@@ -85,6 +90,8 @@ export class InventoryController {
     private readonly obtenerMetricasInventario: ObtenerMetricasInventarioUseCase,
     private readonly listarMantenimiento: ListarMantenimientoUseCase,
     private readonly obtenerHistorialUnidad: ObtenerHistorialUnidadUseCase,
+    private readonly obtenerOcupacionAlmacen: ObtenerOcupacionAlmacenUseCase,
+    private readonly obtenerAuditoriaReciente: ObtenerAuditoriaRecienteUseCase,
   ) {}
 
   @Roles("admin")
@@ -132,6 +139,22 @@ export class InventoryController {
   @Get("inventory/maintenance")
   async mantenimiento(): Promise<UnidadMantenimiento[]> {
     return this.listarMantenimiento.ejecutar();
+  }
+
+  /** `GET /inventory/occupancy` — widget "Ocupación de Almacén" (panel de Almacén). */
+  @Roles("almacenista", "admin")
+  @Get("inventory/occupancy")
+  async ocupacion(): Promise<OcupacionUbicacion[]> {
+    return this.obtenerOcupacionAlmacen.ejecutar();
+  }
+
+  /** `GET /inventory/audit-feed` — widget "Auditoría en Vivo" (panel de Almacén). */
+  @Roles("almacenista", "admin")
+  @Get("inventory/audit-feed")
+  async auditoriaReciente(
+    @Query() query: ObtenerAuditoriaRecienteQueryDto,
+  ): Promise<AuditoriaEvento[]> {
+    return this.obtenerAuditoriaReciente.ejecutar(query.limit);
   }
 
   @Roles("almacenista", "repartidor", "admin")

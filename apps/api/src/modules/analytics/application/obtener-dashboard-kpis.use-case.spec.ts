@@ -307,7 +307,7 @@ describe("ObtenerDashboardKpisUseCase", () => {
 
     it("genera UNA alerta 'media' para una orden con más de 5 días y hasta 15 días de atraso", async () => {
       const clienteId = randomUUID();
-      users.sembrar({ id: clienteId, nombre: "Juan Pérez", email: "juan@example.com", telefono: null, rol: "cliente" });
+      users.sembrar({ id: clienteId, nombre: "Juan Pérez", email: "juan@example.com", telefono: null, rol: "cliente", activo: true });
       const orden = await orders.crear(ordenInput({ clienteId, fechaFin: fechaIsoHaceDias(9) }));
       await orders.actualizarEstado(orden.id, "confirmada");
 
@@ -326,7 +326,7 @@ describe("ObtenerDashboardKpisUseCase", () => {
 
     it("genera UNA alerta 'alta' para una orden con más de 15 días de atraso", async () => {
       const clienteId = randomUUID();
-      users.sembrar({ id: clienteId, nombre: "Ana Gómez", email: "ana@example.com", telefono: null, rol: "cliente" });
+      users.sembrar({ id: clienteId, nombre: "Ana Gómez", email: "ana@example.com", telefono: null, rol: "cliente", activo: true });
       const orden = await orders.crear(ordenInput({ clienteId, fechaFin: fechaIsoHaceDias(19) }));
       await orders.actualizarEstado(orden.id, "en_curso");
 

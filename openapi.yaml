@@ -64,6 +64,14 @@ tags:
     description: Carrito de compras, usado también por el Agente 3 (tool calling).
   - name: Analítica
     description: KPIs de negocio para Gerencia (Fase 1 y Fase 2).
+  - name: Administración de Usuarios
+    description: >
+      Épica 16 (Gestión de Usuarios y Roles, pedido directo del Arquitecto
+      2026-09-11 — no viene del PRD original). Solo rol admin: listar
+      usuarios y cambiar su rol o estado (activo/inactivo). Un cambio de rol
+      o de estado solo se refleja en el JWT del usuario afectado en su
+      PRÓXIMO login/refresh (custom_access_token_hook) — no corta ninguna
+      sesión ya activa.
 
 security:
   - bearerAuth: []
@@ -481,6 +489,56 @@ paths:
                       properties:
                         modelo_nombre: { type: string }
                         ultimo_evento_mantenimiento: { $ref: "#/components/schemas/ToolUnitStatusLogEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inventory/occupancy:
+    get:
+      operationId: getInventoryOccupancy
+      summary: Ocupación de bodega por ubicación (panel de Almacén)
+      description: >
+        Cuenta unidades físicas agrupadas por `ubicacion_bodega` (texto
+        libre, ver `ToolUnit`) — las unidades sin ubicación asignada se
+        agrupan bajo `"Sin ubicación asignada"`. NO incluye capacidad ni
+        porcentaje: el sistema no tiene ningún concepto de capacidad total
+        de bodega/estante, solo reporta el ocupado real.
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      responses:
+        "200":
+          description: Conteo de unidades por ubicación de bodega.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OcupacionUbicacion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /inventory/audit-feed:
+    get:
+      operationId: getInventoryAuditFeed
+      summary: Últimos eventos de la hoja de vida de toda la flota (panel de Almacén)
+      description: >
+        Últimos `limit` (default 10, máx 50) eventos de
+        `tool_unit_status_log` de TODAS las unidades, orden cronológico
+        descendente, enriquecidos con `numero_serie`/`modelo_nombre`. GAP
+        documentado: solo cubre cambios de estado de unidad — NO incluye
+        despachos/recepciones de `Order`/`Shipment` (otro bounded context).
+      tags: [Catálogo e Inventario]
+      x-roles: [almacenista, admin]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200":
+          description: Últimos eventos de la hoja de vida de la flota.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditoriaEvento" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -1445,6 +1503,90 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      summary: Listar usuarios y su rol/estado actual (Épica 16)
+      description: >
+        Página de usuarios humanos de `public.users` (nunca las cuentas de
+        servicio de los Agentes de IA, que no son filas de esta tabla),
+        ordenados alfabéticamente por nombre.
+      tags: [Administración de Usuarios]
+      x-roles: [admin]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Búsqueda libre por nombre o email (contains, sin distinguir mayúsculas).
+        - name: rol
+          in: query
+          schema:
+            type: string
+            enum: [admin, gerente, almacenista, repartidor, cliente]
+        - name: activo
+          in: query
+          schema: { type: boolean }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Página de usuarios.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, page, pageSize]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/User" }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{id}:
+    patch:
+      operationId: updateAdminUser
+      summary: Cambiar el rol y/o el estado (activo/inactivo) de un usuario (Épica 16)
+      description: >
+        Al menos uno de `rol`/`activo` es requerido. Un admin no puede
+        modificar su propio usuario por acá (400) — evita que se
+        auto-demueva o desactive por error y quede sin acceso al panel que
+        necesitaría para revertirlo. El cambio se refleja en el JWT del
+        usuario afectado recién en su PRÓXIMO login/refresh
+        (custom_access_token_hook) — no se corta ninguna sesión ya activa.
+      tags: [Administración de Usuarios]
+      x-roles: [admin]
+      parameters:
+        - $ref: "#/components/parameters/idPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rol:
+                  type: string
+                  enum: [admin, gerente, almacenista, repartidor, cliente]
+                activo: { type: boolean }
+      responses:
+        "200":
+          description: Usuario actualizado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1635,8 +1777,38 @@ components:
           nullable: true
           description: "Sprint 14 (HU-13.3). Solo poblado cuando estado_nuevo = Dado de Baja."
 
+    OcupacionUbicacion:
+      type: object
+      properties:
+        ubicacion: { type: string, description: "'Sin ubicación asignada' si la unidad no tiene ubicacion_bodega." }
+        cantidad: { type: integer }
+
+    AuditoriaEvento:
+      type: object
+      description: "ToolUnitStatusLogEntry enriquecido con numero_serie/modelo_nombre, ver GET /inventory/audit-feed."
+      properties:
+        id: { type: string, format: uuid }
+        unidad_id: { type: string, format: uuid }
+        numero_serie: { type: string }
+        modelo_nombre: { type: string }
+        estado_anterior:
+          type: string
+          nullable: true
+          enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+        estado_nuevo:
+          type: string
+          enum: [Nuevo, Excelente, Operativo, En Mantenimiento, Dado de Baja]
+        created_at: { type: string, format: date-time }
+        autor_id: { type: string, format: uuid }
+        falla_reportada: { type: string, nullable: true }
+        motivo_baja: { type: string, nullable: true }
+
     User:
       type: object
+      description: >
+        Fila de `public.users`. Hasta Épica 16 este schema no lo referenciaba
+        ningún endpoint (documentaba solo el diccionario de datos) — ahora es
+        el contrato real de `GET /admin/users` / `PATCH /admin/users/{id}`.
       properties:
         id: { type: string, format: uuid }
         rol:
@@ -1644,11 +1816,13 @@ components:
           enum: [admin, gerente, almacenista, repartidor, cliente]
         nombre: { type: string }
         email: { type: string, format: email }
-        telefono: { type: string }
-        tipo_cliente:
-          type: string
-          nullable: true
-          enum: [B2C, B2B]
+        telefono: { type: string, nullable: true }
+        activo:
+          type: boolean
+          description: >
+            `false` = el usuario no puede volver a iniciar sesión (aplica
+            desde su próximo login/refresh de token, no corta una sesión ya
+            activa).
 
     Order:
       type: object

@@ -31,6 +31,13 @@ import { AdminShellComponent } from './admin-shell.component';
  * URL en vez de un tab-click interno. `inventario` queda como redirect para
  * no romper enlaces/bookmarks viejos (el PRD también la llama
  * "/logistica/inventario").
+ *
+ * `usuarios` (Épica 16 — Gestión de Usuarios y Roles, pedido directo del
+ * Arquitecto 2026-09-11, no viene del PRD original): a diferencia del resto
+ * de estas rutas, solo rol admin — el backend rechaza con 403 a cualquier
+ * otro rol (`@Roles("admin")`, ver `AdminUsersController`), este componente
+ * no duplica esa verificación del lado del cliente (mismo criterio
+ * documentado en su propio doc-comment).
  */
 export const remoteRoutes: Routes = [
   {
@@ -111,6 +118,14 @@ export const remoteRoutes: Routes = [
         title: 'Rutas del día — ToolBox JL',
       },
       { path: 'inventario', redirectTo: 'almacen' },
+      {
+        path: 'usuarios',
+        loadComponent: () =>
+          import('../features/users-management/users-management.component').then(
+            (m) => m.UsersManagementComponent,
+          ),
+        title: 'Usuarios — ToolBox JL',
+      },
     ],
   },
 ];

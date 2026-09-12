@@ -8,6 +8,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { InventoryService } from './inventory.service';
 import {
+  AuditFeedEntry,
   CreateToolUnitInput,
   InventoryMetrics,
   ListToolUnitsResult,
@@ -15,6 +16,7 @@ import {
   ToolModelOption,
   ToolUnit,
   ToolUnitStatusLogEntry,
+  WarehouseOccupancy,
 } from '../models/inventory.models';
 
 describe('InventoryService', () => {
@@ -206,6 +208,48 @@ describe('InventoryService', () => {
     const req = httpMock.expectOne(`${environment.apiUrl}/inventory/maintenance`);
     expect(req.request.method).toBe('GET');
     req.flush(mockMaintenance);
+  });
+
+  it('Issue #184-bis: obtiene la ocupación de almacén por ubicación', () => {
+    const mockOccupancy: WarehouseOccupancy[] = [
+      { ubicacion: 'Estante A', cantidad: 12 },
+      { ubicacion: 'Sin ubicación asignada', cantidad: 3 },
+    ];
+
+    service.getOccupancy().subscribe((occupancy) => {
+      expect(occupancy).toEqual(mockOccupancy);
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/inventory/occupancy`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockOccupancy);
+  });
+
+  it('Issue #184-bis: obtiene el feed de auditoría reciente, con y sin límite explícito', () => {
+    const mockFeed: AuditFeedEntry[] = [
+      {
+        id: 'log1',
+        unidad_id: 'u1',
+        numero_serie: 'SN-001',
+        modelo_nombre: 'Taladro Percutor',
+        estado_anterior: 'Operativo',
+        estado_nuevo: 'En Mantenimiento',
+        created_at: '2026-09-11T10:00:00Z',
+        autor_id: 'a1',
+        falla_reportada: 'No enciende',
+        motivo_baja: null,
+      },
+    ];
+
+    service.getAuditFeed().subscribe((feed) => {
+      expect(feed).toEqual(mockFeed);
+    });
+    httpMock.expectOne(`${environment.apiUrl}/inventory/audit-feed`).flush(mockFeed);
+
+    service.getAuditFeed(5).subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/inventory/audit-feed?limit=5`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockFeed);
   });
 
   it('HU-13.2: lista los modelos disponibles para el selector de alta de unidad', () => {

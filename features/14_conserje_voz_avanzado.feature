@@ -21,3 +21,21 @@ Característica: Conserje de Voz AI Avanzado
     Entonces el widget muestra un chip animado con el nombre de la acción en curso (ej. "Buscando en catálogo…", "Verificando disponibilidad…", "Agregando al carrito…")
     Y al concluir cada llamada, el chip pasa a estado completado
     Y el agente responde por voz con los datos exactos.
+
+  # HU-14.3/14.4: pedido directo del Arquitecto 2026-09-11, no vienen del PRD
+  # original de la Épica 14 — hasta acá el widget solo mostraba el saludo
+  # (HU-14.1), nunca lo que decía el Cliente ni las respuestas posteriores
+  # del agente, y cerrar la sesión nunca llevaba al Cliente a ver su carrito.
+  @HU-14.3 @TranscriptConversacional
+  Escenario: El widget refleja el diálogo completo, no solo el saludo
+    Dado que le pido al agente: "Necesito una cortadora de concreto para Bogotá por 4 días"
+    Cuando el agente procesa el turno y ejecuta las funciones de backend
+    Entonces mi turno queda registrado en el transcript del widget apenas se transcribe, antes de que el agente termine de responder
+    Y la respuesta final del agente también aparece en el transcript, en orden después de mi turno y de los chips de acción.
+
+  @HU-14.4 @NavegacionAlCarrito
+  Escenario: Al cerrar el widget tras agregar artículos, el Cliente es llevado a ver su carrito
+    Dado que el Agente 3 agregó al menos un artículo a mi carrito durante la sesión de voz
+    Cuando cierro el widget de voz porque no voy a agregar nada más
+    Entonces se me navega a la página "/carrito"
+    Y puedo visualizar ahí los artículos que el agente agregó.

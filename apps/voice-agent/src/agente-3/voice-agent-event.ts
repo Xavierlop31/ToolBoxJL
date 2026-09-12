@@ -1,8 +1,11 @@
 /**
  * Eventos que el Agente 3 publica por el canal de DATOS de LiveKit
  * (`LocalParticipant.publishData`, `@livekit/rtc-node`) hacia el widget del
- * Portal Cliente — HU-14.1 (saludo proactivo) y HU-14.2 (chips de
- * tool-calling en vivo), Épica 14, Sprint 13 (Fase 3).
+ * Portal Cliente — HU-14.1 (saludo proactivo), HU-14.2 (chips de
+ * tool-calling en vivo) y HU-14.3 (transcript conversacional completo,
+ * pedido directo del Arquitecto 2026-09-11 — hasta entonces el widget solo
+ * mostraba el saludo, nunca lo que decía el Cliente ni las respuestas
+ * posteriores del agente), Épica 14, Sprint 13 (Fase 3).
  *
  * Hasta Sprint 9 el widget de voz solo usaba el canal de AUDIO de LiveKit —
  * ver el ADR de alcance en `apps/portal-cliente/.../voice-widget.component.ts`
@@ -10,12 +13,19 @@
  * el primer uso del canal de datos: el frontend lo decodifica en
  * `LivekitSessionService` (`RoomEvent.DataReceived`).
  *
+ * `transcript` se emite dos veces por turno (`manejarTurno`, `room-session.ts`):
+ * una con `role: "user"` apenas Deepgram devuelve la transcripción, y otra con
+ * `role: "agent"` con el texto final de Claude, antes de sintetizarlo por TTS
+ * — así el widget puede mostrar el turno del Cliente ANTES de que la
+ * respuesta hablada empiece a reproducirse, no recién al final.
+ *
  * Formato: JSON serializado a `Uint8Array` (UTF-8) — la forma exacta que
  * exige `LocalParticipant.publishData(data: Uint8Array, options)`.
  */
 export type VoiceAgentEvent =
   | { type: "greeting"; text: string }
-  | { type: "tool_status"; tool: string; label: string; status: "running" | "done" };
+  | { type: "tool_status"; tool: string; label: string; status: "running" | "done" }
+  | { type: "transcript"; role: "user" | "agent"; text: string };
 
 /** Serializa un `VoiceAgentEvent` a la forma exacta que espera `LocalParticipant.publishData`. */
 export function codificarVoiceAgentEvent(evento: VoiceAgentEvent): Uint8Array {
