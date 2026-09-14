@@ -1,0 +1,161 @@
+<main class="almacen-dashboard">
+  <div class="page-header">
+    <h1>Almacén</h1>
+    <a routerLink="/logistica/registrar-unidad" class="btn-primary" data-testid="btn-registrar-unidad">
+      <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
+      Registrar Unidad
+    </a>
+  </div>
+
+  @if (loadingMetrics()) {
+    <output>Cargando métricas…</output>
+  }
+
+  @if (metrics(); as m) {
+    <dl class="metrics-grid" data-testid="inventory-metrics">
+      <div class="metric-card metric-total" data-testid="metric-total">
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>Total Unidades</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">precision_manufacturing</span>
+        </div>
+        <dd>{{ m.total_unidades }}</dd>
+      </div>
+      <div class="metric-card metric-operativas" data-testid="metric-operativas">
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>Operativas</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+        </div>
+        <dd>{{ m.operativas }}</dd>
+      </div>
+      <div class="metric-card metric-alquiler" data-testid="metric-en-alquiler">
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>En Alquiler</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+        </div>
+        <dd>{{ m.en_alquiler }}</dd>
+      </div>
+      <div class="metric-card metric-mantenimiento" data-testid="metric-mantenimiento-baja">
+        <div class="metric-top-bar"></div>
+        <div class="metric-header">
+          <dt>Mantenimiento / Baja</dt>
+          <span class="material-symbols-outlined" aria-hidden="true">build</span>
+        </div>
+        <dd>{{ m.en_mantenimiento_o_baja }}</dd>
+      </div>
+    </dl>
+  }
+
+  <div class="widgets-row">
+    <div class="widget" data-testid="occupancy-widget">
+      <div class="widget-title">
+        <span class="material-symbols-outlined" aria-hidden="true">warehouse</span>
+        <h2>Ocupación de Almacén</h2>
+      </div>
+      <p class="widget-hint">Unidades por ubicación registrada — sin capacidad total (no hay ese dato en el sistema).</p>
+      @if (loadingOccupancy()) {
+        <output>Cargando…</output>
+      }
+      @if (!loadingOccupancy() && occupancy().length === 0) {
+        <p class="empty-hint">Todavía no hay unidades con ubicación de bodega asignada.</p>
+      }
+      <ul class="occupancy-list">
+        @for (fila of occupancy(); track fila.ubicacion) {
+          <li class="occupancy-row" data-testid="occupancy-row">
+            <span class="occupancy-ubicacion">{{ fila.ubicacion }}</span>
+            <span class="occupancy-cantidad">{{ fila.cantidad }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="widget" data-testid="audit-feed-widget">
+      <div class="widget-title">
+        <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
+        <h2>Auditoría en Vivo</h2>
+      </div>
+      <p class="widget-hint">Últimos cambios de estado de la flota. No incluye despachos/recepciones de pedidos.</p>
+      @if (loadingAuditFeed()) {
+        <output>Cargando…</output>
+      }
+      @if (!loadingAuditFeed() && auditFeed().length === 0) {
+        <p class="empty-hint">Sin eventos recientes.</p>
+      }
+      <ul class="audit-timeline">
+        @for (evento of auditFeed(); track evento.id) {
+          <li class="audit-entry" data-testid="audit-entry">
+            <span class="audit-date">{{ evento.created_at | date: 'dd/MM HH:mm' }}</span>
+            <p class="audit-unit">{{ evento.modelo_nombre }} <span class="audit-serial">({{ evento.numero_serie }})</span></p>
+            <p class="audit-transition">
+              {{ evento.estado_anterior || '—' }} <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span> {{ evento.estado_nuevo }}
+            </p>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+
+  <input
+    type="search"
+    placeholder="Buscar por código QR, serial o modelo…"
+    [formControl]="searchControl"
+    data-testid="unit-search"
+    aria-label="Buscar por código QR, serial o modelo"
+  />
+
+  @if (loading()) {
+    <output>Cargando unidades…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <div class="units-grid" data-testid="inventory-table">
+      @for (unit of items(); track unit.id) {
+        <article class="unit-card" data-testid="inventory-row">
+          <div class="unit-card-header">
+            <div class="unit-card-info">
+              <span class="unit-categoria">{{ unit.modelo_categoria }}</span>
+              <h3>{{ unit.modelo_nombre }}</h3>
+              <span class="unit-serial">S/N: {{ unit.numero_serie }}</span>
+            </div>
+            <span class="material-symbols-outlined qr-icon" aria-hidden="true">qr_code_2</span>
+          </div>
+
+          <div class="unit-status-banner" [class]="estadoBadgeClass(unit.estado_visualizacion)">
+            <span class="status-dot"></span>
+            {{ unit.estado_visualizacion }}
+          </div>
+
+          <div class="unit-ubicacion">
+            <span class="material-symbols-outlined" aria-hidden="true">place</span>
+            {{ unit.ubicacion_bodega || 'Sin ubicación asignada' }}
+          </div>
+
+          <div class="unit-actions">
+            <a [routerLink]="['/logistica/unidades', unit.id]" class="btn-secondary" data-testid="btn-historial">
+              Hoja de Vida
+            </a>
+            <a [routerLink]="['/logistica/unidades', unit.id]" class="btn-cambiar-estado" data-testid="btn-cambiar-estado">
+              Cambiar Estado
+            </a>
+          </div>
+        </article>
+      } @empty {
+        <p class="empty-hint">No se encontraron unidades con esos filtros.</p>
+      }
+    </div>
+
+    @if (totalPages > 1) {
+      <nav class="pagination" aria-label="Paginación de inventario">
+        <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">Anterior</button>
+        <span>Página {{ page() }} de {{ totalPages }}</span>
+        <button type="button" [disabled]="page() >= totalPages" (click)="goToPage(page() + 1)">Siguiente</button>
+      </nav>
+    }
+  }
+</main>

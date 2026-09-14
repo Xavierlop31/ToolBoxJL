@@ -127,3 +127,45 @@ export interface ToolModelOption {
   marca: string;
   categoria: string;
 }
+
+/**
+ * `GET /inventory/metrics` — las 4 tarjetas de KPIs. Pedido directo del
+ * Arquitecto (2026-09-14): el dashboard de Almacén (antes solo en
+ * `apps/panel-admin`, `/admin/almacen` — ese rol no le llega al Almacenista)
+ * pasa a vivir también acá, como una pestaña más del nav operativo.
+ */
+export interface InventoryMetrics {
+  total_unidades: number;
+  operativas: number;
+  en_alquiler: number;
+  en_mantenimiento_o_baja: number;
+}
+
+/**
+ * Fila de `GET /inventory/occupancy` — widget "Ocupación de Almacén". Sin
+ * capacidad ni porcentaje: el sistema no tiene ningún concepto de capacidad
+ * total de bodega (decisión del Arquitecto, 2026-09-11) — `cantidad` es el
+ * ocupado real, agrupado por `ubicacion_bodega` (texto libre).
+ */
+export interface WarehouseOccupancy {
+  ubicacion: string;
+  cantidad: number;
+}
+
+/**
+ * Fila de `GET /inventory/audit-feed` — widget "Auditoría en Vivo". GAP
+ * documentado: solo cubre cambios de estado de unidad
+ * (`tool_unit_status_log`), no despachos/recepciones de Orders/Shipments.
+ */
+export interface AuditFeedEntry {
+  id: string;
+  unidad_id: string;
+  numero_serie: string;
+  modelo_nombre: string;
+  estado_anterior: EstadoUnidad | null;
+  estado_nuevo: EstadoUnidad;
+  created_at: string;
+  autor_id: string;
+  falla_reportada: string | null;
+  motivo_baja: string | null;
+}
