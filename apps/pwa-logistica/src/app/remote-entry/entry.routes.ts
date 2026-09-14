@@ -25,13 +25,18 @@ import { LogisticaShellComponent } from './logistica-shell.component';
  * acá también. Reusa `unidades/:id` (`UnitDetailComponent`, ya tiene hoja de
  * vida + cambio de estado en una sola pantalla) para las acciones de cada
  * tarjeta en vez de reimplementar modales.
+ *
+ * `almacen` es además la página de aterrizaje del módulo (pedido explícito
+ * del Arquitecto, 2026-09-14): el resto de los módulos (Escanear QR,
+ * Unidades, Registrar Unidad, Mi Ruta de Hoy) se acceden desde el subnav,
+ * ya no son el default al entrar a `/logistica`.
  */
 export const remoteRoutes: Routes = [
   {
     path: '',
     component: LogisticaShellComponent,
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'escanear' },
+      { path: '', pathMatch: 'full', redirectTo: 'almacen' },
       {
         path: 'almacen',
         loadComponent: () =>
