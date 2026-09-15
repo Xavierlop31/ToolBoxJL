@@ -1,3 +1,5 @@
+@use '../../shared/styles/unit-page';
+
 .almacen-dashboard {
   max-width: 1440px;
   margin: 0 auto;
@@ -15,31 +17,6 @@ output {
   color: var(--tbjl-color-neutral-500, #757588);
   font-size: 14px;
   margin: 8px 0;
-}
-
-.form-error {
-  color: var(--tbjl-color-error, #ba1a1a);
-  background-color: #ffdad6;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-
-  h1 {
-    font-size: 24px;
-    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
-    font-weight: 700;
-    color: var(--tbjl-color-neutral-900, #161c21);
-    margin: 0;
-  }
 }
 
 .btn-primary {
