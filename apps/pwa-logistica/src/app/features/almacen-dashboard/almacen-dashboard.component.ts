@@ -4,6 +4,8 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { PaginatedUnitSearchBase } from '../../core/inventory/paginated-unit-search.base';
+import { PaginationNavComponent } from '../../shared/components/pagination-nav.component';
+import { UnitSearchInputComponent } from '../../shared/components/unit-search-input.component';
 import {
   AuditFeedEntry,
   EstadoVisualizacion,
@@ -45,7 +47,7 @@ const ESTADO_BADGE_CLASS: Record<EstadoVisualizacion, string> = {
 @Component({
   selector: 'app-almacen-dashboard',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DatePipe],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, UnitSearchInputComponent, PaginationNavComponent],
   templateUrl: './almacen-dashboard.component.html',
   styleUrl: './almacen-dashboard.component.scss',
 })

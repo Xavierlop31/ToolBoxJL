@@ -3,6 +3,8 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { PaginatedUnitSearchBase } from '../../core/inventory/paginated-unit-search.base';
+import { PaginationNavComponent } from '../../shared/components/pagination-nav.component';
+import { UnitSearchInputComponent } from '../../shared/components/unit-search-input.component';
 
 /**
  * HU-13.1 reducido (Issue #147 — trabajo adicional del mismo sprint): lista
@@ -19,7 +21,7 @@ import { PaginatedUnitSearchBase } from '../../core/inventory/paginated-unit-sea
 @Component({
   selector: 'app-unit-list',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, UnitSearchInputComponent, PaginationNavComponent],
   templateUrl: './unit-list.component.html',
   styleUrl: './unit-list.component.scss',
 })
