@@ -7,7 +7,12 @@ import { provideHttpClient } from '@angular/common/http';
 
 import { environment } from '../../../environments/environment';
 import { InventoryService } from './inventory.service';
-import { ToolUnit } from '../models/inventory.models';
+import {
+  AuditFeedEntry,
+  InventoryMetrics,
+  ToolUnit,
+  WarehouseOccupancy,
+} from '../models/inventory.models';
 
 describe('InventoryService', () => {
   let service: InventoryService;
@@ -138,5 +143,61 @@ describe('InventoryService', () => {
         categoria: 'Eléctrica',
       },
     ]);
+  });
+
+  it('Issue #184-bis: obtiene las 4 tarjetas de KPIs del dashboard "Almacén"', () => {
+    const mockMetrics: InventoryMetrics = {
+      total_unidades: 100,
+      operativas: 60,
+      en_alquiler: 30,
+      en_mantenimiento_o_baja: 10,
+    };
+
+    service.getMetrics().subscribe((metrics) => {
+      expect(metrics).toEqual(mockMetrics);
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/inventory/metrics`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockMetrics);
+  });
+
+  it('Issue #184-bis: obtiene la ocupación de almacén por ubicación', () => {
+    const mockOccupancy: WarehouseOccupancy[] = [{ ubicacion: 'Estante A', cantidad: 12 }];
+
+    service.getOccupancy().subscribe((occupancy) => {
+      expect(occupancy).toEqual(mockOccupancy);
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/inventory/occupancy`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockOccupancy);
+  });
+
+  it('Issue #184-bis: obtiene el feed de auditoría reciente, con y sin límite explícito', () => {
+    const mockFeed: AuditFeedEntry[] = [
+      {
+        id: 'log1',
+        unidad_id: mockUnit.id,
+        numero_serie: mockUnit.numero_serie,
+        modelo_nombre: 'Taladro Percutor',
+        estado_anterior: 'Nuevo',
+        estado_nuevo: 'Operativo',
+        created_at: '2026-09-14T10:00:00Z',
+        autor_id: 'autor-1',
+        falla_reportada: null,
+        motivo_baja: null,
+      },
+    ];
+
+    service.getAuditFeed().subscribe();
+    httpMock.expectOne(`${environment.apiUrl}/inventory/audit-feed`).flush(mockFeed);
+
+    service.getAuditFeed(5).subscribe((feed) => {
+      expect(feed).toEqual(mockFeed);
+    });
+    const req = httpMock.expectOne(`${environment.apiUrl}/inventory/audit-feed?limit=5`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockFeed);
   });
 });

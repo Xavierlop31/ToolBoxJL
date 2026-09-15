@@ -4,13 +4,20 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 /**
  * Shell layout para PWA Logística (remotes montados vía Native Federation).
  * Provee la barra de navegación operativa para que almacenistas y repartidores
- * puedan alternar entre Escaneo QR, Unidades, Registrar Unidad, Hoja de Vida
- * y Mi Ruta del Día.
+ * puedan alternar entre Almacén, Escaneo QR, Unidades, Registrar Unidad,
+ * Hoja de Vida y Mi Ruta del Día.
  *
  * "Unidades" y "Registrar Unidad" son el espejo reducido de HU-13.1/HU-13.2
  * (Sprint 14, Fase 3, Épica 13, Issues #147/#148) para el rol almacenista —
  * el guard `/admin` de `apps/shell` no deja pasar ese rol, así que este
- * remote expone su propia versión reducida (sin KPIs) en vez de ampliarlo.
+ * remote expone su propia versión de esas pantallas en vez de ampliar
+ * `apps/panel-admin`.
+ *
+ * "Almacén" (pedido directo del Arquitecto, 2026-09-14, Issue #184-bis):
+ * el dashboard con las 4 tarjetas de KPIs + "Ocupación de Almacén"/
+ * "Auditoría en Vivo", antes SOLO en `apps/panel-admin` (`/admin/almacen`)
+ * — decisión revertida explícitamente: el Almacenista SÍ necesita verlo,
+ * acá, no solo en el panel de administración al que no tiene acceso.
  */
 @Component({
   selector: 'app-logistica-shell',
@@ -27,6 +34,10 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
           </div>
 
           <div class="subnav-tabs">
+            <a routerLink="/logistica/almacen" routerLinkActive="active" class="subnav-tab">
+              <span class="material-symbols-outlined">warehouse</span>
+              <span>Almacén</span>
+            </a>
             <a routerLink="/logistica/escanear" routerLinkActive="active" class="subnav-tab">
               <span class="material-symbols-outlined">qr_code_scanner</span>
               <span>Escanear QR</span>

@@ -4,13 +4,16 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  AuditFeedEntry,
   CreateUnitInput,
+  InventoryMetrics,
   ListToolUnitsParams,
   ListToolUnitsResult,
   ToolModelOption,
   ToolUnit,
   ToolUnitStatusLogEntry,
   UpdateUnitStatusInput,
+  WarehouseOccupancy,
 } from '../models/inventory.models';
 
 /**
@@ -21,11 +24,17 @@ import {
  *
  * Sprint 14 (Fase 3, Épica 13, Issues #147/#148) agrega `createUnit`
  * (`POST /inventory/units`, HU-13.2) y `listUnits`
- * (`GET /inventory/units`, HU-13.1 reducido — solo lista/búsqueda, sin las
- * tarjetas de KPIs de `apps/panel-admin`) y `listModelOptions`
+ * (`GET /inventory/units`, HU-13.1 reducido) y `listModelOptions`
  * (`GET /catalog/search`, público) para el selector de modelo del alta de
  * unidad. `x-roles` de `/inventory/units` (ambos verbos) es
  * `[almacenista, admin]`.
+ *
+ * `getMetrics`/`getOccupancy`/`getAuditFeed` (pedido del Arquitecto,
+ * 2026-09-14): el dashboard "Almacén" con KPIs + widgets, antes SOLO en
+ * `apps/panel-admin` (`/admin/almacen`, rol al que el Almacenista no tiene
+ * acceso — ver `logistica-shell.component.ts`), pasa a vivir también acá.
+ * Mismos 3 endpoints que ya consume `panel-admin`, mismo `x-roles`
+ * `[almacenista, admin]` — no hizo falta abrir ningún permiso nuevo.
  */
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
@@ -75,5 +84,24 @@ export class InventoryService {
    */
   listModelOptions(): Observable<ToolModelOption[]> {
     return this.http.get<ToolModelOption[]>(`${this.baseUrl}/catalog/search`);
+  }
+
+  /** `GET /inventory/metrics` — las 4 tarjetas de KPIs del dashboard "Almacén". */
+  getMetrics(): Observable<InventoryMetrics> {
+    return this.http.get<InventoryMetrics>(`${this.baseUrl}/inventory/metrics`);
+  }
+
+  /** `GET /inventory/occupancy` — widget "Ocupación de Almacén". */
+  getOccupancy(): Observable<WarehouseOccupancy[]> {
+    return this.http.get<WarehouseOccupancy[]>(`${this.baseUrl}/inventory/occupancy`);
+  }
+
+  /** `GET /inventory/audit-feed` — widget "Auditoría en Vivo". */
+  getAuditFeed(limit?: number): Observable<AuditFeedEntry[]> {
+    let httpParams = new HttpParams();
+    if (limit) httpParams = httpParams.set('limit', limit);
+    return this.http.get<AuditFeedEntry[]>(`${this.baseUrl}/inventory/audit-feed`, {
+      params: httpParams,
+    });
   }
 }
