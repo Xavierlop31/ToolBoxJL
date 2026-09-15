@@ -1,19 +1,15 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Component, signal } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
-import { InventoryService } from '../../core/inventory/inventory.service';
+import { PaginatedUnitSearchBase } from '../../core/inventory/paginated-unit-search.base';
 import {
   AuditFeedEntry,
   EstadoVisualizacion,
   InventoryMetrics,
-  ToolUnitListItem,
   WarehouseOccupancy,
 } from '../../core/models/inventory.models';
-
-const PAGE_SIZE = 20;
 
 const ESTADO_BADGE_CLASS: Record<EstadoVisualizacion, string> = {
   Operativo: 'badge-operativo',
@@ -41,6 +37,10 @@ const ESTADO_BADGE_CLASS: Record<EstadoVisualizacion, string> = {
  * mockup): el escaneo QR real de este remote ya vive en su propia pestaña
  * (`/logistica/escanear`, `QrScannerComponent`) — acá el buscador es texto
  * libre (mismo criterio que `UnitListComponent`).
+ *
+ * La búsqueda/paginación de unidades reusa `PaginatedUnitSearchBase`
+ * (compartida con `UnitListComponent`) — acá solo se agregan los 3 widgets
+ * nuevos (métricas, ocupación, auditoría).
  */
 @Component({
   selector: 'app-almacen-dashboard',
@@ -49,12 +49,7 @@ const ESTADO_BADGE_CLASS: Record<EstadoVisualizacion, string> = {
   templateUrl: './almacen-dashboard.component.html',
   styleUrl: './almacen-dashboard.component.scss',
 })
-export class AlmacenDashboardComponent implements OnInit, OnDestroy {
-  private readonly inventory = inject(InventoryService);
-  private readonly destroy$ = new Subject<void>();
-
-  readonly searchControl = new FormControl('', { nonNullable: true });
-
+export class AlmacenDashboardComponent extends PaginatedUnitSearchBase {
   readonly loadingMetrics = signal(true);
   readonly metrics = signal<InventoryMetrics | null>(null);
 
@@ -64,30 +59,11 @@ export class AlmacenDashboardComponent implements OnInit, OnDestroy {
   readonly loadingAuditFeed = signal(true);
   readonly auditFeed = signal<AuditFeedEntry[]>([]);
 
-  readonly loading = signal(true);
-  readonly errorMessage = signal<string | null>(null);
-  readonly items = signal<ToolUnitListItem[]>([]);
-  readonly total = signal(0);
-  readonly page = signal(1);
-  readonly pageSize = PAGE_SIZE;
-
-  ngOnInit(): void {
+  override ngOnInit(): void {
     this.loadMetrics();
     this.loadOccupancy();
     this.loadAuditFeed();
-    this.load();
-
-    this.searchControl.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.page.set(1);
-        this.load();
-      });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+    super.ngOnInit();
   }
 
   loadMetrics(): void {
@@ -121,35 +97,6 @@ export class AlmacenDashboardComponent implements OnInit, OnDestroy {
       },
       error: () => this.loadingAuditFeed.set(false),
     });
-  }
-
-  load(): void {
-    this.loading.set(true);
-    this.errorMessage.set(null);
-
-    this.inventory
-      .listUnits({ q: this.searchControl.value || undefined, page: this.page(), pageSize: this.pageSize })
-      .subscribe({
-        next: (result) => {
-          this.items.set(result.items);
-          this.total.set(result.total);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.errorMessage.set('No pudimos cargar el inventario de unidades.');
-          this.loading.set(false);
-        },
-      });
-  }
-
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.total() / this.pageSize));
-  }
-
-  goToPage(page: number): void {
-    if (page < 1 || page > this.totalPages) return;
-    this.page.set(page);
-    this.load();
   }
 
   estadoBadgeClass(estado: EstadoVisualizacion): string {

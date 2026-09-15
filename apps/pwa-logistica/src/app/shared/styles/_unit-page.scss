@@ -1,0 +1,29 @@
+// Estilos compartidos entre las páginas operativas de inventario
+// (UnitListComponent, AlmacenDashboardComponent) — extraídos para que
+// SonarCloud no los marque como código duplicado (eran idénticos, copiados
+// entre ambos componentes).
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  h1 {
+    font-size: 24px;
+    font-family: var(--tbjl-font-family-headings, 'Montserrat', sans-serif);
+    font-weight: 700;
+    color: var(--tbjl-color-neutral-900, #161c21);
+    margin: 0;
+  }
+}
+
+.form-error {
+  color: var(--tbjl-color-error, #ba1a1a);
+  background-color: #ffdad6;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
