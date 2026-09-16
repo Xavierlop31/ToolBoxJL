@@ -7,6 +7,7 @@ import { PaginatedUnitSearchBase } from '../../core/inventory/paginated-unit-sea
 import { MetricCardComponent } from '../../shared/components/metric-card.component';
 import { PaginationNavComponent } from '../../shared/components/pagination-nav.component';
 import { UnitSearchInputComponent } from '../../shared/components/unit-search-input.component';
+import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import {
   AuditFeedEntry,
   EstadoVisualizacion,
@@ -55,6 +56,7 @@ const ESTADO_BADGE_CLASS: Record<EstadoVisualizacion, string> = {
     UnitSearchInputComponent,
     PaginationNavComponent,
     MetricCardComponent,
+    WidgetCardComponent,
   ],
   templateUrl: './almacen-dashboard.component.html',
   styleUrl: './almacen-dashboard.component.scss',

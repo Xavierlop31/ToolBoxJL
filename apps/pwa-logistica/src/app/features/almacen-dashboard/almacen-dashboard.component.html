@@ -45,12 +45,12 @@
   }
 
   <div class="widgets-row">
-    <div class="widget" data-testid="occupancy-widget">
-      <div class="widget-title">
-        <span class="material-symbols-outlined" aria-hidden="true">warehouse</span>
-        <h2>Ocupación de Almacén</h2>
-      </div>
-      <p class="widget-hint">Unidades por ubicación registrada — sin capacidad total (no hay ese dato en el sistema).</p>
+    <app-widget-card
+      testId="occupancy-widget"
+      icon="warehouse"
+      title="Ocupación de Almacén"
+      hint="Unidades por ubicación registrada — sin capacidad total (no hay ese dato en el sistema)."
+    >
       @if (loadingOccupancy()) {
         <output>Cargando…</output>
       }
@@ -65,14 +65,14 @@
           </li>
         }
       </ul>
-    </div>
+    </app-widget-card>
 
-    <div class="widget" data-testid="audit-feed-widget">
-      <div class="widget-title">
-        <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
-        <h2>Auditoría en Vivo</h2>
-      </div>
-      <p class="widget-hint">Últimos cambios de estado de la flota. No incluye despachos/recepciones de pedidos.</p>
+    <app-widget-card
+      testId="audit-feed-widget"
+      icon="timeline"
+      title="Auditoría en Vivo"
+      hint="Últimos cambios de estado de la flota. No incluye despachos/recepciones de pedidos."
+    >
       @if (loadingAuditFeed()) {
         <output>Cargando…</output>
       }
@@ -90,7 +90,7 @@
           </li>
         }
       </ul>
-    </div>
+    </app-widget-card>
   </div>
 
   <app-unit-search-input [control]="searchControl" />
