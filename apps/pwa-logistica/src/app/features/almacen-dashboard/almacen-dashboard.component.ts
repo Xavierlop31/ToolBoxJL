@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, WritableSignal, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 
 import { PaginatedUnitSearchBase } from '../../core/inventory/paginated-unit-search.base';
 import { MetricCardComponent } from '../../shared/components/metric-card.component';
@@ -79,35 +80,30 @@ export class AlmacenDashboardComponent extends PaginatedUnitSearchBase {
   }
 
   loadMetrics(): void {
-    this.loadingMetrics.set(true);
-    this.inventory.getMetrics().subscribe({
-      next: (metrics) => {
-        this.metrics.set(metrics);
-        this.loadingMetrics.set(false);
-      },
-      error: () => this.loadingMetrics.set(false),
-    });
+    this.loadInto(this.loadingMetrics, this.metrics, this.inventory.getMetrics());
   }
 
   loadOccupancy(): void {
-    this.loadingOccupancy.set(true);
-    this.inventory.getOccupancy().subscribe({
-      next: (occupancy) => {
-        this.occupancy.set(occupancy);
-        this.loadingOccupancy.set(false);
-      },
-      error: () => this.loadingOccupancy.set(false),
-    });
+    this.loadInto(this.loadingOccupancy, this.occupancy, this.inventory.getOccupancy());
   }
 
   loadAuditFeed(): void {
-    this.loadingAuditFeed.set(true);
-    this.inventory.getAuditFeed().subscribe({
-      next: (feed) => {
-        this.auditFeed.set(feed);
-        this.loadingAuditFeed.set(false);
+    this.loadInto(this.loadingAuditFeed, this.auditFeed, this.inventory.getAuditFeed());
+  }
+
+  /** Patrón compartido por las 3 cargas de widgets de arriba: activa un signal de loading, pide el dato y lo setea (o apaga el loading si falla). */
+  private loadInto<T>(
+    loading: WritableSignal<boolean>,
+    data: { set(value: T): void },
+    source: Observable<T>,
+  ): void {
+    loading.set(true);
+    source.subscribe({
+      next: (value) => {
+        data.set(value);
+        loading.set(false);
       },
-      error: () => this.loadingAuditFeed.set(false),
+      error: () => loading.set(false),
     });
   }
 
