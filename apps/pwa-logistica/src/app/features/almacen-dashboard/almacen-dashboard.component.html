@@ -12,7 +12,7 @@
   }
 
   @if (metrics(); as m) {
-    <dl class="metrics-grid" data-testid="inventory-metrics">
+    <div class="metrics-grid" data-testid="inventory-metrics">
       <app-metric-card
         variantClass="metric-total"
         testId="metric-total"
@@ -41,7 +41,7 @@
         icon="build"
         [value]="m.en_mantenimiento_o_baja"
       />
-    </dl>
+    </div>
   }
 
   <div class="widgets-row">
