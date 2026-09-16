@@ -13,38 +13,34 @@
 
   @if (metrics(); as m) {
     <dl class="metrics-grid" data-testid="inventory-metrics">
-      <div class="metric-card metric-total" data-testid="metric-total">
-        <div class="metric-top-bar"></div>
-        <div class="metric-header">
-          <dt>Total Unidades</dt>
-          <span class="material-symbols-outlined" aria-hidden="true">precision_manufacturing</span>
-        </div>
-        <dd>{{ m.total_unidades }}</dd>
-      </div>
-      <div class="metric-card metric-operativas" data-testid="metric-operativas">
-        <div class="metric-top-bar"></div>
-        <div class="metric-header">
-          <dt>Operativas</dt>
-          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
-        </div>
-        <dd>{{ m.operativas }}</dd>
-      </div>
-      <div class="metric-card metric-alquiler" data-testid="metric-en-alquiler">
-        <div class="metric-top-bar"></div>
-        <div class="metric-header">
-          <dt>En Alquiler</dt>
-          <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
-        </div>
-        <dd>{{ m.en_alquiler }}</dd>
-      </div>
-      <div class="metric-card metric-mantenimiento" data-testid="metric-mantenimiento-baja">
-        <div class="metric-top-bar"></div>
-        <div class="metric-header">
-          <dt>Mantenimiento / Baja</dt>
-          <span class="material-symbols-outlined" aria-hidden="true">build</span>
-        </div>
-        <dd>{{ m.en_mantenimiento_o_baja }}</dd>
-      </div>
+      <app-metric-card
+        variantClass="metric-total"
+        testId="metric-total"
+        label="Total Unidades"
+        icon="precision_manufacturing"
+        [value]="m.total_unidades"
+      />
+      <app-metric-card
+        variantClass="metric-operativas"
+        testId="metric-operativas"
+        label="Operativas"
+        icon="check_circle"
+        [value]="m.operativas"
+      />
+      <app-metric-card
+        variantClass="metric-alquiler"
+        testId="metric-en-alquiler"
+        label="En Alquiler"
+        icon="local_shipping"
+        [value]="m.en_alquiler"
+      />
+      <app-metric-card
+        variantClass="metric-mantenimiento"
+        testId="metric-mantenimiento-baja"
+        label="Mantenimiento / Baja"
+        icon="build"
+        [value]="m.en_mantenimiento_o_baja"
+      />
     </dl>
   }
 
