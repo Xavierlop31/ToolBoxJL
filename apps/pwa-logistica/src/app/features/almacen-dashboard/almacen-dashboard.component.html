@@ -1,0 +1,152 @@
+<main class="almacen-dashboard">
+  <div class="page-header">
+    <h1>Almacén</h1>
+    <a routerLink="/logistica/registrar-unidad" class="btn-primary" data-testid="btn-registrar-unidad">
+      <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
+      Registrar Unidad
+    </a>
+  </div>
+
+  @if (loadingMetrics()) {
+    <output>Cargando métricas…</output>
+  }
+
+  @if (metrics(); as m) {
+    <div class="metrics-grid" data-testid="inventory-metrics">
+      <app-metric-card
+        variantClass="metric-total"
+        testId="metric-total"
+        label="Total Unidades"
+        icon="precision_manufacturing"
+        [value]="m.total_unidades"
+      />
+      <app-metric-card
+        variantClass="metric-operativas"
+        testId="metric-operativas"
+        label="Operativas"
+        icon="check_circle"
+        [value]="m.operativas"
+      />
+      <app-metric-card
+        variantClass="metric-alquiler"
+        testId="metric-en-alquiler"
+        label="En Alquiler"
+        icon="local_shipping"
+        [value]="m.en_alquiler"
+      />
+      <app-metric-card
+        variantClass="metric-mantenimiento"
+        testId="metric-mantenimiento-baja"
+        label="Mantenimiento / Baja"
+        icon="build"
+        [value]="m.en_mantenimiento_o_baja"
+      />
+    </div>
+  }
+
+  <div class="widgets-row">
+    <app-widget-card
+      testId="occupancy-widget"
+      icon="warehouse"
+      title="Ocupación de Almacén"
+      hint="Unidades por ubicación registrada — sin capacidad total (no hay ese dato en el sistema)."
+    >
+      @if (loadingOccupancy()) {
+        <output>Cargando…</output>
+      }
+      @if (!loadingOccupancy() && occupancy().length === 0) {
+        <p class="empty-hint">Todavía no hay unidades con ubicación de bodega asignada.</p>
+      }
+      <ul class="occupancy-list">
+        @for (fila of occupancy(); track fila.ubicacion) {
+          <li class="occupancy-row" data-testid="occupancy-row">
+            <span class="occupancy-ubicacion">{{ fila.ubicacion }}</span>
+            <span class="occupancy-cantidad">{{ fila.cantidad }}</span>
+          </li>
+        }
+      </ul>
+    </app-widget-card>
+
+    <app-widget-card
+      testId="audit-feed-widget"
+      icon="timeline"
+      title="Auditoría en Vivo"
+      hint="Últimos cambios de estado de la flota. No incluye despachos/recepciones de pedidos."
+    >
+      @if (loadingAuditFeed()) {
+        <output>Cargando…</output>
+      }
+      @if (!loadingAuditFeed() && auditFeed().length === 0) {
+        <p class="empty-hint">Sin eventos recientes.</p>
+      }
+      <ul class="audit-timeline">
+        @for (evento of auditFeed(); track evento.id) {
+          <li class="audit-entry" data-testid="audit-entry">
+            <span class="audit-date">{{ evento.created_at | date: 'dd/MM HH:mm' }}</span>
+            <p class="audit-unit">{{ evento.modelo_nombre }} <span class="audit-serial">({{ evento.numero_serie }})</span></p>
+            <p class="audit-transition">
+              {{ evento.estado_anterior || '—' }} <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span> {{ evento.estado_nuevo }}
+            </p>
+          </li>
+        }
+      </ul>
+    </app-widget-card>
+  </div>
+
+  <app-unit-search-input [control]="searchControl" />
+
+  @if (loading()) {
+    <output>Cargando unidades…</output>
+  }
+
+  @if (errorMessage()) {
+    <p class="form-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (!loading() && !errorMessage()) {
+    <div class="units-grid" data-testid="inventory-table">
+      @for (unit of items(); track unit.id) {
+        <article class="unit-card" data-testid="inventory-row">
+          <div class="unit-card-header">
+            <div class="unit-card-info">
+              <span class="unit-categoria">{{ unit.modelo_categoria }}</span>
+              <h3>{{ unit.modelo_nombre }}</h3>
+              <span class="unit-serial">S/N: {{ unit.numero_serie }}</span>
+            </div>
+            <span class="material-symbols-outlined qr-icon" aria-hidden="true">qr_code_2</span>
+          </div>
+
+          <div class="unit-status-banner" [class]="estadoBadgeClass(unit.estado_visualizacion)">
+            <span class="status-dot"></span>
+            {{ unit.estado_visualizacion }}
+          </div>
+
+          <div class="unit-ubicacion">
+            <span class="material-symbols-outlined" aria-hidden="true">place</span>
+            {{ unit.ubicacion_bodega || 'Sin ubicación asignada' }}
+          </div>
+
+          <div class="unit-actions">
+            <a [routerLink]="['/logistica/unidades', unit.id]" class="btn-secondary" data-testid="btn-historial">
+              Hoja de Vida
+            </a>
+            <a [routerLink]="['/logistica/unidades', unit.id]" class="btn-cambiar-estado" data-testid="btn-cambiar-estado">
+              Cambiar Estado
+            </a>
+          </div>
+        </article>
+      } @empty {
+        <p class="empty-hint">No se encontraron unidades con esos filtros.</p>
+      }
+    </div>
+
+    @if (totalPages > 1) {
+      <app-pagination-nav
+        [page]="page()"
+        [totalPages]="totalPages"
+        ariaLabel="Paginación de inventario"
+        (pageChange)="goToPage($event)"
+      />
+    }
+  }
+</main>

@@ -16,15 +16,35 @@ import { LogisticaShellComponent } from './logistica-shell.component';
  * desde Sprint 7, HU-8.2 (Repartidor ve su ruta del día ya optimizada) —
  * features/08_agente_ruteo.feature — y, desde Sprint 14 (Fase 3, Épica 13,
  * Issues #147/#148), HU-13.2 (alta de unidad + QR) y HU-13.1 reducido
- * (lista/búsqueda simple de unidades, sin KPIs) —
- * features/13_gestion_inventario_qr.feature.
+ * (lista/búsqueda simple de unidades) — features/13_gestion_inventario_qr.feature.
+ *
+ * `almacen` (pedido directo del Arquitecto, 2026-09-14, Issue #184-bis): el
+ * dashboard con KPIs + widgets de "Ocupación de Almacén"/"Auditoría en
+ * Vivo" — antes SOLO en `apps/panel-admin` (`/admin/almacen`, rol al que el
+ * Almacenista no le llega, ver `logistica-shell.component.ts`) — se agrega
+ * acá también. Reusa `unidades/:id` (`UnitDetailComponent`, ya tiene hoja de
+ * vida + cambio de estado en una sola pantalla) para las acciones de cada
+ * tarjeta en vez de reimplementar modales.
+ *
+ * `almacen` es además la página de aterrizaje del módulo (pedido explícito
+ * del Arquitecto, 2026-09-14): el resto de los módulos (Escanear QR,
+ * Unidades, Registrar Unidad, Mi Ruta de Hoy) se acceden desde el subnav,
+ * ya no son el default al entrar a `/logistica`.
  */
 export const remoteRoutes: Routes = [
   {
     path: '',
     component: LogisticaShellComponent,
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'escanear' },
+      { path: '', pathMatch: 'full', redirectTo: 'almacen' },
+      {
+        path: 'almacen',
+        loadComponent: () =>
+          import('../features/almacen-dashboard/almacen-dashboard.component').then(
+            (m) => m.AlmacenDashboardComponent,
+          ),
+        title: 'Almacén — ToolBox JL',
+      },
       {
         path: 'escanear',
         loadComponent: () =>
