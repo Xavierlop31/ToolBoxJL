@@ -58,6 +58,26 @@
           <span class="material-symbols-outlined kpi-icon">trending_up</span>
         </header>
         <p class="kpi-value">{{ formatPct(k.roi_promedio_pct) }}</p>
+        @if (formatAmortizacion(k.amortizacion_meses); as amortizacion) {
+          <p class="kpi-subtitulo" data-testid="kpi-amortizacion">{{ amortizacion }}</p>
+        }
+      </article>
+
+      <article class="kpi-card" data-testid="kpi-equipos-activos">
+        <header class="kpi-card-header">
+          <span class="kpi-label">Utilización de Inventario</span>
+          <span class="material-symbols-outlined kpi-icon">construction</span>
+        </header>
+        <p class="kpi-value">{{ formatPct(k.ocupacion_global_pct) }}</p>
+        <p class="kpi-subtitulo">{{ formatEntero(k.equipos_activos) }} equipos activos</p>
+      </article>
+
+      <article class="kpi-card" data-testid="kpi-entregas-exitosas">
+        <header class="kpi-card-header">
+          <span class="kpi-label">Tasa de Entregas Exitosas</span>
+          <span class="material-symbols-outlined kpi-icon">local_shipping</span>
+        </header>
+        <p class="kpi-value">{{ formatPct(k.tasa_entregas_exitosas_pct) }}</p>
       </article>
     </section>
 
@@ -92,6 +112,93 @@
           }
         </ul>
       }
+    </section>
+
+    <section class="analytics-widgets" data-testid="dashboard-widgets">
+      <article class="rentabilidad-panel" data-testid="rentabilidad-top-bottom">
+        <header class="panel-header">
+          <h2>Análisis de Rentabilidad por Equipo</h2>
+          <div class="metrica-toggle" role="group" aria-label="Métrica del ranking de rentabilidad">
+            <button
+              type="button"
+              [class.active]="rankingMetrica() === 'roi_pct'"
+              (click)="rankingMetrica.set('roi_pct')"
+              data-testid="ranking-metrica-roi"
+            >
+              ROI %
+            </button>
+            <button
+              type="button"
+              [class.active]="rankingMetrica() === 'margen_neto_cop'"
+              (click)="rankingMetrica.set('margen_neto_cop')"
+              data-testid="ranking-metrica-margen"
+            >
+              Margen Neto COP
+            </button>
+          </div>
+        </header>
+
+        @if (roiErrorMessage()) {
+          <p class="form-error" role="alert">{{ roiErrorMessage() }}</p>
+        } @else {
+          <div class="rentabilidad-columnas">
+            <div class="rentabilidad-columna">
+              <h3>Top 5</h3>
+              <ol data-testid="rentabilidad-top5">
+                @for (item of top5(); track item.modelo_id) {
+                  <li>
+                    <span class="rentabilidad-modelo">{{ item.modelo_nombre }}</span>
+                    <span class="rentabilidad-valor" [class.rentabilidad-valor-negativo]="rankingValorNegativo(item)">
+                      {{ formatRankingValor(item) }}
+                    </span>
+                  </li>
+                } @empty {
+                  <li class="rentabilidad-vacio">Sin datos de ROI todavía.</li>
+                }
+              </ol>
+            </div>
+            <div class="rentabilidad-columna">
+              <h3>Bottom 5</h3>
+              <ol data-testid="rentabilidad-bottom5">
+                @for (item of bottom5(); track item.modelo_id) {
+                  <li>
+                    <span class="rentabilidad-modelo">{{ item.modelo_nombre }}</span>
+                    <span class="rentabilidad-valor" [class.rentabilidad-valor-negativo]="rankingValorNegativo(item)">
+                      {{ formatRankingValor(item) }}
+                    </span>
+                  </li>
+                } @empty {
+                  <li class="rentabilidad-vacio">Sin datos de ROI todavía.</li>
+                }
+              </ol>
+            </div>
+          </div>
+        }
+      </article>
+
+      <article class="mantenimiento-widget" data-testid="alertas-mantenimiento">
+        <h2>Alertas de Mantenimiento</h2>
+
+        @if (maintenanceErrorMessage()) {
+          <p class="form-error" role="alert">{{ maintenanceErrorMessage() }}</p>
+        } @else if (alertasMantenimiento().length === 0) {
+          <p class="mantenimiento-empty" data-testid="alertas-mantenimiento-empty">
+            No hay unidades en mantenimiento o dadas de baja.
+          </p>
+        } @else {
+          <ul class="mantenimiento-list" data-testid="alertas-mantenimiento-list">
+            @for (unidad of alertasMantenimiento(); track unidad.id) {
+              <li class="mantenimiento-item" data-testid="alerta-mantenimiento-row">
+                <span class="badge" [class]="maintenanceBadgeClass(unidad)">{{ unidad.estado }}</span>
+                <p class="mantenimiento-unidad">{{ unidad.modelo_nombre }} — {{ unidad.numero_serie }}</p>
+                @if (unidad.ultimo_evento_mantenimiento?.falla_reportada) {
+                  <p class="mantenimiento-falla">{{ unidad.ultimo_evento_mantenimiento?.falla_reportada }}</p>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </article>
     </section>
   }
 </main>

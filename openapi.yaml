@@ -1697,6 +1697,28 @@ components:
             Promedio simple de roi_pct entre los modelos con costo_compra
             cargado (mismo criterio de exclusión que GET /analytics/roi). 0
             si ningún modelo tiene costo_compra cargado.
+        equipos_activos:
+          type: integer
+          description: "Unidades con estado distinto de \"Dado de Baja\" — flota que sigue en servicio."
+        tasa_entregas_exitosas_pct:
+          type: number
+          description: >
+            Σ entregas_exitosas / Σ ruta_asignada de TODOS los repartidores
+            del mes calendario actual, x 100 (mismos componentes de GET
+            /analytics/delivery-productivity, agregados). 0 si no hubo
+            paradas asignadas en el mes.
+        amortizacion_meses:
+          type: number
+          nullable: true
+          description: >
+            Meses estimados para recuperar la inversión total en
+            herramientas al ritmo de ingresos actual: Costo de Compra total
+            / Ingreso mensual promedio desde la unidad más antigua de los
+            modelos con costo_compra cargado. null (no un número inventado)
+            si no hay modelos con costo_compra válido, si no hay ninguna
+            unidad de esos modelos de la que tomar una fecha de referencia,
+            si esa unidad tiene menos de 1 mes de historial, o si el
+            ingreso mensual promedio calculado es 0.
         alertas_criticas:
           type: array
           items: { $ref: "#/components/schemas/AlertaCritica" }

@@ -61,6 +61,9 @@ describe('AnalyticsService', () => {
     ocupacion_global_pct: 68.3,
     moras_recaudadas_mes: 450_000,
     roi_promedio_pct: 24.1,
+    equipos_activos: 2_410,
+    tasa_entregas_exitosas_pct: 94.2,
+    amortizacion_meses: 18,
     alertas_criticas: [
       {
         tipo: 'mora_cliente',
