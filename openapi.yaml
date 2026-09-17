@@ -473,8 +473,10 @@ paths:
         datos de taller de su entrada más reciente en la hoja de vida
         (`ToolUnitStatusLogEntry` — ver los campos nuevos de mantenimiento
         en ese schema, poblados por `PATCH /inventory/units/{id}/status`).
+        `x-roles` amplía a `gerente` (Issue #184-ter): el Gerente ve la
+        pestaña "Mantenimiento" en su panel reducido.
       tags: [Catálogo e Inventario]
-      x-roles: [almacenista, admin]
+      x-roles: [almacenista, gerente, admin]
       responses:
         "200":
           description: Unidades en taller o dadas de baja, con su último evento de mantenimiento.
@@ -608,9 +610,11 @@ paths:
         `En Mantenimiento`; `motivo_baja` solo aplica cuando `estado_nuevo`
         es `Dado de Baja` — el backend no los exige por tipo (quedarían
         `null` en la hoja de vida si se omiten), la UI del panel admin es
-        quien los pide como obligatorios en cada caso.
+        quien los pide como obligatorios en cada caso. `x-roles` amplía a
+        `gerente` (Issue #184-ter) por el mismo motivo que
+        `GET /inventory/maintenance`.
       tags: [Catálogo e Inventario]
-      x-roles: [almacenista, repartidor, admin]
+      x-roles: [almacenista, repartidor, gerente, admin]
       parameters:
         - $ref: "#/components/parameters/idPath"
       requestBody:

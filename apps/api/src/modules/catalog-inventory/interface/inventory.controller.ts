@@ -135,7 +135,7 @@ export class InventoryController {
     return this.obtenerMetricasInventario.ejecutar();
   }
 
-  @Roles("almacenista", "admin")
+  @Roles("almacenista", "gerente", "admin")
   @Get("inventory/maintenance")
   async mantenimiento(): Promise<UnidadMantenimiento[]> {
     return this.listarMantenimiento.ejecutar();
@@ -188,7 +188,7 @@ export class InventoryController {
     }
   }
 
-  @Roles("almacenista", "repartidor", "admin")
+  @Roles("almacenista", "repartidor", "gerente", "admin")
   @Patch("inventory/units/:id/status")
   async actualizarEstado(
     @Param("id", new ParseUUIDPipe()) id: string,
