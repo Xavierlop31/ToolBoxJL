@@ -3,6 +3,8 @@ import type { Dinero } from "@toolboxjl/shared-types";
 /** Datos agregados de un modelo necesarios para calcular su ROI. */
 export interface ModeloConIngresos {
   modeloId: string;
+  /** `tool_models.nombre` — para que el frontend muestre el nombre del modelo en vez del GUID. */
+  modeloNombre: string;
   /**
    * `tool_models.costo_compra` — campo opcional del contrato
    * (`ToolModelInput`, openapi.yaml): puede ser `null` si nunca se cargó.

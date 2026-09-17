@@ -58,7 +58,10 @@ Then(
  * escenario — esta UI solo lo consulta y muestra.
  */
 const roiModeloId = '11111111-1111-1111-1111-111111111111';
-const mockRoi = [{ modelo_id: roiModeloId, roi_pct: 42.5 }];
+const roiModeloNombre = 'Taladro Percutor 20V';
+const mockRoi = [
+  { modelo_id: roiModeloId, modelo_nombre: roiModeloNombre, roi_pct: 42.5, margen_neto_cop: 425_000 },
+];
 
 When('consulto el ROI de un modelo específico', async ({ page }) => {
   await page.route('**/api/v1/analytics/roi*', async (route) => {
@@ -79,7 +82,9 @@ When('consulto el ROI de un modelo específico', async ({ page }) => {
 Then(
   String.raw`el sistema calcula \(Ingresos Acumulados − Costo de Compra\) \/ Costo de Compra × 100 para ese modelo`,
   async ({ page }) => {
-    await expect(page.getByTestId('roi-row')).toContainText(roiModeloId);
+    // Bug corregido: la fila mostraba el GUID del modelo — ahora muestra su
+    // nombre legible (modelo_nombre, resuelto contra tool_models.nombre).
+    await expect(page.getByTestId('roi-row')).toContainText(roiModeloNombre);
     await expect(page.getByTestId('roi-row')).toContainText(/42[.,]5%/);
   },
 );
@@ -91,7 +96,7 @@ Then(
  */
 const mockUtilization = {
   utilizacion_global_pct: 68.3,
-  por_modelo: [{ modelo_id: roiModeloId, utilizacion_pct: 72.1 }],
+  por_modelo: [{ modelo_id: roiModeloId, modelo_nombre: roiModeloNombre, utilizacion_pct: 72.1 }],
 };
 
 const mockProductivity = [

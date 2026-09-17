@@ -31,10 +31,18 @@
   }
 
   @if (!loading() && !errorMessage()) {
+    <div class="roi-toolbar">
+      <app-sort-toggle
+        [direction]="sortDirection()"
+        (directionChange)="sortDirection.set($event)"
+        data-testid="roi-sort-toggle"
+      />
+    </div>
+
     <ul class="roi-list" data-testid="roi-list">
-      @for (item of roi(); track item.modelo_id) {
+      @for (item of roiOrdenado(); track item.modelo_id) {
         <li class="roi-item" data-testid="roi-row">
-          <span class="roi-modelo">{{ item.modelo_id }}</span>
+          <span class="roi-modelo">{{ item.modelo_nombre }}</span>
           <span class="roi-pct">{{ formatPct(item.roi_pct) }}</span>
         </li>
       } @empty {

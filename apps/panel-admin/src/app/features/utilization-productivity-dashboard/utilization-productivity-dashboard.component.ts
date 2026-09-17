@@ -1,12 +1,14 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { AnalyticsService } from '../../core/analytics/analytics.service';
 import {
   DeliveryProductivity,
+  UtilizationByModelo,
   UtilizationSummary,
 } from '../../core/models/analytics.models';
+import { SortDirection, SortToggleComponent } from '../../shared/components/sort-toggle/sort-toggle.component';
 
 /**
  * Dashboard combinado de utilización de inventario y productividad de
@@ -29,7 +31,7 @@ import {
 @Component({
   selector: 'app-utilization-productivity-dashboard',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, SortToggleComponent],
   templateUrl: './utilization-productivity-dashboard.component.html',
   styleUrl: './utilization-productivity-dashboard.component.scss',
 })
@@ -48,6 +50,16 @@ export class UtilizationProductivityDashboardComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly utilization = signal<UtilizationSummary | null>(null);
   readonly productivity = signal<DeliveryProductivity[]>([]);
+
+  /** Bug reportado: los modelos se listaban sin poder ordenarlos por utilización. */
+  readonly sortDirection = signal<SortDirection>('desc');
+  readonly porModeloOrdenado = computed<UtilizationByModelo[]>(() => {
+    const dir = this.sortDirection();
+    const items = this.utilization()?.por_modelo ?? [];
+    return [...items].sort((a, b) =>
+      dir === 'desc' ? b.utilizacion_pct - a.utilizacion_pct : a.utilizacion_pct - b.utilizacion_pct,
+    );
+  });
 
   ngOnInit(): void {
     this.consultar();

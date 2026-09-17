@@ -3,6 +3,8 @@ import type { RangoPeriodo } from "./revenue.repository";
 /** Días-unidad agregados de un modelo para calcular su tasa de utilización del mes. */
 export interface UtilizacionPorModelo {
   modeloId: string;
+  /** `tool_models.nombre` — para que el frontend muestre el nombre del modelo en vez del GUID. */
+  modeloNombre: string;
   diasAlquilada: number;
   diasDisponibles: number;
 }

@@ -1434,7 +1434,9 @@ paths:
                   type: object
                   properties:
                     modelo_id: { type: string, format: uuid }
+                    modelo_nombre: { type: string, description: "tool_models.nombre — nombre legible del modelo (no el GUID)." }
                     roi_pct: { type: number }
+                    margen_neto_cop: { type: integer, description: "Ingresos Acumulados − Costo de Compra, en COP." }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -1460,6 +1462,7 @@ paths:
                       type: object
                       properties:
                         modelo_id: { type: string, format: uuid }
+                        modelo_nombre: { type: string, description: "tool_models.nombre — nombre legible del modelo (no el GUID)." }
                         utilizacion_pct: { type: number }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }

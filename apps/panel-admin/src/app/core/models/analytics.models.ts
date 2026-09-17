@@ -24,7 +24,10 @@ export interface RevenueBreakdown {
  */
 export interface RoiItem {
   modelo_id: string;
+  modelo_nombre: string;
   roi_pct: number;
+  /** Ingresos Acumulados − Costo de Compra, en COP. */
+  margen_neto_cop: number;
 }
 
 /**
@@ -34,6 +37,7 @@ export interface RoiItem {
  */
 export interface UtilizationByModelo {
   modelo_id: string;
+  modelo_nombre: string;
   utilizacion_pct: number;
 }
 
