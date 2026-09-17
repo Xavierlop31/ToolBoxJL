@@ -5,7 +5,17 @@ import { Transform } from "class-transformer";
 // mensajes de WhatsApp, PDFs y el panel admin (Issue #187), así que un
 // `nombre = "<script>...</script>"` sin este paso llegaría intacto hasta
 // esas superficies.
-const TAGS_HTML_REGEX = /<[^>]*>/g;
+//
+// `{0,1000}` en vez de `*` sin acotar (sonar-typescript:S8786, hallazgo de
+// Reliability): ningún tag HTML real necesita más de 1000 caracteres entre
+// `<` y `>`, y acotar el cuantificador limita el trabajo de backtracking a
+// una constante por posición de inicio en vez de dejarlo crecer con el
+// tamaño del input — este valor lo pisa `@Transform` ANTES de cualquier
+// `@MaxLength` (ver doc-comment de `sanitizarTextoLibre`), así que el input
+// crudo puede ser arbitrariamente largo. Mismo criterio que
+// `scripts/generate-frontend-config.mjs` (`sinBarraFinal`) para el mismo
+// hallazgo.
+const TAGS_HTML_REGEX = /<[^>]{0,1000}>/g;
 
 // Caracteres de control ASCII salvo tab (0x09), LF (0x0A) y CR (0x0D), que sí
 // se preservan porque campos como `falla_reportada`/`motivo_baja` son
