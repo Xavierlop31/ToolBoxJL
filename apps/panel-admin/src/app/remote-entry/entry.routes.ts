@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { AdminShellComponent } from './admin-shell.component';
+import { adminOnlyGuard } from '../core/auth/admin-only.guard';
 
 /**
  * Rutas expuestas por Native Federation (`./Routes` en federation.config.js)
@@ -38,6 +39,12 @@ import { AdminShellComponent } from './admin-shell.component';
  * otro rol (`@Roles("admin")`, ver `AdminUsersController`), este componente
  * no duplica esa verificación del lado del cliente (mismo criterio
  * documentado en su propio doc-comment).
+ *
+ * `adminOnlyGuard` (Issue #184-ter, `core/auth/admin-only.guard.ts`):
+ * defensa en profundidad sobre `almacen`/`rutas`/`envios`/`vehiculos/nuevo`/
+ * `usuarios` — mismos 5 ítems que `AdminShellComponent` ya oculta del
+ * sidenav para `gerente`. Sin esto, el filtrado del nav por sí solo no
+ * evita que un gerente navegue directo por URL.
  */
 export const remoteRoutes: Routes = [
   {
@@ -76,6 +83,7 @@ export const remoteRoutes: Routes = [
             (m) => m.ShipmentsPanelComponent,
           ),
         title: 'Panel de envíos — ToolBox JL',
+        canActivate: [adminOnlyGuard],
       },
       {
         path: 'utilizacion-productividad',
@@ -92,6 +100,7 @@ export const remoteRoutes: Routes = [
             (m) => m.VehicleRegistrationComponent,
           ),
         title: 'Registrar vehículo — ToolBox JL',
+        canActivate: [adminOnlyGuard],
       },
       {
         path: 'almacen',
@@ -100,6 +109,7 @@ export const remoteRoutes: Routes = [
             (m) => m.GeneralTabComponent,
           ),
         title: 'Almacén — ToolBox JL',
+        canActivate: [adminOnlyGuard],
       },
       {
         path: 'mantenimiento',
@@ -116,6 +126,7 @@ export const remoteRoutes: Routes = [
             '../features/inventory-panel/components/routes-today-tab/routes-today-tab.component'
           ).then((m) => m.RoutesTodayTabComponent),
         title: 'Rutas del día — ToolBox JL',
+        canActivate: [adminOnlyGuard],
       },
       { path: 'inventario', redirectTo: 'almacen' },
       {
@@ -125,6 +136,7 @@ export const remoteRoutes: Routes = [
             (m) => m.UsersManagementComponent,
           ),
         title: 'Usuarios — ToolBox JL',
+        canActivate: [adminOnlyGuard],
       },
     ],
   },

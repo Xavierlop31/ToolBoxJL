@@ -3,12 +3,17 @@ import type { Order } from "@toolboxjl/shared-types";
 import { mesActualUtc, mesAnteriorUtc } from "../domain/mes-actual";
 import type { ModeloConIngresos, RoiRepository } from "../domain/roi.repository";
 import type { RangoPeriodo, RevenueRepository } from "../domain/revenue.repository";
-import { REVENUE_REPOSITORY, ROI_REPOSITORY } from "../infrastructure/analytics.tokens";
+import type { DeliveryProductivityRepository } from "../domain/delivery-productivity.repository";
+import {
+  DELIVERY_PRODUCTIVITY_REPOSITORY,
+  REVENUE_REPOSITORY,
+  ROI_REPOSITORY,
+} from "../infrastructure/analytics.tokens";
 import { ConsultarUtilizacionUseCase } from "./consultar-utilizacion.use-case";
 
 import { TOOL_MODEL_REPOSITORY, TOOL_UNIT_REPOSITORY, TOOL_UNIT_STATUS_LOG_REPOSITORY } from "../../catalog-inventory/infrastructure/catalog-inventory.tokens";
 import type { ToolModelRepository } from "../../catalog-inventory/domain/tool-model.repository";
-import type { ToolUnitRepository } from "../../catalog-inventory/domain/tool-unit.repository";
+import type { ToolUnitRepository, UnidadPersistida } from "../../catalog-inventory/domain/tool-unit.repository";
 import type { ToolUnitStatusLogRepository } from "../../catalog-inventory/domain/tool-unit-status-log.repository";
 
 import { ORDER_REPOSITORY } from "../../orders/infrastructure/orders.tokens";
@@ -34,10 +39,28 @@ export interface DashboardKpisRespuesta {
   ocupacion_global_pct: number;
   moras_recaudadas_mes: number;
   roi_promedio_pct: number;
+  /** Unidades con `estado !== "Dado de Baja"` — flota que sigue en servicio (disponible, alquilada o en mantenimiento). */
+  equipos_activos: number;
+  /** Suma de `entregas_exitosas` / suma de `ruta_asignada` de TODOS los repartidores del mes, x 100. `0` (no NaN/Infinity) si no hubo paradas asignadas. */
+  tasa_entregas_exitosas_pct: number;
+  /**
+   * Meses estimados para recuperar la inversión total en herramientas, al
+   * ritmo de ingresos actual: Costo de Compra total / Ingreso mensual
+   * promedio desde la unidad más antigua de esos mismos modelos. `null`
+   * (no un número inventado) si no hay modelos con `costo_compra` válido,
+   * si la unidad más antigua de esos modelos tiene menos de 1 mes de
+   * historial (extrapolar desde una fracción de mes es estadísticamente
+   * inestable), o si el ingreso mensual promedio calculado es 0 — mismo
+   * criterio de "no inventar un dato sin soporte" que
+   * `roi_promedio_pct`/`ConsultarRoiUseCase`.
+   */
+  amortizacion_meses: number | null;
   alertas_criticas: AlertaCriticaRespuesta[];
 }
 
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
+/** Aproximación de días por mes para `amortizacion_meses` — mismo orden de magnitud que un mes calendario real, sin necesidad de calendario exacto para una ESTIMACIÓN de payback. */
+const DIAS_POR_MES = 30;
 
 /**
  * Cantidad de transiciones a "En Mantenimiento" en el mes, a partir de la
@@ -112,21 +135,33 @@ export class ObtenerDashboardKpisUseCase {
     private readonly orders: OrderRepository,
     @Inject(USER_REPOSITORY)
     private readonly users: UserRepository,
+    @Inject(DELIVERY_PRODUCTIVITY_REPOSITORY)
+    private readonly deliveryProductivity: DeliveryProductivityRepository,
   ) {}
 
   async ejecutar(ahora: Date = new Date()): Promise<DashboardKpisRespuesta> {
     const mesActual = mesActualUtc(ahora);
     const mesAnterior = mesAnteriorUtc(ahora);
 
-    const [ingresosMesActual, ingresosMesAnterior, utilizacion, modelosConIngresos, alertasMantenimiento, alertasMora] =
-      await Promise.all([
-        this.revenue.sumarPorTipo(mesActual),
-        this.revenue.sumarPorTipo(mesAnterior),
-        this.consultarUtilizacion.ejecutar(ahora),
-        this.roi.listarConIngresos(),
-        this.detectarMantenimientoRecurrente(mesActual),
-        this.detectarMoraCliente(ahora),
-      ]);
+    const [
+      ingresosMesActual,
+      ingresosMesAnterior,
+      utilizacion,
+      modelosConIngresos,
+      alertasMantenimiento,
+      alertasMora,
+      unidades,
+      productividadPorRepartidor,
+    ] = await Promise.all([
+      this.revenue.sumarPorTipo(mesActual),
+      this.revenue.sumarPorTipo(mesAnterior),
+      this.consultarUtilizacion.ejecutar(ahora),
+      this.roi.listarConIngresos(),
+      this.detectarMantenimientoRecurrente(mesActual),
+      this.detectarMoraCliente(ahora),
+      this.toolUnits.listarTodos(),
+      this.deliveryProductivity.listarPorRepartidor(mesActual),
+    ]);
 
     const totalMesActual = ingresosMesActual.ventasDirectas
       .sumar(ingresosMesActual.tarifasAlquiler)
@@ -141,11 +176,62 @@ export class ObtenerDashboardKpisUseCase {
       ocupacion_global_pct: utilizacion.utilizacion_global_pct,
       moras_recaudadas_mes: ingresosMesActual.cobrosMora.valor,
       roi_promedio_pct: this.calcularRoiPromedio(modelosConIngresos),
+      equipos_activos: unidades.filter((u) => u.estado !== "Dado de Baja").length,
+      tasa_entregas_exitosas_pct: this.calcularTasaEntregasExitosas(productividadPorRepartidor),
+      amortizacion_meses: this.calcularAmortizacionMeses(modelosConIngresos, unidades, ahora),
       // Orden fijo: mantenimiento primero, mora después (openapi.yaml,
       // doc-comment de `AlertaCritica`, describe los 2 disparadores en ese
       // orden).
       alertas_criticas: [...alertasMantenimiento, ...alertasMora],
     };
+  }
+
+  /** `tasa_entregas_exitosas_pct` = Σ entregas_exitosas / Σ ruta_asignada de TODOS los repartidores, x 100. `0` si no hubo paradas asignadas. */
+  private calcularTasaEntregasExitosas(porRepartidor: { entregasExitosas: number; rutaAsignada: number }[]): number {
+    const totalAsignada = porRepartidor.reduce((s, p) => s + p.rutaAsignada, 0);
+    if (totalAsignada === 0) {
+      return 0;
+    }
+    const totalExitosas = porRepartidor.reduce((s, p) => s + p.entregasExitosas, 0);
+    return redondear2Decimales((totalExitosas / totalAsignada) * 100);
+  }
+
+  /** Ver doc-comment de `amortizacion_meses` en `DashboardKpisRespuesta`. */
+  private calcularAmortizacionMeses(
+    modelos: ModeloConIngresos[],
+    unidades: UnidadPersistida[],
+    ahora: Date,
+  ): number | null {
+    const validos = modelos.filter((m) => m.costoCompra !== null && m.costoCompra.valor > 0);
+    if (validos.length === 0) {
+      return null;
+    }
+    const idsValidos = new Set(validos.map((m) => m.modeloId));
+    const fechasIngreso = unidades
+      .filter((u) => idsValidos.has(u.modelo_id))
+      .map((u) => new Date(u.fecha_ingreso).getTime());
+    if (fechasIngreso.length === 0) {
+      return null;
+    }
+
+    // Menos de 1 mes completo de historial produce una extrapolación
+    // inestable/engañosa (dividir por una fracción de mes puede disparar el
+    // resultado a cualquier valor) — se prefiere `null` a un número sin
+    // soporte estadístico real, mismo criterio de "no inventar un dato" que
+    // el resto de este endpoint.
+    const mesesTranscurridos = (ahora.getTime() - Math.min(...fechasIngreso)) / MS_POR_DIA / DIAS_POR_MES;
+    if (mesesTranscurridos < 1) {
+      return null;
+    }
+
+    const totalCostoCompra = validos.reduce((s, m) => s + m.costoCompra!.valor, 0);
+    const totalIngresos = validos.reduce((s, m) => s + m.ingresosAcumulados.valor, 0);
+    const ingresoMensualPromedio = totalIngresos / mesesTranscurridos;
+    if (ingresoMensualPromedio <= 0) {
+      return null;
+    }
+
+    return redondear2Decimales(totalCostoCompra / ingresoMensualPromedio);
   }
 
   /** `variacion_ingresos_pct` = (mesActual - mesAnterior) / mesAnterior x 100. `0` (no Infinity/NaN) si mesAnterior fue 0. */

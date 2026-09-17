@@ -61,6 +61,7 @@ describe("AnalyticsController — GET /analytics/dashboard-kpis (Issue #153, HU-
         new InMemoryToolModelRepository(),
         new InMemoryOrderRepository(),
         new InMemoryUserRepository(),
+        new InMemoryDeliveryProductivityRepository(),
       ),
     );
     // Reflector real (no mockeado): lee el metadata que `@Roles(...)`
@@ -77,6 +78,9 @@ describe("AnalyticsController — GET /analytics/dashboard-kpis (Issue #153, HU-
       ocupacion_global_pct: expect.any(Number),
       moras_recaudadas_mes: expect.any(Number),
       roi_promedio_pct: expect.any(Number),
+      equipos_activos: expect.any(Number),
+      tasa_entregas_exitosas_pct: expect.any(Number),
+      amortizacion_meses: null,
       alertas_criticas: expect.any(Array),
     });
   });

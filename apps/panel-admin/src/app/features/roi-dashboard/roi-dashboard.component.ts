@@ -1,9 +1,10 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { AnalyticsService } from '../../core/analytics/analytics.service';
 import { RoiItem } from '../../core/models/analytics.models';
+import { SortDirection, SortToggleComponent } from '../../shared/components/sort-toggle/sort-toggle.component';
 
 /**
  * Dashboard de ROI por herramienta (HU-7.2, Issue #20) —
@@ -19,7 +20,7 @@ import { RoiItem } from '../../core/models/analytics.models';
 @Component({
   selector: 'app-roi-dashboard',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, SortToggleComponent],
   templateUrl: './roi-dashboard.component.html',
   styleUrl: './roi-dashboard.component.scss',
 })
@@ -36,6 +37,15 @@ export class RoiDashboardComponent implements OnInit {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly roi = signal<RoiItem[]>([]);
+
+  /** Bug reportado: los modelos se listaban sin poder ordenarlos por ROI. */
+  readonly sortDirection = signal<SortDirection>('desc');
+  readonly roiOrdenado = computed(() => {
+    const dir = this.sortDirection();
+    return [...this.roi()].sort((a, b) =>
+      dir === 'desc' ? b.roi_pct - a.roi_pct : a.roi_pct - b.roi_pct,
+    );
+  });
 
   ngOnInit(): void {
     this.consultar();

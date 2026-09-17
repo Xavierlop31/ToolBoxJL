@@ -24,7 +24,10 @@ export interface RevenueBreakdown {
  */
 export interface RoiItem {
   modelo_id: string;
+  modelo_nombre: string;
   roi_pct: number;
+  /** Ingresos Acumulados − Costo de Compra, en COP. */
+  margen_neto_cop: number;
 }
 
 /**
@@ -34,6 +37,7 @@ export interface RoiItem {
  */
 export interface UtilizationByModelo {
   modelo_id: string;
+  modelo_nombre: string;
   utilizacion_pct: number;
 }
 
@@ -108,5 +112,9 @@ export interface DashboardKpis {
   ocupacion_global_pct: number;
   moras_recaudadas_mes: number;
   roi_promedio_pct: number;
+  equipos_activos: number;
+  tasa_entregas_exitosas_pct: number;
+  /** null si no hay suficiente historial para una estimación confiable — ver descripción del campo en openapi.yaml. */
+  amortizacion_meses: number | null;
   alertas_criticas: AlertaCritica[];
 }

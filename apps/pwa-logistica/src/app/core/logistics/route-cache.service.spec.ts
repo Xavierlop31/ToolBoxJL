@@ -21,6 +21,7 @@ describe('RouteCacheService', () => {
         tipo: 'entrega',
         estado_envio: 'en_ruta_entrega',
         direccion: 'Calle 1',
+        pago_pendiente_confirmacion: false,
       },
     ],
   };

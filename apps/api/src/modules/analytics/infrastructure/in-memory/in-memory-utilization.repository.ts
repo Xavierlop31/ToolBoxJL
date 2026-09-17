@@ -7,6 +7,8 @@ import { diasEnRango } from "../../domain/mes-actual";
 /** Unidad sembrada directamente por tests/BDD — ver doc-comment de `UtilizationRepository` sobre el criterio de "estado actual como proxy del mes". */
 export interface UnidadSembradaParaUtilizacion {
   modeloId: string;
+  /** Opcional: si no se pasa, se usa el propio `modeloId` (los tests que no ejercitan el nombre no necesitan sembrarlo). */
+  modeloNombre?: string;
   estado: EstadoUnidad;
   /** Fecha de alta de la unidad, UTC medianoche (mismo criterio que `tool_units.fecha_ingreso`). */
   fechaIngreso: Date;
@@ -25,9 +27,13 @@ const NO_DISPONIBLE = new Set<EstadoUnidad>(["En Mantenimiento", "Dado de Baja"]
 export class InMemoryUtilizationRepository implements UtilizationRepository {
   private readonly unidades: UnidadSembradaParaUtilizacion[] = [];
   private readonly alquileres: AlquilerSembradoParaUtilizacion[] = [];
+  private readonly nombres = new Map<string, string>();
 
   sembrarUnidad(unidad: UnidadSembradaParaUtilizacion): void {
     this.unidades.push(unidad);
+    if (unidad.modeloNombre) {
+      this.nombres.set(unidad.modeloId, unidad.modeloNombre);
+    }
   }
 
   sembrarAlquiler(alquiler: AlquilerSembradoParaUtilizacion): void {
@@ -37,6 +43,7 @@ export class InMemoryUtilizationRepository implements UtilizationRepository {
   limpiar(): void {
     this.unidades.length = 0;
     this.alquileres.length = 0;
+    this.nombres.clear();
   }
 
   async calcularPorModelo(mes: RangoPeriodo): Promise<UtilizacionPorModelo[]> {
@@ -50,7 +57,11 @@ export class InMemoryUtilizationRepository implements UtilizationRepository {
       this.acumularAlquiler(alquiler, mes, porModelo);
     }
 
-    return [...porModelo.entries()].map(([modeloId, v]) => ({ modeloId, ...v }));
+    return [...porModelo.entries()].map(([modeloId, v]) => ({
+      modeloId,
+      modeloNombre: this.nombres.get(modeloId) ?? modeloId,
+      ...v,
+    }));
   }
 
   /** Suma los "días disponibles" de una unidad al acumulador del modelo (mismo criterio que antes: siempre queda una entrada en el mapa, aunque la unidad no aporte nada). */

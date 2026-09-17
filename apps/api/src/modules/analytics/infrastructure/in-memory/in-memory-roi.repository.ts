@@ -12,6 +12,8 @@ import type { ModeloConIngresos, RoiRepository } from "../../domain/roi.reposito
  */
 export interface ModeloSembradoParaRoi {
   modeloId: string;
+  /** Opcional: si no se pasa, se usa el propio `modeloId` (los tests que no ejercitan el nombre no necesitan sembrarlo). */
+  modeloNombre?: string;
   costoCompra: number | null;
   ingresosAcumulados: number;
 }
@@ -35,6 +37,7 @@ export class InMemoryRoiRepository implements RoiRepository {
 
     return filtrados.map((m) => ({
       modeloId: m.modeloId,
+      modeloNombre: m.modeloNombre ?? m.modeloId,
       costoCompra: m.costoCompra !== null ? Dinero.pesos(m.costoCompra) : null,
       ingresosAcumulados: Dinero.pesos(m.ingresosAcumulados),
     }));

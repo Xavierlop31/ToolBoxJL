@@ -1,0 +1,19 @@
+.sort-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--tbjl-color-card, #ffffff);
+  border: 1px solid var(--tbjl-color-border, #dce3ea);
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  color: var(--tbjl-color-neutral-700, #454556);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--tbjl-color-neutral-100, #eef4fb);
+    color: var(--tbjl-color-primary-500, #141cdb);
+  }
+}

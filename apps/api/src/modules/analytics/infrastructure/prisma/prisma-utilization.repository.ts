@@ -45,7 +45,24 @@ export class PrismaUtilizationRepository implements UtilizationRepository {
       this.acumularAlquilerOrden(orden, mes, porModelo);
     }
 
-    return [...porModelo.entries()].map(([modeloId, v]) => ({ modeloId, ...v }));
+    const nombresPorModelo = await this.resolverNombres([...porModelo.keys()]);
+    return [...porModelo.entries()].map(([modeloId, v]) => ({
+      modeloId,
+      modeloNombre: nombresPorModelo.get(modeloId) ?? modeloId,
+      ...v,
+    }));
+  }
+
+  /** Resuelve `tool_models.nombre` para los modelos que aparecieron en el agregado (evita traer TODO el catálogo cuando solo hace falta un puñado). */
+  private async resolverNombres(modeloIds: string[]): Promise<Map<string, string>> {
+    if (modeloIds.length === 0) {
+      return new Map();
+    }
+    const modelos = await this.prisma.toolModel.findMany({
+      where: { id: { in: modeloIds } },
+      select: { id: true, nombre: true },
+    });
+    return new Map(modelos.map((m) => [m.id, m.nombre]));
   }
 
   /** Suma los "días disponibles" de una unidad al acumulador del modelo (siempre deja una entrada en el mapa, igual que antes, aunque la unidad no aporte nada). */

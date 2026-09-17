@@ -27,13 +27,22 @@ describe('AnalyticsService', () => {
   };
 
   const mockRoi: RoiItem[] = [
-    { modelo_id: '11111111-1111-1111-1111-111111111111', roi_pct: 42.5 },
+    {
+      modelo_id: '11111111-1111-1111-1111-111111111111',
+      modelo_nombre: 'Taladro Percutor 20V',
+      roi_pct: 42.5,
+      margen_neto_cop: 425_000,
+    },
   ];
 
   const mockUtilization: UtilizationSummary = {
     utilizacion_global_pct: 68.3,
     por_modelo: [
-      { modelo_id: '11111111-1111-1111-1111-111111111111', utilizacion_pct: 72.1 },
+      {
+        modelo_id: '11111111-1111-1111-1111-111111111111',
+        modelo_nombre: 'Taladro Percutor 20V',
+        utilizacion_pct: 72.1,
+      },
     ],
   };
 
@@ -52,6 +61,9 @@ describe('AnalyticsService', () => {
     ocupacion_global_pct: 68.3,
     moras_recaudadas_mes: 450_000,
     roi_promedio_pct: 24.1,
+    equipos_activos: 2_410,
+    tasa_entregas_exitosas_pct: 94.2,
+    amortizacion_meses: 18,
     alertas_criticas: [
       {
         tipo: 'mora_cliente',

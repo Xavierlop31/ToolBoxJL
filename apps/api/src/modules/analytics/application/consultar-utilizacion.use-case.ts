@@ -6,7 +6,7 @@ import { mesActualUtc } from "../domain/mes-actual";
 /** Forma de la respuesta de `GET /analytics/utilization` (openapi.yaml). */
 export interface UtilizacionRespuesta {
   utilizacion_global_pct: number;
-  por_modelo: { modelo_id: string; utilizacion_pct: number }[];
+  por_modelo: { modelo_id: string; modelo_nombre: string; utilizacion_pct: number }[];
 }
 
 /** Porcentaje redondeado a 2 decimales; `0` (no `NaN`/`Infinity`) cuando el denominador es 0. */
@@ -43,6 +43,7 @@ export class ConsultarUtilizacionUseCase {
       totalDisponibles += m.diasDisponibles;
       return {
         modelo_id: m.modeloId,
+        modelo_nombre: m.modeloNombre,
         utilizacion_pct: porcentaje(m.diasAlquilada, m.diasDisponibles),
       };
     });

@@ -16,7 +16,10 @@ describe('UtilizationProductivityDashboardComponent', () => {
 
   const mockUtilization: UtilizationSummary = {
     utilizacion_global_pct: 62.5,
-    por_modelo: [{ modelo_id: 'm1', utilizacion_pct: 80 }],
+    por_modelo: [
+      { modelo_id: 'm1', modelo_nombre: 'Taladro Percutor 20V', utilizacion_pct: 40 },
+      { modelo_id: 'm2', modelo_nombre: 'Andamio Modular 2m', utilizacion_pct: 80 },
+    ],
   };
 
   const mockProductivity: DeliveryProductivity[] = [
@@ -117,5 +120,29 @@ describe('UtilizationProductivityDashboardComponent', () => {
 
     expect(analyticsSpy.getUtilization).toHaveBeenCalled();
     expect(analyticsSpy.getDeliveryProductivity).toHaveBeenCalled();
+  });
+
+  describe('orden por utilización (bug: los modelos no se podían organizar de mayor a menor)', () => {
+    beforeEach(() => {
+      const utilizationSubject = new Subject<UtilizationSummary>();
+      const productivitySubject = new Subject<DeliveryProductivity[]>();
+      analyticsSpy.getUtilization.and.returnValue(utilizationSubject.asObservable());
+      analyticsSpy.getDeliveryProductivity.and.returnValue(productivitySubject.asObservable());
+      fixture.detectChanges();
+      utilizationSubject.next(mockUtilization);
+      productivitySubject.next(mockProductivity);
+      utilizationSubject.complete();
+      productivitySubject.complete();
+      fixture.detectChanges();
+    });
+
+    it('por defecto ordena de mayor a menor (desc)', () => {
+      expect(component.porModeloOrdenado().map((i) => i.modelo_id)).toEqual(['m2', 'm1']);
+    });
+
+    it('al cambiar la dirección a asc, ordena de menor a mayor', () => {
+      component.sortDirection.set('asc');
+      expect(component.porModeloOrdenado().map((i) => i.modelo_id)).toEqual(['m1', 'm2']);
+    });
   });
 });
