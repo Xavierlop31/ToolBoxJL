@@ -1,6 +1,9 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Subject, filter, takeUntil } from 'rxjs';
+
+import { RoleService } from '../core/auth/role.service';
+import { Rol } from '../core/models/users.models';
 
 interface AdminNavItem {
   path: string;
@@ -8,6 +11,8 @@ interface AdminNavItem {
   icon: string;
   /** Sufijo estable para `data-testid` (evita depender de `String.replace` en el template). */
   testId: string;
+  /** Roles que ven este ítem en el sidenav (Issue #184-ter). */
+  roles: Rol[];
 }
 
 /**
@@ -24,7 +29,18 @@ interface AdminNavItem {
  * pestañas que antes vivían dentro de `/admin/inventario`
  * (`InventoryPanelComponent`, ahora eliminado) — ver `entry.routes.ts`.
  * "Usuarios" (10mo ítem) se agrega en Épica 16 (Gestión de Usuarios y
- * Roles) — ver doc-comment sobre por qué no está oculto para gerente.
+ * Roles).
+ *
+ * Filtrado por rol (Issue #184-ter, pedido directo del Arquitecto
+ * 2026-09-17): el Gerente solo debe ver Dashboard/Mantenimiento/Ingresos/
+ * ROI/Utilización — los otros 5 ítems (Almacén/Rutas/Envíos/Alta Vehículo/
+ * Usuarios) quedan admin-only. `RoleService` (nuevo, `core/auth/`) lee el
+ * rol de la MISMA sesión de Supabase que ya inició el usuario en
+ * `apps/shell` — antes este remote no tenía ningún servicio de sesión/rol
+ * propio (de ahí que "Usuarios" se mostrara sin ocultar y el backend fuera
+ * la única defensa, con un 403 inline). `entry.routes.ts` agrega además un
+ * guard funcional sobre las rutas admin-only — el filtrado del sidenav por
+ * sí solo no evita que un gerente navegue directo por URL.
  *
  * El `<h1>` del `TopAppBar` refleja la sección activa derivándola de la URL
  * (no hay Input/servicio adicional: es la forma más simple dado que este
@@ -54,7 +70,7 @@ interface AdminNavItem {
         </div>
 
         <ul class="sidenav-items">
-          @for (item of navItems; track item.path) {
+          @for (item of visibleNavItems(); track item.path) {
             <li>
               <a
                 [routerLink]="item.path"
@@ -286,38 +302,62 @@ interface AdminNavItem {
 })
 export class AdminShellComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly roleService = inject(RoleService);
   private readonly destroy$ = new Subject<void>();
 
   /** 9 ítems del sidenav, mismo orden que confirmó el Arquitecto (Issue #184). */
   readonly navItems: AdminNavItem[] = [
-    { path: '/admin/dashboard-kpis', label: 'Dashboard', icon: 'space_dashboard', testId: 'dashboard' },
-    { path: '/admin/almacen', label: 'Almacén', icon: 'warehouse', testId: 'almacen' },
-    { path: '/admin/mantenimiento', label: 'Mantenimiento', icon: 'build', testId: 'mantenimiento' },
-    { path: '/admin/rutas', label: 'Rutas', icon: 'route', testId: 'rutas' },
-    { path: '/admin/ingresos', label: 'Ingresos', icon: 'payments', testId: 'ingresos' },
-    { path: '/admin/roi', label: 'ROI', icon: 'trending_up', testId: 'roi' },
-    { path: '/admin/envios', label: 'Envíos', icon: 'local_shipping', testId: 'envios' },
+    {
+      path: '/admin/dashboard-kpis',
+      label: 'Dashboard',
+      icon: 'space_dashboard',
+      testId: 'dashboard',
+      roles: ['admin', 'gerente'],
+    },
+    { path: '/admin/almacen', label: 'Almacén', icon: 'warehouse', testId: 'almacen', roles: ['admin'] },
+    {
+      path: '/admin/mantenimiento',
+      label: 'Mantenimiento',
+      icon: 'build',
+      testId: 'mantenimiento',
+      roles: ['admin', 'gerente'],
+    },
+    { path: '/admin/rutas', label: 'Rutas', icon: 'route', testId: 'rutas', roles: ['admin'] },
+    {
+      path: '/admin/ingresos',
+      label: 'Ingresos',
+      icon: 'payments',
+      testId: 'ingresos',
+      roles: ['admin', 'gerente'],
+    },
+    { path: '/admin/roi', label: 'ROI', icon: 'trending_up', testId: 'roi', roles: ['admin', 'gerente'] },
+    { path: '/admin/envios', label: 'Envíos', icon: 'local_shipping', testId: 'envios', roles: ['admin'] },
     {
       path: '/admin/utilizacion-productividad',
       label: 'Utilización',
       icon: 'monitoring',
       testId: 'utilizacion',
+      roles: ['admin', 'gerente'],
     },
     {
       path: '/admin/vehiculos/nuevo',
       label: 'Alta Vehículo',
       icon: 'directions_car',
       testId: 'alta-vehiculo',
+      roles: ['admin'],
     },
-    // Épica 16 (pedido directo del Arquitecto 2026-09-11): a diferencia de
-    // los otros 9 ítems, esta pantalla es solo-admin (el backend rechaza
-    // con 403 a cualquier otro rol) — se muestra igual acá para todos los
-    // que ya llegan a panel-admin (admin/gerente), mismo criterio que el
-    // resto de esta lista: sin un servicio de sesión/rol propio en este
-    // remote, un gerente que entre ve un error 403 inline en la pantalla,
-    // no un ítem oculto (ver doc-comment de `UsersManagementComponent`).
-    { path: '/admin/usuarios', label: 'Usuarios', icon: 'group', testId: 'usuarios' },
+    // Épica 16 (pedido directo del Arquitecto 2026-09-11): solo-admin, igual
+    // que Almacén/Rutas/Envíos/Alta Vehículo — el backend también rechaza
+    // con 403 a cualquier otro rol (ver doc-comment de
+    // `UsersManagementComponent`), esto es defensa en profundidad en el nav.
+    { path: '/admin/usuarios', label: 'Usuarios', icon: 'group', testId: 'usuarios', roles: ['admin'] },
   ];
+
+  /** Issue #184-ter: el sidenav real que ve cada usuario, filtrado por su rol. */
+  readonly visibleNavItems = computed(() => {
+    const rol = this.roleService.userRole();
+    return this.navItems.filter((item) => item.roles.includes(rol));
+  });
 
   readonly activeTitle = signal('Panel de Control');
 
