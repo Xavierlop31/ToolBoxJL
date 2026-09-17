@@ -30,10 +30,18 @@
           <dd>{{ formatPct(u.utilizacion_global_pct) }}</dd>
         </dl>
 
+        <div class="utilization-toolbar">
+          <app-sort-toggle
+            [direction]="sortDirection()"
+            (directionChange)="sortDirection.set($event)"
+            data-testid="utilization-sort-toggle"
+          />
+        </div>
+
         <ul class="utilization-list" data-testid="utilization-por-modelo">
-          @for (item of u.por_modelo; track item.modelo_id) {
+          @for (item of porModeloOrdenado(); track item.modelo_id) {
             <li class="utilization-item" data-testid="utilization-row">
-              <span class="utilization-modelo">{{ item.modelo_id }}</span>
+              <span class="utilization-modelo">{{ item.modelo_nombre }}</span>
               <span class="utilization-pct">{{ formatPct(item.utilizacion_pct) }}</span>
             </li>
           } @empty {

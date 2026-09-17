@@ -12,8 +12,8 @@ describe('RoiDashboardComponent', () => {
   let analyticsSpy: jasmine.SpyObj<AnalyticsService>;
 
   const mockRoi: RoiItem[] = [
-    { modelo_id: 'm1', roi_pct: 145.7 },
-    { modelo_id: 'm2', roi_pct: -12.3 },
+    { modelo_id: 'm1', modelo_nombre: 'Taladro Percutor 20V', roi_pct: 145.7, margen_neto_cop: 700_000 },
+    { modelo_id: 'm2', modelo_nombre: 'Andamio Modular 2m', roi_pct: -12.3, margen_neto_cop: -60_000 },
   ];
 
   beforeEach(() => {
@@ -71,5 +71,25 @@ describe('RoiDashboardComponent', () => {
     fixture.detectChanges();
     expect(component.formatPct(145.7)).toBe('145,7%');
     expect(component.formatPct(-12.3)).toBe('-12,3%');
+  });
+
+  describe('orden por ROI (bug: los modelos no se podían organizar de mayor a menor)', () => {
+    beforeEach(() => {
+      const subject = new Subject<RoiItem[]>();
+      analyticsSpy.getRoi.and.returnValue(subject.asObservable());
+      fixture.detectChanges();
+      subject.next(mockRoi);
+      subject.complete();
+      fixture.detectChanges();
+    });
+
+    it('por defecto ordena de mayor a menor (desc)', () => {
+      expect(component.roiOrdenado().map((i) => i.modelo_id)).toEqual(['m1', 'm2']);
+    });
+
+    it('al cambiar la dirección a asc, ordena de menor a mayor', () => {
+      component.sortDirection.set('asc');
+      expect(component.roiOrdenado().map((i) => i.modelo_id)).toEqual(['m2', 'm1']);
+    });
   });
 });

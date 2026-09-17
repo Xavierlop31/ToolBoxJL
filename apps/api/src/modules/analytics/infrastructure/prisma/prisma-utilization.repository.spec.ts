@@ -3,7 +3,11 @@ import { PrismaUtilizationRepository } from "./prisma-utilization.repository";
 import type { PrismaService } from "../../../catalog-inventory/infrastructure/prisma/prisma.service";
 
 describe("PrismaUtilizationRepository", () => {
-  let prisma: { toolUnit: { findMany: jest.Mock }; order: { findMany: jest.Mock } };
+  let prisma: {
+    toolUnit: { findMany: jest.Mock };
+    order: { findMany: jest.Mock };
+    toolModel: { findMany: jest.Mock };
+  };
   let repo: PrismaUtilizationRepository;
   const mes = { desde: new Date("2026-08-01T00:00:00Z"), hasta: new Date("2026-09-01T00:00:00Z") };
 
@@ -11,6 +15,7 @@ describe("PrismaUtilizationRepository", () => {
     prisma = {
       toolUnit: { findMany: jest.fn() },
       order: { findMany: jest.fn() },
+      toolModel: { findMany: jest.fn().mockResolvedValue([]) },
     };
     repo = new PrismaUtilizationRepository(prisma as unknown as PrismaService);
   });
@@ -20,10 +25,13 @@ describe("PrismaUtilizationRepository", () => {
       { modeloId: "modelo-1", estado: PrismaEstadoUnidad.Operativo, fechaIngreso: new Date("2026-01-01") },
     ]);
     prisma.order.findMany.mockResolvedValueOnce([]);
+    prisma.toolModel.findMany.mockResolvedValueOnce([{ id: "modelo-1", nombre: "Taladro Percutor 20V" }]);
 
     const resultado = await repo.calcularPorModelo(mes);
 
-    expect(resultado).toEqual([{ modeloId: "modelo-1", diasAlquilada: 0, diasDisponibles: 31 }]);
+    expect(resultado).toEqual([
+      { modeloId: "modelo-1", modeloNombre: "Taladro Percutor 20V", diasAlquilada: 0, diasDisponibles: 31 },
+    ]);
   });
 
   it("excluye días disponibles de unidades En Mantenimiento o Dadas de Baja (pero las deja en el mapa con 0)", async () => {
@@ -32,13 +40,17 @@ describe("PrismaUtilizationRepository", () => {
       { modeloId: "modelo-2", estado: PrismaEstadoUnidad.DadoDeBaja, fechaIngreso: new Date("2026-01-01") },
     ]);
     prisma.order.findMany.mockResolvedValueOnce([]);
+    prisma.toolModel.findMany.mockResolvedValueOnce([
+      { id: "modelo-1", nombre: "Modelo 1" },
+      { id: "modelo-2", nombre: "Modelo 2" },
+    ]);
 
     const resultado = await repo.calcularPorModelo(mes);
 
     expect(resultado).toEqual(
       expect.arrayContaining([
-        { modeloId: "modelo-1", diasAlquilada: 0, diasDisponibles: 0 },
-        { modeloId: "modelo-2", diasAlquilada: 0, diasDisponibles: 0 },
+        { modeloId: "modelo-1", modeloNombre: "Modelo 1", diasAlquilada: 0, diasDisponibles: 0 },
+        { modeloId: "modelo-2", modeloNombre: "Modelo 2", diasAlquilada: 0, diasDisponibles: 0 },
       ]),
     );
   });
@@ -48,10 +60,13 @@ describe("PrismaUtilizationRepository", () => {
       { modeloId: "modelo-1", estado: PrismaEstadoUnidad.Nuevo, fechaIngreso: new Date("2026-08-21T00:00:00Z") },
     ]);
     prisma.order.findMany.mockResolvedValueOnce([]);
+    prisma.toolModel.findMany.mockResolvedValueOnce([{ id: "modelo-1", nombre: "Modelo 1" }]);
 
     const resultado = await repo.calcularPorModelo(mes);
 
-    expect(resultado).toEqual([{ modeloId: "modelo-1", diasAlquilada: 0, diasDisponibles: 11 }]);
+    expect(resultado).toEqual([
+      { modeloId: "modelo-1", modeloNombre: "Modelo 1", diasAlquilada: 0, diasDisponibles: 11 },
+    ]);
   });
 
   it("consulta órdenes de alquiler efectivas y suma días alquilada por modelo de sus items", async () => {
@@ -63,6 +78,7 @@ describe("PrismaUtilizationRepository", () => {
         items: [{ unidad: { modeloId: "modelo-1" } }],
       },
     ]);
+    prisma.toolModel.findMany.mockResolvedValueOnce([{ id: "modelo-1", nombre: "Modelo 1" }]);
 
     const resultado = await repo.calcularPorModelo(mes);
 
@@ -74,7 +90,9 @@ describe("PrismaUtilizationRepository", () => {
         }),
       }),
     );
-    expect(resultado).toEqual([{ modeloId: "modelo-1", diasAlquilada: 5, diasDisponibles: 0 }]);
+    expect(resultado).toEqual([
+      { modeloId: "modelo-1", modeloNombre: "Modelo 1", diasAlquilada: 5, diasDisponibles: 0 },
+    ]);
   });
 
   it("acota días alquilada a la intersección con el mes cuando la orden empieza antes del mes", async () => {
@@ -86,10 +104,13 @@ describe("PrismaUtilizationRepository", () => {
         items: [{ unidad: { modeloId: "modelo-1" } }],
       },
     ]);
+    prisma.toolModel.findMany.mockResolvedValueOnce([{ id: "modelo-1", nombre: "Modelo 1" }]);
 
     const resultado = await repo.calcularPorModelo(mes);
 
-    expect(resultado).toEqual([{ modeloId: "modelo-1", diasAlquilada: 4, diasDisponibles: 0 }]);
+    expect(resultado).toEqual([
+      { modeloId: "modelo-1", modeloNombre: "Modelo 1", diasAlquilada: 4, diasDisponibles: 0 },
+    ]);
   });
 
   it("ignora órdenes sin fecha_inicio o fecha_fin (venta)", async () => {
@@ -101,5 +122,20 @@ describe("PrismaUtilizationRepository", () => {
     const resultado = await repo.calcularPorModelo(mes);
 
     expect(resultado).toEqual([]);
+    expect(prisma.toolModel.findMany).not.toHaveBeenCalled();
+  });
+
+  it("usa el propio modeloId como fallback si tool_models no devuelve un nombre para ese modelo (dato inconsistente)", async () => {
+    prisma.toolUnit.findMany.mockResolvedValueOnce([
+      { modeloId: "modelo-huerfano", estado: PrismaEstadoUnidad.Operativo, fechaIngreso: new Date("2026-01-01") },
+    ]);
+    prisma.order.findMany.mockResolvedValueOnce([]);
+    prisma.toolModel.findMany.mockResolvedValueOnce([]);
+
+    const resultado = await repo.calcularPorModelo(mes);
+
+    expect(resultado).toEqual([
+      { modeloId: "modelo-huerfano", modeloNombre: "modelo-huerfano", diasAlquilada: 0, diasDisponibles: 31 },
+    ]);
   });
 });

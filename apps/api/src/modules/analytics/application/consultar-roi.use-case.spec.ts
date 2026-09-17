@@ -13,11 +13,18 @@ describe("ConsultarRoiUseCase", () => {
 
   it("calcula (Ingresos Acumulados - Costo de Compra) / Costo de Compra x 100 por modelo", async () => {
     const modeloId = randomUUID();
-    repo.sembrar({ modeloId, costoCompra: 1_000_000, ingresosAcumulados: 1_500_000 });
+    repo.sembrar({
+      modeloId,
+      modeloNombre: "Taladro Percutor 20V",
+      costoCompra: 1_000_000,
+      ingresosAcumulados: 1_500_000,
+    });
 
     const resultado = await useCase.ejecutar();
 
-    expect(resultado).toEqual([{ modelo_id: modeloId, roi_pct: 50 }]);
+    expect(resultado).toEqual([
+      { modelo_id: modeloId, modelo_nombre: "Taladro Percutor 20V", roi_pct: 50, margen_neto_cop: 500_000 },
+    ]);
   });
 
   it("admite ROI negativo cuando los ingresos acumulados no cubren el costo de compra", async () => {

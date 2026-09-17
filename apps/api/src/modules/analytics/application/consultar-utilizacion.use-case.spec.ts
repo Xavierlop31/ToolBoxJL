@@ -16,7 +16,12 @@ describe("ConsultarUtilizacionUseCase", () => {
   it("calcula Días Alquilada / Días Disponibles del mes, por modelo y global", async () => {
     const modeloId = randomUUID();
     // 1 unidad disponible todo agosto (31 días) desde antes del mes.
-    repo.sembrarUnidad({ modeloId, estado: "Operativo", fechaIngreso: new Date("2026-01-01T00:00:00.000Z") });
+    repo.sembrarUnidad({
+      modeloId,
+      modeloNombre: "Taladro Percutor 20V",
+      estado: "Operativo",
+      fechaIngreso: new Date("2026-01-01T00:00:00.000Z"),
+    });
     // Alquilada del 1 al 11 de agosto (10 días, fecha_fin exclusiva).
     repo.sembrarAlquiler({
       modeloId,
@@ -26,7 +31,13 @@ describe("ConsultarUtilizacionUseCase", () => {
 
     const resultado = await useCase.ejecutar(AHORA);
 
-    expect(resultado.por_modelo).toEqual([{ modelo_id: modeloId, utilizacion_pct: Math.round((10 / 31) * 10000) / 100 }]);
+    expect(resultado.por_modelo).toEqual([
+      {
+        modelo_id: modeloId,
+        modelo_nombre: "Taladro Percutor 20V",
+        utilizacion_pct: Math.round((10 / 31) * 10000) / 100,
+      },
+    ]);
     expect(resultado.utilizacion_global_pct).toBe(Math.round((10 / 31) * 10000) / 100);
   });
 
@@ -36,7 +47,7 @@ describe("ConsultarUtilizacionUseCase", () => {
 
     const resultado = await useCase.ejecutar(AHORA);
 
-    expect(resultado.por_modelo).toEqual([{ modelo_id: modeloId, utilizacion_pct: 0 }]);
+    expect(resultado.por_modelo).toEqual([{ modelo_id: modeloId, modelo_nombre: modeloId, utilizacion_pct: 0 }]);
   });
 
   it("acota días disponibles a partir de fecha_ingreso cuando la unidad ingresó a mitad del mes", async () => {
@@ -46,7 +57,7 @@ describe("ConsultarUtilizacionUseCase", () => {
 
     const resultado = await useCase.ejecutar(AHORA);
 
-    expect(resultado.por_modelo).toEqual([{ modelo_id: modeloId, utilizacion_pct: 0 }]);
+    expect(resultado.por_modelo).toEqual([{ modelo_id: modeloId, modelo_nombre: modeloId, utilizacion_pct: 0 }]);
     // Sin alquileres sembrados, dias_alquilada = 0 -> 0%, pero el
     // denominador (dias_disponibles) sí quedó acotado a 10 (ver siguiente
     // caso con alquiler para verificarlo indirectamente vía el %).
@@ -71,6 +82,6 @@ describe("ConsultarUtilizacionUseCase", () => {
 
     const resultado = await useCase.ejecutar(AHORA);
 
-    expect(resultado.por_modelo).toEqual([{ modelo_id: modeloId, utilizacion_pct: 0 }]);
+    expect(resultado.por_modelo).toEqual([{ modelo_id: modeloId, modelo_nombre: modeloId, utilizacion_pct: 0 }]);
   });
 });

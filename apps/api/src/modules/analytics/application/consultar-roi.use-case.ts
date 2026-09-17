@@ -5,7 +5,10 @@ import type { RoiRepository } from "../domain/roi.repository";
 /** Forma de un ítem de la respuesta de `GET /analytics/roi` (openapi.yaml). */
 export interface RoiPorModelo {
   modelo_id: string;
+  modelo_nombre: string;
   roi_pct: number;
+  /** Ingresos Acumulados − Costo de Compra, en COP (mismo cálculo que `roi_pct`, expresado en dinero en vez de %). */
+  margen_neto_cop: number;
 }
 
 /**
@@ -36,10 +39,13 @@ export class ConsultarRoiUseCase {
       .filter((m) => m.costoCompra !== null && m.costoCompra.valor > 0)
       .map((m) => {
         const costo = m.costoCompra!.valor;
-        const roiPct = ((m.ingresosAcumulados.valor - costo) / costo) * 100;
+        const margen = m.ingresosAcumulados.valor - costo;
+        const roiPct = (margen / costo) * 100;
         return {
           modelo_id: m.modeloId,
+          modelo_nombre: m.modeloNombre,
           roi_pct: Math.round(roiPct * 100) / 100,
+          margen_neto_cop: margen,
         };
       });
   }

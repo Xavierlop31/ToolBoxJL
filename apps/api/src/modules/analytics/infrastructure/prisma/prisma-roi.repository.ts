@@ -13,7 +13,7 @@ export class PrismaRoiRepository implements RoiRepository {
   async listarConIngresos(modeloId?: string): Promise<ModeloConIngresos[]> {
     const modelos = await this.prisma.toolModel.findMany({
       where: modeloId ? { id: modeloId } : {},
-      select: { id: true, costoCompra: true },
+      select: { id: true, nombre: true, costoCompra: true },
     });
 
     if (modelos.length === 0) {
@@ -59,6 +59,7 @@ export class PrismaRoiRepository implements RoiRepository {
 
     return modelos.map((m) => ({
       modeloId: m.id,
+      modeloNombre: m.nombre,
       costoCompra: m.costoCompra !== null ? Dinero.pesos(m.costoCompra) : null,
       // Math.round: el prorrateo por peso puede dejar centavos fraccionarios
       // (Dinero.pesos exige enteros) — se redondea recién acá, al final de

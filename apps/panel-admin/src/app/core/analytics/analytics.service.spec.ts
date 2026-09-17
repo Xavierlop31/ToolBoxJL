@@ -27,13 +27,22 @@ describe('AnalyticsService', () => {
   };
 
   const mockRoi: RoiItem[] = [
-    { modelo_id: '11111111-1111-1111-1111-111111111111', roi_pct: 42.5 },
+    {
+      modelo_id: '11111111-1111-1111-1111-111111111111',
+      modelo_nombre: 'Taladro Percutor 20V',
+      roi_pct: 42.5,
+      margen_neto_cop: 425_000,
+    },
   ];
 
   const mockUtilization: UtilizationSummary = {
     utilizacion_global_pct: 68.3,
     por_modelo: [
-      { modelo_id: '11111111-1111-1111-1111-111111111111', utilizacion_pct: 72.1 },
+      {
+        modelo_id: '11111111-1111-1111-1111-111111111111',
+        modelo_nombre: 'Taladro Percutor 20V',
+        utilizacion_pct: 72.1,
+      },
     ],
   };
 
