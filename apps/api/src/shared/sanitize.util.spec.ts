@@ -23,6 +23,17 @@ describe("sanitizarTextoLibre", () => {
     );
   });
 
+  it("no cuelga con un '<' sin cerrar seguido de un input muy largo (S8786 — cuantificador acotado)", () => {
+    const entradaMaliciosa = "<" + "a".repeat(2_000_000);
+    const inicio = Date.now();
+    const resultado = sanitizarTextoLibre(entradaMaliciosa);
+    expect(Date.now() - inicio).toBeLessThan(1000);
+    // Sin un '>' dentro de los primeros 1000 caracteres, el tag nunca
+    // "cierra" para la regex acotada — se preserva tal cual, igual que
+    // pasaría con cualquier '<' suelto sin `>` en todo el string.
+    expect(resultado).toBe(entradaMaliciosa);
+  });
+
   it("no toca valores que no son string (deja que class-validator reporte el error de tipo)", () => {
     expect(sanitizarTextoLibre(42)).toBe(42);
     expect(sanitizarTextoLibre(undefined)).toBeUndefined();

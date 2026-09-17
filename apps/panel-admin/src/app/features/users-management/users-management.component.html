@@ -52,6 +52,7 @@
                   (change)="onRolChange(row, $event)"
                   [disabled]="savingRowId() === row.id"
                   [attr.data-testid]="'rol-select-' + row.id"
+                  [attr.aria-label]="'Rol de ' + row.nombre"
                 >
                   @for (rol of roles; track rol) {
                     <option [value]="rol" [selected]="rol === row.pendingRol">{{ rol }}</option>
