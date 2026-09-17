@@ -13,6 +13,8 @@ import { ROUTE_REPOSITORY, SHIPMENT_REPOSITORY } from "../infrastructure/logisti
 import { PrismaRouteRepository } from "../infrastructure/prisma/prisma-route.repository";
 import { PrismaShipmentRepository } from "../infrastructure/prisma/prisma-shipment.repository";
 import { PrismaService } from "../../catalog-inventory/infrastructure/prisma/prisma.service";
+import { PAYMENT_REPOSITORY } from "../../payments/infrastructure/payments.tokens";
+import { PrismaPaymentRepository } from "../../payments/infrastructure/prisma/prisma-payment.repository";
 import { LogisticsController } from "./logistics.controller";
 
 /**
@@ -43,6 +45,14 @@ import { LogisticsController } from "./logistics.controller";
  * nombre de repartidor/cliente) — mismo criterio de import directo (no
  * transitivo) que `InspectionsModule`, que ya combina estos mismos módulos
  * sin ciclo (ninguno de los dos importa `LogisticsModule`).
+ *
+ * `PAYMENT_REPOSITORY` (2026-09-17, fix de `VerMiRutaUseCase`): se provee
+ * DIRECTO acá (`PrismaPaymentRepository`), sin importar `PaymentsModule` —
+ * `PaymentsModule` ya importa `LogisticsModule` (ver arriba), así que
+ * importarlo de vuelta crearía el ciclo que el Tech Lead evitó en Sprint 4.
+ * Mismo patrón que cualquier otro repo Prisma de este módulo: la
+ * implementación es una clase sin dependencias de otro módulo más que
+ * `PrismaService`, ya disponible acá.
  */
 @Module({
   imports: [AuthModule, FleetModule, OrdersModule, CatalogInventoryModule, UsersModule],
@@ -51,6 +61,7 @@ import { LogisticsController } from "./logistics.controller";
     PrismaService,
     { provide: SHIPMENT_REPOSITORY, useClass: PrismaShipmentRepository },
     { provide: ROUTE_REPOSITORY, useClass: PrismaRouteRepository },
+    { provide: PAYMENT_REPOSITORY, useClass: PrismaPaymentRepository },
     ListarPedidosPendientesUseCase,
     AsignarRutasUseCase,
     ListarEnviosUseCase,

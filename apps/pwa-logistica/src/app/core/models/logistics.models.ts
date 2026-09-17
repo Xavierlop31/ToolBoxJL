@@ -54,6 +54,13 @@ export interface ParadaRuta {
   tipo: TipoParada;
   estado_envio: EstadoEnvio;
   direccion: string;
+  /**
+   * `true` si la orden tiene un Payment `contra_entrega` en `pendiente` —
+   * el Repartidor debe confirmar el cobro (`POST /orders/{id}/confirm-cod-payment`)
+   * para que aparezca en el reporte de Ingresos del Gerente (bug real,
+   * 2026-09-17: nada llamaba ese endpoint hasta ahora).
+   */
+  pago_pendiente_confirmacion: boolean;
 }
 
 export interface MyRouteResponse {

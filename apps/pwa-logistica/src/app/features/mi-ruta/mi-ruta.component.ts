@@ -41,6 +41,16 @@ import {
  * conexión. El 404 nunca usa el cache: es una respuesta válida del backend
  * ("hoy no tenés ruta"), no una falla de conectividad, así que mostrar una
  * ruta vieja ahí sería engañoso.
+ *
+ * "Confirmar Cobro" (2026-09-17, fix de bug real): cada parada con
+ * `pago_pendiente_confirmacion=true` (pago contra entrega, ver
+ * `ParadaRuta`) muestra un botón que llama
+ * `MyRouteService.confirmCodPayment(order_id)` — antes NADA en esta PWA
+ * llamaba ese endpoint (ya existente en el backend), así que esos
+ * alquileres nunca aparecían en el reporte de Ingresos del Gerente. Al
+ * confirmar, se actualiza el signal local en vez de recargar toda la ruta
+ * (`confirmedOrderIds` — un Set de `order_id` ya confirmados en esta
+ * sesión de pantalla) para que el botón desaparezca de inmediato.
  */
 @Component({
   selector: 'app-mi-ruta',
@@ -61,6 +71,10 @@ export class MiRutaComponent implements OnInit {
   readonly emptyState = signal(false);
   readonly offlineFallback = signal(false);
   readonly data = signal<MyRouteResponse | null>(null);
+
+  readonly confirmingOrderIds = signal<ReadonlySet<string>>(new Set());
+  readonly confirmedOrderIds = signal<ReadonlySet<string>>(new Set());
+  readonly confirmError = signal<string | null>(null);
 
   ngOnInit(): void {
     this.myRoute.getMyRoute().subscribe({
@@ -97,5 +111,36 @@ export class MiRutaComponent implements OnInit {
       this.errorMessage.set('No pudimos cargar tu ruta del día.');
     }
     this.loading.set(false);
+  }
+
+  /** `true` si esta parada necesita el botón "Confirmar Cobro" (pago contra entrega, todavía no confirmado en esta pantalla). */
+  necesitaConfirmarCobro(parada: { order_id: string; pago_pendiente_confirmacion: boolean }): boolean {
+    return parada.pago_pendiente_confirmacion && !this.confirmedOrderIds().has(parada.order_id);
+  }
+
+  estaConfirmandoCobro(orderId: string): boolean {
+    return this.confirmingOrderIds().has(orderId);
+  }
+
+  confirmarCobro(orderId: string): void {
+    this.confirmError.set(null);
+    this.confirmingOrderIds.set(new Set([...this.confirmingOrderIds(), orderId]));
+
+    this.myRoute.confirmCodPayment(orderId).subscribe({
+      next: () => {
+        this.confirmingOrderIds.set(this.sinId(this.confirmingOrderIds(), orderId));
+        this.confirmedOrderIds.set(new Set([...this.confirmedOrderIds(), orderId]));
+      },
+      error: () => {
+        this.confirmingOrderIds.set(this.sinId(this.confirmingOrderIds(), orderId));
+        this.confirmError.set('No pudimos confirmar el cobro. Intentá de nuevo.');
+      },
+    });
+  }
+
+  private sinId(ids: ReadonlySet<string>, id: string): Set<string> {
+    const copia = new Set(ids);
+    copia.delete(id);
+    return copia;
   }
 }

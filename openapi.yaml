@@ -1067,6 +1067,14 @@ paths:
                           type: string
                           enum: [pendiente_asignacion, en_ruta_entrega, entregado, en_ruta_recogida, retornado]
                         direccion: { type: string }
+                        pago_pendiente_confirmacion:
+                          type: boolean
+                          description: >
+                            `true` si la orden tiene al menos un Payment en
+                            `pendiente` (siempre `contra_entrega` — tarjeta/PSE
+                            capturan de inmediato). El Repartidor lo usa para
+                            saber cuándo mostrar "Confirmar Cobro"
+                            (`POST /orders/{id}/confirm-cod-payment`).
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404":
