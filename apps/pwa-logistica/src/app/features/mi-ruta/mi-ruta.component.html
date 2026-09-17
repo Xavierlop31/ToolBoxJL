@@ -27,6 +27,10 @@
       Ruta del {{ ruta.route.fecha }} — {{ ruta.paradas.length }} parada(s)
     </p>
 
+    @if (confirmError()) {
+      <p class="form-error" role="alert">{{ confirmError() }}</p>
+    }
+
     <ol class="paradas-list" data-testid="mi-ruta-paradas">
       @for (parada of ruta.paradas; track parada.shipment_id; let i = $index) {
         <li class="parada-card" [attr.data-testid]="'mi-ruta-parada-' + i">
@@ -37,6 +41,17 @@
             </span>
             <p class="parada-direccion">{{ parada.direccion }}</p>
             <p class="parada-estado">{{ estadoLabel[parada.estado_envio] }}</p>
+            @if (necesitaConfirmarCobro(parada)) {
+              <button
+                type="button"
+                class="btn-confirmar-cobro"
+                [attr.data-testid]="'mi-ruta-confirmar-cobro-' + i"
+                [disabled]="estaConfirmandoCobro(parada.order_id)"
+                (click)="confirmarCobro(parada.order_id)"
+              >
+                {{ estaConfirmandoCobro(parada.order_id) ? 'Confirmando…' : 'Confirmar Cobro' }}
+              </button>
+            }
           </div>
         </li>
       }

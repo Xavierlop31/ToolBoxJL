@@ -29,6 +29,7 @@ describe('MiRutaComponent', () => {
         tipo: 'entrega',
         estado_envio: 'en_ruta_entrega',
         direccion: 'Calle 1 #1-11',
+        pago_pendiente_confirmacion: true,
       },
       {
         shipment_id: 'shipment-2',
@@ -36,6 +37,7 @@ describe('MiRutaComponent', () => {
         tipo: 'recogida',
         estado_envio: 'en_ruta_recogida',
         direccion: 'Calle 2 #2-22',
+        pago_pendiente_confirmacion: false,
       },
     ],
   };
@@ -122,5 +124,45 @@ describe('MiRutaComponent', () => {
     const component = fixture.componentInstance;
     expect(component.errorMessage()).toBe('No pudimos cargar tu ruta del día.');
     expect(component.data()).toBeNull();
+  });
+
+  describe('Confirmar Cobro (bug de Ingresos en cero, contra entrega)', () => {
+    beforeEach(() => {
+      fixture.detectChanges();
+      httpMock.expectOne(`${environment.apiUrl}/logistics/my-route`).flush(mockResponse);
+      fixture.detectChanges();
+    });
+
+    it('solo la parada con pago_pendiente_confirmacion=true necesita el botón', () => {
+      const component = fixture.componentInstance;
+      expect(component.necesitaConfirmarCobro(mockResponse.paradas[0])).toBe(true);
+      expect(component.necesitaConfirmarCobro(mockResponse.paradas[1])).toBe(false);
+    });
+
+    it('confirmarCobro llama a POST /orders/{id}/confirm-cod-payment y oculta el botón al resolver', () => {
+      const component = fixture.componentInstance;
+
+      component.confirmarCobro('order-1');
+      expect(component.estaConfirmandoCobro('order-1')).toBe(true);
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/confirm-cod-payment`);
+      expect(req.request.method).toBe('POST');
+      req.flush({});
+
+      expect(component.estaConfirmandoCobro('order-1')).toBe(false);
+      expect(component.necesitaConfirmarCobro(mockResponse.paradas[0])).toBe(false);
+    });
+
+    it('si falla la confirmación, muestra un mensaje de error y deja el botón disponible de nuevo', () => {
+      const component = fixture.componentInstance;
+
+      component.confirmarCobro('order-1');
+      const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/confirm-cod-payment`);
+      req.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+      expect(component.estaConfirmandoCobro('order-1')).toBe(false);
+      expect(component.confirmError()).toBe('No pudimos confirmar el cobro. Intentá de nuevo.');
+      expect(component.necesitaConfirmarCobro(mockResponse.paradas[0])).toBe(true);
+    });
   });
 });

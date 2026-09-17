@@ -39,6 +39,7 @@ describe('MyRouteService', () => {
           tipo: 'entrega',
           estado_envio: 'en_ruta_entrega',
           direccion: 'Calle 1',
+          pago_pendiente_confirmacion: true,
         },
         {
           shipment_id: 'shipment-2',
@@ -46,6 +47,7 @@ describe('MyRouteService', () => {
           tipo: 'recogida',
           estado_envio: 'en_ruta_recogida',
           direccion: 'Calle 2',
+          pago_pendiente_confirmacion: false,
         },
       ],
     };
@@ -70,5 +72,13 @@ describe('MyRouteService', () => {
       { message: 'No hay ruta publicada para hoy' },
       { status: 404, statusText: 'Not Found' },
     );
+  });
+
+  it('confirmCodPayment: llama a POST /orders/{id}/confirm-cod-payment', () => {
+    service.confirmCodPayment('order-1').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/orders/order-1/confirm-cod-payment`);
+    expect(req.request.method).toBe('POST');
+    req.flush({});
   });
 });

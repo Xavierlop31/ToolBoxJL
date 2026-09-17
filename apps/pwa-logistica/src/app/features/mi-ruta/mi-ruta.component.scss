@@ -127,6 +127,27 @@
   margin: 0;
 }
 
+.btn-confirmar-cobro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--tbjl-radius-md, 0.5rem);
+  background: var(--tbjl-color-success, #1e9e5a);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 output {
   display: block;
   margin: 1em 0;

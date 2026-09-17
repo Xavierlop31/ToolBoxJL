@@ -4,6 +4,8 @@ import { VEHICLE_REPOSITORY } from "../../fleet/infrastructure/fleet.tokens";
 import type { VehicleRepository } from "../../fleet/domain/vehicle.repository";
 import { ORDER_REPOSITORY } from "../../orders/infrastructure/orders.tokens";
 import type { OrderRepository } from "../../orders/domain/order.repository";
+import { PAYMENT_REPOSITORY } from "../../payments/infrastructure/payments.tokens";
+import type { PaymentRepository } from "../../payments/domain/payment.repository";
 import { SHIPMENT_REPOSITORY, ROUTE_REPOSITORY } from "../infrastructure/logistics.tokens";
 import type { ShipmentRepository } from "../domain/shipment.repository";
 import type { RouteRepository } from "../domain/route.repository";
@@ -17,6 +19,16 @@ export interface ParadaRuta {
   tipo: TipoEnvio;
   estado_envio: EstadoEnvio;
   direccion: string;
+  /**
+   * `true` si la orden tiene al menos un Payment en `pendiente` (siempre
+   * `contra_entrega` — tarjeta/PSE capturan de inmediato, ver
+   * `PagarOrdenUseCase`). El Repartidor usa esto para saber cuándo mostrar
+   * "Confirmar Cobro" (`POST /orders/{id}/confirm-cod-payment`) — bug real
+   * encontrado (2026-09-17): ningún componente de pwa-logistica llamaba
+   * ese endpoint, así que un alquiler contra entrega nunca capturaba su
+   * pago y el reporte de Ingresos lo excluía para siempre.
+   */
+  pago_pendiente_confirmacion: boolean;
 }
 
 export interface RutaRepartidor {
@@ -58,6 +70,8 @@ export class VerMiRutaUseCase {
     private readonly shipments: ShipmentRepository,
     @Inject(ORDER_REPOSITORY)
     private readonly ordenes: OrderRepository,
+    @Inject(PAYMENT_REPOSITORY)
+    private readonly pagos: PaymentRepository,
   ) {}
 
   async ejecutar(repartidorId: string, ahora: Date = new Date()): Promise<RutaRepartidor> {
@@ -84,12 +98,14 @@ export class VerMiRutaUseCase {
         continue;
       }
       const orden = await this.ordenes.buscarPorId(shipment.order_id);
+      const pagosDeLaOrden = await this.pagos.listarPorOrden(shipment.order_id);
       paradas.push({
         shipment_id: shipment.id,
         order_id: shipment.order_id,
         tipo: shipment.tipo,
         estado_envio: shipment.estado_envio,
         direccion: orden?.direccion_entrega ?? "",
+        pago_pendiente_confirmacion: pagosDeLaOrden.some((p) => p.estado === "pendiente"),
       });
     }
 

@@ -3,6 +3,7 @@ import { InMemoryVehicleRepository } from "../../fleet/infrastructure/in-memory/
 import { InMemoryRouteRepository } from "../infrastructure/in-memory/in-memory-route.repository";
 import { InMemoryShipmentRepository } from "../infrastructure/in-memory/in-memory-shipment.repository";
 import { InMemoryOrderRepository } from "../../orders/infrastructure/in-memory/in-memory-order.repository";
+import { InMemoryPaymentRepository } from "../../payments/infrastructure/in-memory/in-memory-payment.repository";
 import { RepartidorSinVehiculoError } from "../domain/errors/repartidor-sin-vehiculo.error";
 import { RutaNoPublicadaHoyError } from "../domain/errors/ruta-no-publicada-hoy.error";
 import { VerMiRutaUseCase } from "./ver-mi-ruta.use-case";
@@ -12,6 +13,7 @@ describe("VerMiRutaUseCase", () => {
   let rutas: InMemoryRouteRepository;
   let shipments: InMemoryShipmentRepository;
   let ordenes: InMemoryOrderRepository;
+  let pagos: InMemoryPaymentRepository;
   let useCase: VerMiRutaUseCase;
 
   const HOY = new Date("2026-09-03T12:00:00.000Z");
@@ -21,7 +23,8 @@ describe("VerMiRutaUseCase", () => {
     rutas = new InMemoryRouteRepository();
     shipments = new InMemoryShipmentRepository();
     ordenes = new InMemoryOrderRepository();
-    useCase = new VerMiRutaUseCase(vehiculos, rutas, shipments, ordenes);
+    pagos = new InMemoryPaymentRepository();
+    useCase = new VerMiRutaUseCase(vehiculos, rutas, shipments, ordenes, pagos);
   });
 
   async function crearOrden(direccion: string) {
@@ -91,6 +94,74 @@ describe("VerMiRutaUseCase", () => {
     expect(resultado.paradas[0].direccion).toBe("Carrera 5 # 10-20");
     expect(resultado.paradas[1].shipment_id).toBe(shipmentA.id);
     expect(resultado.paradas[1].direccion).toBe("Calle 1 # 2-30");
+  });
+
+  it("marca pago_pendiente_confirmacion=true si la orden tiene un Payment en pendiente (contra entrega)", async () => {
+    const vehiculo = await vehiculos.crear({
+      tipo: "moto",
+      capacidad_kg: 20,
+      capacidad_m3: 0.1,
+      repartidor_id: "repartidor-1",
+    });
+    const orden = await crearOrden("Calle 1 # 2-30");
+    await pagos.crear({
+      orderId: orden.id,
+      tipo: "pago_alquiler",
+      metodo: "contra_entrega",
+      estado: "pendiente",
+      monto: 40_000,
+      wompiTransactionId: null,
+    });
+    const shipment = await shipments.crear({
+      orderId: orden.id,
+      vehiculoId: vehiculo.id,
+      tipo: "entrega",
+      estadoEnvio: "en_ruta_entrega",
+    });
+    await rutas.crear({
+      vehiculoId: vehiculo.id,
+      fecha: "2026-09-03",
+      paradas: [shipment.id],
+      generadaPor: "agente_1",
+    });
+
+    const resultado = await useCase.ejecutar("repartidor-1", HOY);
+
+    expect(resultado.paradas[0].pago_pendiente_confirmacion).toBe(true);
+  });
+
+  it("marca pago_pendiente_confirmacion=false si el Payment ya está capturado (tarjeta/PSE)", async () => {
+    const vehiculo = await vehiculos.crear({
+      tipo: "moto",
+      capacidad_kg: 20,
+      capacidad_m3: 0.1,
+      repartidor_id: "repartidor-1",
+    });
+    const orden = await crearOrden("Calle 1 # 2-30");
+    await pagos.crear({
+      orderId: orden.id,
+      tipo: "pago_alquiler",
+      metodo: "tarjeta",
+      estado: "capturado",
+      monto: 40_000,
+      wompiTransactionId: "txn-1",
+    });
+    const shipment = await shipments.crear({
+      orderId: orden.id,
+      vehiculoId: vehiculo.id,
+      tipo: "entrega",
+      estadoEnvio: "en_ruta_entrega",
+    });
+    await rutas.crear({
+      vehiculoId: vehiculo.id,
+      fecha: "2026-09-03",
+      paradas: [shipment.id],
+      generadaPor: "agente_1",
+    });
+
+    const resultado = await useCase.ejecutar("repartidor-1", HOY);
+
+    expect(resultado.paradas[0].pago_pendiente_confirmacion).toBe(false);
   });
 
   it("omite paradas cuyo shipment ya no existe, sin romper el resto de la respuesta", async () => {
