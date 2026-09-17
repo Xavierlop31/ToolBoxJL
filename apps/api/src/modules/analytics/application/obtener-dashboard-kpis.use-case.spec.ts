@@ -9,6 +9,7 @@ import { InMemoryToolModelRepository } from "../../catalog-inventory/infrastruct
 import { InMemoryOrderRepository } from "../../orders/infrastructure/in-memory/in-memory-order.repository";
 import type { NuevaOrdenInput } from "../../orders/domain/order.repository";
 import { InMemoryUserRepository } from "../../users/infrastructure/in-memory/in-memory-user.repository";
+import { InMemoryDeliveryProductivityRepository } from "../infrastructure/in-memory/in-memory-delivery-productivity.repository";
 import { ObtenerDashboardKpisUseCase } from "./obtener-dashboard-kpis.use-case";
 
 // agosto/2026 -> mes de 31 días, sin ambigüedad de rollover para las
@@ -47,6 +48,7 @@ describe("ObtenerDashboardKpisUseCase", () => {
   let toolModels: InMemoryToolModelRepository;
   let orders: InMemoryOrderRepository;
   let users: InMemoryUserRepository;
+  let deliveryProductivity: InMemoryDeliveryProductivityRepository;
   let useCase: ObtenerDashboardKpisUseCase;
 
   beforeEach(() => {
@@ -59,6 +61,7 @@ describe("ObtenerDashboardKpisUseCase", () => {
     toolModels = new InMemoryToolModelRepository();
     orders = new InMemoryOrderRepository();
     users = new InMemoryUserRepository();
+    deliveryProductivity = new InMemoryDeliveryProductivityRepository();
     useCase = new ObtenerDashboardKpisUseCase(
       revenue,
       roi,
@@ -68,6 +71,7 @@ describe("ObtenerDashboardKpisUseCase", () => {
       toolModels,
       orders,
       users,
+      deliveryProductivity,
     );
   });
 
@@ -199,6 +203,134 @@ describe("ObtenerDashboardKpisUseCase", () => {
       const resultado = await useCase.ejecutar(AHORA);
 
       expect(resultado.roi_promedio_pct).toBe(0);
+    });
+  });
+
+  describe("equipos_activos", () => {
+    it("cuenta todas las unidades excepto las Dadas de Baja", async () => {
+      const modelo = await toolModels.crear({ nombre: "Taladro", marca: "Bosch", categoria: "Taladros", tarifa_dia: 40_000 });
+      await toolUnits.crear({ modeloId: modelo.id, numeroSerie: "SN-1" });
+      const enMantenimiento = await toolUnits.crear({ modeloId: modelo.id, numeroSerie: "SN-2" });
+      const dadaDeBaja = await toolUnits.crear({ modeloId: modelo.id, numeroSerie: "SN-3" });
+      await toolUnits.actualizarEstado(enMantenimiento.id, "En Mantenimiento");
+      await toolUnits.actualizarEstado(dadaDeBaja.id, "Dado de Baja");
+
+      const resultado = await useCase.ejecutar(AHORA);
+
+      expect(resultado.equipos_activos).toBe(2);
+    });
+
+    it("devuelve 0 cuando no hay unidades registradas", async () => {
+      const resultado = await useCase.ejecutar(AHORA);
+
+      expect(resultado.equipos_activos).toBe(0);
+    });
+  });
+
+  describe("tasa_entregas_exitosas_pct", () => {
+    it("calcula Σ entregas_exitosas / Σ ruta_asignada de todos los repartidores del mes, x 100", async () => {
+      deliveryProductivity.sembrarParada({
+        repartidorId: "r1",
+        tipo: "entrega",
+        estadoEnvio: "entregado",
+        fecha: new Date("2026-08-05T00:00:00.000Z"),
+      });
+      deliveryProductivity.sembrarParada({
+        repartidorId: "r1",
+        tipo: "entrega",
+        estadoEnvio: "en_ruta_entrega",
+        fecha: new Date("2026-08-06T00:00:00.000Z"),
+      });
+      deliveryProductivity.sembrarParada({
+        repartidorId: "r2",
+        tipo: "recogida",
+        estadoEnvio: "retornado",
+        fecha: new Date("2026-08-07T00:00:00.000Z"),
+      });
+
+      const resultado = await useCase.ejecutar(AHORA);
+
+      // 2 exitosas de 3 asignadas -> 66.67%.
+      expect(resultado.tasa_entregas_exitosas_pct).toBe(66.67);
+    });
+
+    it("devuelve 0 (no NaN/Infinity) cuando no hubo paradas asignadas en el mes", async () => {
+      const resultado = await useCase.ejecutar(AHORA);
+
+      expect(resultado.tasa_entregas_exitosas_pct).toBe(0);
+    });
+  });
+
+  describe("amortizacion_meses", () => {
+    it("devuelve null cuando ningún modelo tiene costo_compra válido (mismo criterio que roi_promedio_pct)", async () => {
+      roi.sembrar({ modeloId: randomUUID(), costoCompra: null, ingresosAcumulados: 500_000 });
+
+      const resultado = await useCase.ejecutar(AHORA);
+
+      expect(resultado.amortizacion_meses).toBeNull();
+    });
+
+    it("devuelve null cuando no hay ninguna unidad de los modelos válidos (no hay fecha de referencia)", async () => {
+      roi.sembrar({ modeloId: randomUUID(), costoCompra: 1_000_000, ingresosAcumulados: 500_000 });
+
+      const resultado = await useCase.ejecutar(AHORA);
+
+      expect(resultado.amortizacion_meses).toBeNull();
+    });
+
+    it("devuelve null cuando la unidad más antigua ingresó el mismo día consultado (sin historial del que estimar un ritmo de ingresos)", async () => {
+      const modelo = await toolModels.crear({ nombre: "Andamio", marca: "Layher", categoria: "Andamios", tarifa_dia: 20_000 });
+      await toolUnits.crear({ modeloId: modelo.id, numeroSerie: "SN-AMORT" }); // fecha_ingreso = hoy (InMemoryToolUnitRepository)
+      roi.sembrar({ modeloId: modelo.id, costoCompra: 900_000, ingresosAcumulados: 300_000 });
+
+      const resultado = await useCase.ejecutar(new Date());
+
+      expect(resultado.amortizacion_meses).toBeNull();
+    });
+
+    it("calcula Costo de Compra total / Ingreso mensual promedio desde la unidad más antigua de los modelos válidos", async () => {
+      const modeloId = randomUUID();
+      roi.sembrar({ modeloId, modeloNombre: "Taladro", costoCompra: 1_200_000, ingresosAcumulados: 600_000 });
+
+      // Stub propio (no InMemoryToolUnitRepository: su `crear()` siempre
+      // sella fecha_ingreso = hoy, no permite fijar una fecha pasada) —
+      // exactamente 6 "meses" de 30 días antes de AHORA (mismo criterio de
+      // aproximación que DIAS_POR_MES en el use case): ingreso mensual
+      // promedio = 600.000 / 6 = 100.000 -> amortización = 1.200.000 /
+      // 100.000 = 12 meses.
+      const seisMesesAntes = new Date(AHORA.getTime() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString();
+      const toolUnitsConHistorial: Pick<
+        import("../../catalog-inventory/domain/tool-unit.repository").ToolUnitRepository,
+        "listarTodos"
+      > = {
+        listarTodos: async () => [
+          {
+            id: randomUUID(),
+            modelo_id: modeloId,
+            numero_serie: "SN-1",
+            estado: "Operativo",
+            fecha_ingreso: seisMesesAntes,
+            fecha_adquisicion: null,
+            costo_compra: null,
+            ubicacion_bodega: null,
+          },
+        ],
+      };
+      const useCaseConHistorial = new ObtenerDashboardKpisUseCase(
+        revenue,
+        roi,
+        consultarUtilizacion,
+        statusLog,
+        toolUnitsConHistorial as never,
+        toolModels,
+        orders,
+        users,
+        deliveryProductivity,
+      );
+
+      const resultado = await useCaseConHistorial.ejecutar(AHORA);
+
+      expect(resultado.amortizacion_meses).toBe(12);
     });
   });
 

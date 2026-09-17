@@ -22,6 +22,9 @@ const mockDashboardKpis = {
   ocupacion_global_pct: 68.3,
   moras_recaudadas_mes: 450_000,
   roi_promedio_pct: 24.1,
+  equipos_activos: 2_410,
+  tasa_entregas_exitosas_pct: 94.2,
+  amortizacion_meses: 18,
   alertas_criticas: [
     {
       tipo: 'mantenimiento_recurrente',
@@ -42,6 +45,17 @@ const mockDashboardKpis = {
   ],
 };
 
+/**
+ * `DashboardKpisComponent` también carga, en paralelo y con manejo de error
+ * independiente de los KPIs principales, el widget "Análisis de
+ * Rentabilidad por Equipo" (`GET /analytics/roi`) y el widget "Alertas de
+ * Mantenimiento" (`GET /inventory/maintenance`) — sin interceptarlos acá,
+ * Playwright dejaría pasar esas 2 llamadas a la red real (no hay backend
+ * levantado en este runner standalone). Se mockean con listas vacías por
+ * defecto: los escenarios de HU-15.1 no ejercitan estos 2 widgets nuevos
+ * (eso vive en dashboard-kpis.component.spec.ts, Karma), acá alcanza con
+ * que no rompan la carga de la página.
+ */
 async function mockDashboardKpisEndpoint(page: Page): Promise<void> {
   await page.route('**/api/v1/analytics/dashboard-kpis', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
@@ -50,6 +64,14 @@ async function mockDashboardKpisEndpoint(page: Page): Promise<void> {
       contentType: 'application/json',
       body: JSON.stringify(mockDashboardKpis),
     });
+  });
+  await page.route('**/api/v1/analytics/roi*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
+  await page.route('**/api/v1/inventory/maintenance', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 }
 
