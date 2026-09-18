@@ -21,6 +21,18 @@ export interface Shipment {
   vehiculo_id?: string | null;
   tipo: TipoEnvio;
   estado_envio: EstadoEnvio;
+  /**
+   * Identificador legible de la orden (ej. "TJL0000001"), nombre del
+   * cliente y dirección de entrega — resueltos server-side, solo vienen
+   * poblados en el snapshot inicial de `GET /logistics/shipments` (bug
+   * corregido: antes se mostraba el GUID crudo de `order_id`). Un evento de
+   * Supabase Realtime sobre la tabla `shipments` NUNCA trae estos 3 campos
+   * (no viven en esa tabla) — `ShipmentsPanelComponent` los preserva del
+   * estado anterior en vez de pisarlos con `undefined`.
+   */
+  numero_orden?: string;
+  cliente_nombre?: string;
+  direccion_entrega?: string;
 }
 
 /**

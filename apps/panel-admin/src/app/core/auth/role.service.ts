@@ -4,8 +4,51 @@ import type { Session } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase-client';
 import { Rol } from '../models/users.models';
 
+const ROLES_VALIDOS: Rol[] = ['cliente', 'admin', 'gerente', 'almacenista', 'repartidor'];
+
+function esRolValido(valor: unknown): valor is Rol {
+  return typeof valor === 'string' && (ROLES_VALIDOS as string[]).includes(valor);
+}
+
+/**
+ * Rol tal como lo dejó `custom_access_token_hook` (migración
+ * `20260830120000_custom_access_token_hook`) en `claims.app_metadata.rol`
+ * del JWT FIRMADO — se refresca en cada login/refresh de token, a
+ * diferencia de `session.user.app_metadata` (ver `extractRol`).
+ */
+function extractRolDelJwt(accessToken: string | undefined): Rol | null {
+  if (!accessToken) return null;
+  try {
+    const parts = accessToken.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    const jwtRol = payload.rol ?? payload.role ?? payload.app_metadata?.rol ?? payload.user_metadata?.rol;
+    return esRolValido(jwtRol) ? jwtRol : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * *** BUG CORREGIDO ***: `session.user.app_metadata`/`user_metadata` NO son
+ * el claim del JWT firmado — son la serialización de `auth.users` que
+ * GoTrue devuelve junto al token, y ESA columna solo se actualiza cuando
+ * algo hace `auth.admin.updateUserById`/`UPDATE auth.users` directamente
+ * (el viejo procedimiento manual por SQL). `ActualizarUsuarioUseCase` (Sprint
+ * 15, gestión de usuarios) solo actualiza `public.users.rol` — el rol
+ * correcto y FRESCO viaja en el JWT vía `custom_access_token_hook`, que sí
+ * lee `public.users.rol` en cada login. Por eso acá se decodifica el JWT
+ * PRIMERO; `session.user.app_metadata`/`user_metadata` quedan como fallback
+ * únicamente para sesiones sin ese claim. Mismo fix que
+ * `apps/shell/src/app/core/auth/auth.service.ts` (`extractRol`).
+ */
 function extractRol(session: Session | null): Rol {
   if (!session?.user) return 'cliente';
+
+  const jwtRol = extractRolDelJwt(session.access_token);
+  if (jwtRol) {
+    return jwtRol;
+  }
 
   const rawRol =
     session.user.app_metadata?.['rol'] ??
@@ -13,32 +56,7 @@ function extractRol(session: Session | null): Rol {
     session.user.app_metadata?.['role'] ??
     session.user.user_metadata?.['role'];
 
-  if (
-    typeof rawRol === 'string' &&
-    ['cliente', 'admin', 'gerente', 'almacenista', 'repartidor'].includes(rawRol)
-  ) {
-    return rawRol as Rol;
-  }
-
-  if (session.access_token) {
-    try {
-      const parts = session.access_token.split('.');
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]));
-        const jwtRol = payload.rol ?? payload.role ?? payload.app_metadata?.rol ?? payload.user_metadata?.rol;
-        if (
-          typeof jwtRol === 'string' &&
-          ['cliente', 'admin', 'gerente', 'almacenista', 'repartidor'].includes(jwtRol)
-        ) {
-          return jwtRol as Rol;
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return 'cliente';
+  return esRolValido(rawRol) ? rawRol : 'cliente';
 }
 
 /**
