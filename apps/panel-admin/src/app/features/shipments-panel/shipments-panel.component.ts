@@ -76,12 +76,20 @@ export class ShipmentsPanelComponent implements OnInit {
 
     this.shipments.update((list) => {
       const index = list.findIndex((s) => s.id === newRow.id);
-      const updated = newRow as Shipment;
       if (index === -1) {
-        return [...list, updated];
+        // Alta nueva vía Realtime: el payload crudo de `postgres_changes`
+        // no trae numero_orden/cliente_nombre/direccion_entrega (no viven
+        // en la tabla `shipments`) — se agrega con lo que hay, se completa
+        // en el próximo refresh completo del panel.
+        return [...list, newRow as Shipment];
       }
+      // BUG CORREGIDO: un UPDATE por Realtime solo trae columnas crudas de
+      // `shipments` (ej. estado_envio/vehiculo_id) — reemplazar el objeto
+      // entero borraba silenciosamente los campos enriquecidos que solo
+      // vinieron del GET inicial. Se hace merge, preservando lo que ya
+      // había.
       const copy = [...list];
-      copy[index] = updated;
+      copy[index] = { ...copy[index], ...newRow };
       return copy;
     });
   }

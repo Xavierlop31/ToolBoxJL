@@ -41,6 +41,28 @@ li {
   font-size: 14px;
 }
 
+.shipment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shipment-order {
+  font-weight: 700;
+  color: var(--tbjl-color-neutral-900, #161c21);
+}
+
+.shipment-cliente {
+  font-size: 13px;
+  color: var(--tbjl-color-neutral-700, #454556);
+}
+
+.shipment-direccion {
+  font-size: 13px;
+  color: var(--tbjl-color-neutral-500, #757588);
+}
+
 .form-error {
   color: var(--tbjl-color-error, #ba1a1a);
   background-color: #ffdad6;
