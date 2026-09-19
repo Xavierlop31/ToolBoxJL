@@ -246,36 +246,13 @@ describe('AuthService', () => {
       expect(service.isAdminOrGerente()).toBeTrue();
     });
 
-    it('BUG CORREGIDO: prioriza el rol del JWT firmado sobre session.user.app_metadata desactualizado (custom_access_token_hook lo refresca en cada login, la fila de auth.users no)', () => {
-      const { service, emitAuthState } = setup();
-      // Simula el escenario reportado: un usuario cuyo app_metadata.rol
-      // quedó "almacenista" (seteado por el viejo procedimiento manual de
-      // SQL) pero cuyo public.users.rol ya se actualizó a "gerente" — el
-      // hook lo refleja en el JWT en el siguiente login/refresh.
-      const jwtPayload = { app_metadata: { rol: 'gerente' } };
-      const fakeJwt = `header.${btoa(JSON.stringify(jwtPayload))}.signature`;
-      const fakeSession = {
-        access_token: fakeJwt,
-        user: { id: 'u1', app_metadata: { rol: 'almacenista' } },
-      } as unknown as Session;
-
-      emitAuthState('SIGNED_IN', fakeSession);
-
-      expect(service.userRole()).toBe('gerente');
-      expect(service.isAdminOrGerente()).toBeTrue();
-    });
-
-    it('usa session.user.app_metadata como fallback cuando el JWT no trae un rol válido (ej. token malformado o sin ese claim)', () => {
-      const { service, emitAuthState } = setup();
-      const fakeSession = {
-        access_token: 'no-es-un-jwt-valido',
-        user: { id: 'u1', app_metadata: { rol: 'repartidor' } },
-      } as unknown as Session;
-
-      emitAuthState('SIGNED_IN', fakeSession);
-
-      expect(service.userRole()).toBe('repartidor');
-    });
+    // La extracción de rol en sí (precedencia JWT vs. app_metadata, el bug
+    // de "rol de sesión desactualizado" y sus casos borde) se prueba
+    // exhaustivamente en packages/shared-types/src/extract-rol.spec.ts
+    // (`extractRolDeSesion`) — acá solo se ejercitan los computed()
+    // específicos de AuthService (userRoleDisplay/isCliente/isAdminOrGerente/
+    // isLogistica) para no duplicar esos casos en 2 apps (causó un Quality
+    // Gate de SonarCloud por duplicación de código).
 
     it('asigna cliente por defecto ante un rol no reconocido o ausente', () => {
       const { service, emitAuthState } = setup();
