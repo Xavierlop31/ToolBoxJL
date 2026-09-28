@@ -141,9 +141,6 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.112.4
-      '@toolboxjl/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
       '@toolboxjl/ui-kit':
         specifier: workspace:*
         version: link:../../packages/ui-kit
@@ -453,9 +450,6 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.112.4
-      '@toolboxjl/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
       '@toolboxjl/ui-kit':
         specifier: workspace:*
         version: link:../../packages/ui-kit
