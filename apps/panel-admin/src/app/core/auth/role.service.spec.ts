@@ -67,6 +67,20 @@ describe('RoleService', () => {
     expect(service.userRole()).toBe('gerente');
   });
 
+  it('BUG CORREGIDO: prioriza el rol del JWT firmado sobre session.user.app_metadata desactualizado (custom_access_token_hook lo refresca en cada login, la fila de auth.users no)', () => {
+    const { service, emitAuthState } = setup();
+    const jwtPayload = { app_metadata: { rol: 'gerente' } };
+    const fakeJwt = `header.${btoa(JSON.stringify(jwtPayload))}.signature`;
+    const fakeSession = {
+      access_token: fakeJwt,
+      user: { id: 'u1', app_metadata: { rol: 'almacenista' } },
+    } as unknown as Session;
+
+    emitAuthState('SIGNED_IN', fakeSession);
+
+    expect(service.userRole()).toBe('gerente');
+  });
+
   it('asigna cliente por defecto ante un rol no reconocido o ausente', () => {
     const { service, emitAuthState } = setup();
     const fakeSession = { user: { id: 'u1', user_metadata: {} } } as unknown as Session;

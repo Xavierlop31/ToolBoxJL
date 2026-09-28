@@ -13,7 +13,15 @@
     <ul data-testid="shipments-panel">
       @for (shipment of shipments(); track shipment.id) {
         <li data-testid="shipment-row">
-          <span class="shipment-order">Pedido {{ shipment.order_id }}</span>
+          <div class="shipment-info">
+            <span class="shipment-order">Pedido {{ shipment.numero_orden || shipment.order_id }}</span>
+            @if (shipment.cliente_nombre) {
+              <span class="shipment-cliente">{{ shipment.cliente_nombre }}</span>
+            }
+            @if (shipment.direccion_entrega) {
+              <span class="shipment-direccion">{{ shipment.direccion_entrega }}</span>
+            }
+          </div>
           <span class="shipment-tipo">{{ shipment.tipo === 'entrega' ? 'Entrega' : 'Recogida' }}</span>
           <span class="shipment-estado">{{ estadoLabel[shipment.estado_envio] }}</span>
         </li>

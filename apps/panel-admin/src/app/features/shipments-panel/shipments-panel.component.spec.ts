@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Subject, throwError } from 'rxjs';
 
 import { ShipmentsPanelComponent } from './shipments-panel.component';
@@ -18,7 +19,15 @@ describe('ShipmentsPanelComponent', () => {
   }>;
 
   const mockShipments: Shipment[] = [
-    { id: 's1', order_id: 'o1', tipo: 'entrega', estado_envio: 'pendiente_asignacion' },
+    {
+      id: 's1',
+      order_id: 'o1',
+      tipo: 'entrega',
+      estado_envio: 'pendiente_asignacion',
+      numero_orden: 'TJL0000001',
+      cliente_nombre: 'Ana Gómez',
+      direccion_entrega: 'Calle 10 # 20-30, Medellín',
+    },
     { id: 's2', order_id: 'o2', tipo: 'recogida', estado_envio: 'en_ruta_recogida' },
   ];
 
@@ -63,6 +72,27 @@ describe('ShipmentsPanelComponent', () => {
 
     expect(component.errorMessage()).toBe('No pudimos cargar el panel de envíos.');
     expect(component.loading()).toBe(false);
+  });
+
+  it('BUG CORREGIDO: renderiza numero_orden/cliente_nombre/direccion_entrega en vez del GUID crudo del pedido', () => {
+    setup();
+    const shipmentsSubject = new Subject<Shipment[]>();
+    logisticsSpy.getShipments.and.returnValue(shipmentsSubject.asObservable());
+
+    fixture.detectChanges();
+    shipmentsSubject.next(mockShipments);
+    shipmentsSubject.complete();
+    fixture.detectChanges();
+
+    const filas = fixture.debugElement.queryAll(By.css('[data-testid="shipment-row"]'));
+    expect(filas[0].nativeElement.textContent).toContain('TJL0000001');
+    expect(filas[0].nativeElement.textContent).toContain('Ana Gómez');
+    expect(filas[0].nativeElement.textContent).toContain('Calle 10 # 20-30, Medellín');
+    expect(filas[0].nativeElement.textContent).not.toContain('o1');
+
+    // Sin numero_orden/cliente_nombre/direccion_entrega (segundo shipment
+    // del fixture), cae al order_id crudo como último recurso.
+    expect(filas[1].nativeElement.textContent).toContain('o2');
   });
 
   describe('actualizaciones en tiempo real', () => {
@@ -110,6 +140,29 @@ describe('ShipmentsPanelComponent', () => {
       expect(component.shipments()).toHaveSize(2);
       const actualizadoEnLista = component.shipments().find((s) => s.id === 's1');
       expect(actualizadoEnLista?.estado_envio).toBe('en_ruta_entrega');
+    });
+
+    it('BUG CORREGIDO: un UPDATE por Realtime no borra numero_orden/cliente_nombre/direccion_entrega (esos campos no viven en la tabla shipments, el payload crudo nunca los trae)', () => {
+      // Simula el payload real de postgres_changes: solo columnas de
+      // `shipments` (sin los campos enriquecidos que solo vinieron del GET inicial).
+      const filaCruda = {
+        id: 's1',
+        order_id: 'o1',
+        tipo: 'entrega',
+        estado_envio: 'en_ruta_entrega',
+      };
+
+      realtimeSubject.next({
+        eventType: 'UPDATE',
+        new: filaCruda as unknown as Record<string, unknown>,
+        old: { id: 's1' },
+      });
+
+      const actualizadoEnLista = component.shipments().find((s) => s.id === 's1');
+      expect(actualizadoEnLista?.estado_envio).toBe('en_ruta_entrega');
+      expect(actualizadoEnLista?.numero_orden).toBe('TJL0000001');
+      expect(actualizadoEnLista?.cliente_nombre).toBe('Ana Gómez');
+      expect(actualizadoEnLista?.direccion_entrega).toBe('Calle 10 # 20-30, Medellín');
     });
 
     it('elimina un envío de la lista por DELETE', () => {

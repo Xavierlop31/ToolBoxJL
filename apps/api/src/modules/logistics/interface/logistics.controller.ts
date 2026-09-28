@@ -21,7 +21,7 @@ import { RolesGuard } from "../../auth/interface/guards/roles.guard";
 import { SupabaseAuthGuard } from "../../auth/interface/guards/supabase-auth.guard";
 import { VehiculoNoEncontradoError } from "../../fleet/domain/errors/vehiculo-no-encontrado.error";
 import { AsignarRutasUseCase } from "../application/asignar-rutas.use-case";
-import { ListarEnviosUseCase } from "../application/listar-envios.use-case";
+import { ListarEnviosUseCase, type EnvioConDetalle } from "../application/listar-envios.use-case";
 import { ListarPedidosPendientesUseCase } from "../application/listar-pedidos-pendientes.use-case";
 import { RutasHoyUseCase } from "../application/rutas-hoy.use-case";
 import { VerMiRutaUseCase, type RutaRepartidor } from "../application/ver-mi-ruta.use-case";
@@ -77,7 +77,7 @@ export class LogisticsController {
 
   @Roles("gerente", "admin")
   @Get("logistics/shipments")
-  async envios(): Promise<Shipment[]> {
+  async envios(): Promise<EnvioConDetalle[]> {
     return this.listarEnvios.ejecutar();
   }
 

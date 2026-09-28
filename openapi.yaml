@@ -1094,16 +1094,30 @@ paths:
       description: >
         El listado inicial se sirve por este endpoint; las actualizaciones en
         vivo del panel se reciben por Supabase Realtime, no por polling.
+        El Shipment viene expandido con numero_orden/cliente_nombre/
+        direccion_entrega (resueltos contra Order/User) para que el panel no
+        tenga que mostrar el GUID crudo del pedido — mismo criterio que
+        `GET /logistics/pending-orders`. Esos 3 campos NO viven en la tabla
+        `shipments` (Supabase Realtime no puede traerlos en un evento
+        `postgres_changes`): el frontend los preserva al recibir una
+        actualización en vivo en vez de esperarlos ahí.
       tags: [Logística]
       x-roles: [gerente, admin]
       responses:
         "200":
-          description: Envíos en curso con su estado actual.
+          description: Envíos en curso con su estado actual, identificador legible, cliente y dirección de entrega.
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/Shipment" }
+                items:
+                  allOf:
+                    - $ref: "#/components/schemas/Shipment"
+                    - type: object
+                      properties:
+                        numero_orden: { type: string, description: "Identificador legible de la orden (ej. \"TJL0000001\")." }
+                        cliente_nombre: { type: string }
+                        direccion_entrega: { type: string }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
